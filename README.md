@@ -834,7 +834,7 @@ Detailed contribution instructions belong in:
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-GitHub recommends maintaining contribution guidelines separately from the README so contributors can easily find the project's development, issue, pull-request, and community expectations. citeturn330493search0turn330493search4
+GitHub recommends maintaining contribution guidelines separately from the README so contributors can easily find the project's development, issue, pull-request, and community expectations.
 
 ---
 
