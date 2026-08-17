@@ -94,14 +94,11 @@ Project knowledge that is too detailed for the root README but is not applicatio
 ```text
 docs/
 │
+├── SETUP.md
 ├── PHASE-0.md
 ├── COMPATIBILITY.md
 ├── INPUT_BACKENDS.md
 ├── CONFIGURATION_SCHEMA.md
-│
-├── phase0/
-│   ├── README.md
-│   └── results/
 │
 ├── adr/
 │   ├── ADR-001-json-first-config.md
@@ -118,11 +115,16 @@ docs/
 │   └── reports/
 │
 └── phase0/
-    ├── results/
+    ├── README.md          test procedure for the feasibility harness
+    ├── results/           exported evidence
     ├── reports/
     ├── logs/
     └── screenshots/
 ```
+
+### `docs/SETUP.md`
+
+Toolchain installation and on-device install, for contributors not using the full IDE.
 
 ### `docs/PHASE-0.md`
 

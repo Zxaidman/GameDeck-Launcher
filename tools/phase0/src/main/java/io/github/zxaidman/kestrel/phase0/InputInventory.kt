@@ -67,6 +67,19 @@ object InputInventory {
             (sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK)
     }
 
+    /**
+     * Rumble support, read through the API appropriate to the running version.
+     * `InputDevice.getVibrator()` is deprecated from API 31 in favour of the manager.
+     */
+    private fun hasVibrator(device: InputDevice): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            device.vibratorManager.vibratorIds.isNotEmpty()
+        } else {
+            @Suppress("DEPRECATION")
+            device.vibrator?.hasVibrator() ?: false
+        }
+    }.getOrDefault(false)
+
     fun snapshot(): List<JSONObject> {
         val out = mutableListOf<JSONObject>()
         for (id in InputDevice.getDeviceIds()) {
@@ -90,7 +103,7 @@ object InputInventory {
         json.put("controllerNumber", device.controllerNumber)
         json.put("keyboardType", device.keyboardType)
         json.put("looksLikeGamepad", looksLikeGamepad(device))
-        json.put("hasVibrator", runCatching { device.vibrator?.hasVibrator() ?: false }.getOrDefault(false))
+        json.put("hasVibrator", hasVibrator(device))
 
         val axes = JSONArray()
         for (range in device.motionRanges) {

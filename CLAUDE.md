@@ -39,17 +39,20 @@ domain type needs an Android API, it belongs in `platform/`.
 What an agent can actually verify here:
 
 ```bash
-./gradlew :core:test        # runs; JVM only, no SDK needed
-./gradlew :app:assembleDebug   # needs the Android SDK — fails without it
+./gradlew :core:test    # JVM only, no SDK needed — works in a bare container
+./gradlew build         # everything: compiles both modules, lints, tests. Needs the SDK.
 ```
 
-The SDK is usually absent in a container, so `:app` cannot be built or tested there. That is a
-missing prerequisite, not a broken build — say which of the two you actually observed, and never
-report an assembly as passing when only `:core` ran.
+The whole build is known to pass with the SDK installed. In a container without one, `:core:test`
+still runs but anything Android-side fails with `SDK location not found` — a missing prerequisite,
+not a broken build. Say which of the two you actually observed, and never report an assembly as
+passing when only `:core` ran. `docs/SETUP.md` documents the exact toolchain that works.
 
-Stack, now pinned in `gradle/libs.versions.toml`: Kotlin, Jetpack Compose, AGP, min SDK 29
-(Android 10, fixed by ADR-004), Gradle Kotlin DSL, GPLv3. The Android-side dependency versions have
-not yet been resolved by a real sync — see `CHANGELOG.md` for what is verified and what is not.
+Stack, pinned in `gradle/libs.versions.toml` and confirmed mutually compatible by a real build:
+Kotlin 2.2.21, Jetpack Compose (BOM 2026.05.01), AGP 8.13.2, Gradle 8.14.3, compileSdk 36,
+min SDK 29 (Android 10, fixed by ADR-004), GPLv3. Lint runs as part of `build` and its errors fail
+the build — fix them rather than suppressing, unless the suppression is genuinely justified and
+commented. See `CHANGELOG.md` for what is verified and what is not.
 
 ---
 
@@ -62,6 +65,7 @@ not yet been resolved by a real sync — see `CHANGELOG.md` for what is verified
 | `ARCHITECTURE.md` | Layers, boundaries, domain model, input/Shizuku/session/display architecture |
 | `PROJECT_STRUCTURE.md` | **Canonical** folder organization and dependency rules |
 | `DEVELOPMENT.md` | Build/test workflow, testing levels, definition of done |
+| `docs/SETUP.md` | Toolchain install and on-device run, without the full IDE |
 | `AI_DEVELOPMENT_GUIDE.md` | **Rules for AI-assisted implementation — read this before writing code** |
 | `CONTRIBUTING.md` | Contributor workflow, coding style, commit/branch/PR conventions, governance |
 | `SECURITY.md` | Security policy and threat boundaries |

@@ -1,5 +1,6 @@
 package io.github.zxaidman.kestrel.phase0
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.hardware.input.InputManager
@@ -99,20 +100,28 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
     }
 
     private fun refreshDevices() {
-        devices = InputDevice.getDeviceIds().mapNotNull { InputDevice.getDevice(it) }
+        // getDeviceIds() returns an IntArray, which has map but not mapNotNull.
+        devices = InputDevice.getDeviceIds().map { InputDevice.getDevice(it) }.filterNotNull()
     }
 
     // Every key event routed to this window, including those produced from a shell.
+    //
+    // Dispatch is the earliest hook, so an event is recorded even when a view would later consume
+    // it — which matters here, because focus navigation eats D-pad events before they reach
+    // onKeyDown. The event is then passed on untouched: the harness observes, it does not swallow.
+    // That also keeps the back gesture working normally rather than trapping the user.
+    //
+    // The suppression is required because androidx marks its own override as library-group
+    // restricted; calling through to it is exactly what an observer must do.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         EventLog.record(event)
-        // BACK is left to the system so the harness stays escapable.
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
-        return true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         EventLog.record(event)
-        return true
+        return super.dispatchGenericMotionEvent(event)
     }
 
     private fun exportReport(): String {
@@ -148,6 +157,10 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
     }
 }
 
+private fun deviceHeadline(): String =
+    "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}  ·  " +
+        "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
+
 private const val TAB_DEVICES = 0
 private const val TAB_EVENTS = 1
 
@@ -166,8 +179,7 @@ private fun HarnessScreen(
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "${Build_MODEL()}  ·  Android ${android.os.Build.VERSION.RELEASE} " +
-                "(API ${android.os.Build.VERSION.SDK_INT})",
+            text = deviceHeadline(),
             style = MaterialTheme.typography.bodySmall,
         )
 
@@ -198,9 +210,6 @@ private fun HarnessScreen(
         }
     }
 }
-
-@Composable
-private fun Build_MODEL(): String = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
 
 @Composable
 private fun DeviceList(devices: List<InputDevice>) {

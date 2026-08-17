@@ -1354,6 +1354,7 @@ The full set, and what each file is authoritative for:
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, boundaries, domain model, subsystem architecture |
 | [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) | Canonical folder organization and dependency rules |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Build/test workflow, testing levels, definition of done |
+| [`docs/SETUP.md`](docs/SETUP.md) | Installing the toolchain and running on a device, without the full IDE |
 | [`AI_DEVELOPMENT_GUIDE.md`](AI_DEVELOPMENT_GUIDE.md) | Rules for AI-assisted implementation |
 | [`CLAUDE.md`](CLAUDE.md) | Condensed operating brief for AI coding agents |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contributor workflow, style, commit/branch/PR/ADR conventions |
@@ -1383,10 +1384,14 @@ cd Kestrel-Launcher
 
 Baseline:
 
-- Android Studio
-- Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`)
 - JDK 17 or newer
+- Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`)
 - Android 10+ test device recommended
+- Android Studio is optional — see below
+
+**New to this, or not a software developer?** [`docs/SETUP.md`](docs/SETUP.md) walks through the
+whole thing with a code editor and the command-line tools instead of the full IDE, including
+connecting the phone and installing over USB.
 
 Dependency versions are pinned in `gradle/libs.versions.toml`.
 

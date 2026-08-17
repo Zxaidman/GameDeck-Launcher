@@ -165,17 +165,19 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
   of throwing for expected failures, as required by `docs/CONFIGURATION_SCHEMA.md`.
 - Pinned Android 10 / API 29 as `minSdk`, per ADR-004.
 
-Verified:
+Verified, with the Android SDK installed:
 
+- `./gradlew build` completes successfully — both modules compile, lint reports no errors, and the
+  domain tests pass.
 - `./gradlew :core:test` — 9 tests, all passing, on JDK 21 with Gradle 8.14.3.
-- The Gradle wrapper was generated and executed successfully.
+- Every pinned version in `gradle/libs.versions.toml` resolved. AGP 8.13.2, Kotlin 2.2.21, Compose
+  BOM 2026.05.01 and `compileSdk`/`targetSdk` 36 are confirmed mutually compatible.
+- `app-debug.apk` builds with identity `io.github.zxaidman.kestrel`, label Kestrel.
 
 Not verified:
 
-- `./gradlew :app:assembleDebug` has never been run. The environment used to create the module has
-  no Android SDK, so the Android side has not been compiled, packaged, linted, or run on a device.
-- The AndroidX, Compose, and AGP versions are real published artifacts but have not been resolved
-  by a Gradle sync. `compileSdk` and `targetSdk` in particular need confirming on first sync.
+- Neither APK has been installed on a physical device or launched. Nothing about runtime behaviour,
+  rendering, or OEM firmware interaction is known.
 - No layout, skin, profile, input backend, overlay, or session behaviour exists.
 
 ### Phase 0 Harness Established
@@ -191,10 +193,31 @@ Not verified:
   requires.
 - Added `docs/phase0/results/` for exported evidence.
 
+Fixed during first compilation:
+
+- `IntArray` has no `mapNotNull`; device enumeration used `map` and `filterNotNull` instead.
+- The harness consumed key events, including BACK, which would have trapped the user on the screen.
+  It now records each event and passes it on untouched — an observer must not swallow what it
+  measures.
+- Rumble detection used an API deprecated from API 31; it now selects the API by version.
+- Removed redundant manifest labels and a mis-declared composable.
+
+Verified:
+
+- `./gradlew :tools:phase0:assembleDebug` produces `phase0-debug.apk` with identity
+  `io.github.zxaidman.kestrel.phase0`, label Kestrel Phase 0, installable alongside the product.
+- Lint reports no errors for the module.
+
 Not verified:
 
-- The harness has never been compiled or run. It was written in an environment with no Android SDK.
+- The harness has never been installed or launched on a device.
 - No tier has been executed and no evidence has been recorded. `ADR-INPUT-001` remains Pending.
+
+### Setup Documentation
+
+- Added `docs/SETUP.md` — a build and install guide for contributors who are not software
+  developers, using the command-line tools and a code editor rather than the full IDE. The Linux
+  path in it was executed end to end; the Windows and macOS paths were not, and say so.
 
 ### Rebranding
 
