@@ -1376,7 +1376,7 @@ The repository now contains a Gradle build. It produces a launchable placeholder
 Phase 0 is not complete, so there is no controller, input backend, overlay, or gaming session yet.
 
 ```bash
-git clone https://github.com/Zxaidman/GameDeck-Launcher.git
+git clone https://github.com/Zxaidman/Kestrel.git
 cd Kestrel-Launcher
 ./gradlew :core:test          # domain tests, no SDK required
 ./gradlew :app:assembleDebug  # debug APK, requires the Android SDK

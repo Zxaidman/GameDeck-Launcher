@@ -401,12 +401,12 @@ Version comparison links are added once the first release exists. Until then onl
 link below is meaningful, because there is no tag to compare against.
 
 ```text
-[Unreleased]: https://github.com/Zxaidman/GameDeck-Launcher/commits/main
+[Unreleased]: https://github.com/Zxaidman/Kestrel/commits/main
 ```
 
 After the first release, the pattern becomes:
 
 ```text
-[Unreleased]: https://github.com/Zxaidman/GameDeck-Launcher/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Zxaidman/GameDeck-Launcher/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Zxaidman/Kestrel/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Zxaidman/Kestrel/releases/tag/v0.1.0
 ```

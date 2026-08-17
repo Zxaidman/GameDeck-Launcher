@@ -96,8 +96,8 @@ Those three were confirmed sufficient to build this project: nothing else was in
 ## 4. Get the source and point it at the SDK
 
 ```bash
-git clone https://github.com/Zxaidman/GameDeck-Launcher.git
-cd GameDeck-Launcher
+git clone https://github.com/Zxaidman/Kestrel.git
+cd Kestrel
 ```
 
 Create a file called `local.properties` in the project root containing the path to your SDK:
