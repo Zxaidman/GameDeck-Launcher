@@ -1,6 +1,6 @@
 # GameDeck Android — Product Requirements Document v1.0
 
-**Document: `PRD.md`**
+**Document: `PRD.md`**\
 **Project status:** Product definition / architecture phase\
 **Target platform:** Android phones\
 **Minimum Android version:** Android 10 / API 29\
