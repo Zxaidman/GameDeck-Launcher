@@ -238,6 +238,36 @@ Confidence: Unverified
 
 ---
 
+# 4a. Relationship to the Other Status Vocabularies
+
+Three documents describe result quality for different purposes. They are not interchangeable, and a
+value from one must never be substituted for a value from another.
+
+| Vocabulary | Defined in | Describes | Scope |
+| --- | --- | --- | --- |
+| Status + Confidence | this document, §3–§4 | what the project supports, and how well that is known | a device / target-application / backend combination |
+| Grade A–E | `docs/PHASE-0.md` §28 | how strong an input mechanism is, technically | one input mechanism during the feasibility phase |
+| Claim state | `AI_DEVELOPMENT_GUIDE.md` | how far a specific statement has been verified | any individual claim, in code or documentation |
+
+Approximate mapping, for orientation only:
+
+```text
+Grade A  →  may justify   Supported                (once devices confirm it)
+Grade B  →  may justify   Supported / Supported with Shizuku
+Grade C  →  may justify   Limited
+Grade D  →  may justify   Supported with Fallback
+Grade E  →                Unsupported
+```
+
+A grade is evidence about a mechanism. A status is a claim about the product. Producing a grade in a
+feasibility test never by itself upgrades a status here — that requires the evidence in §5 and a
+confidence level from §4.
+
+The issue template offers a deliberately reduced set of statuses because a reporter is describing one
+observation, not setting project-wide support. A maintainer assigns the final status.
+
+---
+
 # 5. Evidence Requirements
 
 A compatibility entry should ideally include:

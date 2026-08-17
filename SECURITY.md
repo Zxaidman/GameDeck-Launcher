@@ -759,13 +759,18 @@ Security-relevant architectural decisions should be documented in:
 docs/adr/
 ```
 
-Examples:
+Security decisions use the same naming rule as every other record — sequential `ADR-NNN-topic.md`,
+per `CONTRIBUTING.md` §57. There is no separate security numbering series.
+
+Topics that would justify a record:
 
 ```text
-ADR-SEC-001-community-content.md
-ADR-SEC-002-shizuku-boundaries.md
-ADR-SEC-003-input-session-isolation.md
+community content trust boundary
+Shizuku capability boundaries
+input/session isolation
 ```
+
+Check `docs/adr/` directly for the records that currently exist.
 
 ---
 

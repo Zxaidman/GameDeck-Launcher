@@ -147,6 +147,31 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 - Defined the requirement to distinguish touch simulation, key-event injection, axis/event injection, and true virtual gamepad/HID identity.
 - Defined `ADR-INPUT-001` as the intended decision record for the production input strategy.
 
+### Documentation Artifacts Established
+
+These files exist in the repository. No source code, build system, or CI configuration exists yet.
+
+- Established the root documentation set: `README.md`, `PRD.md`, `ARCHITECTURE.md`,
+  `PROJECT_STRUCTURE.md`, `DEVELOPMENT.md`, `AI_DEVELOPMENT_GUIDE.md`, `CLAUDE.md`,
+  `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`,
+  `THIRD_PARTY_LICENSES.md`, `LICENSE`.
+- Established the supporting documentation set under `docs/`: `PHASE-0.md`, `COMPATIBILITY.md`,
+  `INPUT_BACKENDS.md`, `CONFIGURATION_SCHEMA.md`.
+- Established the accepted decision records under `docs/adr/`:
+  - `ADR-001-json-first-config.md` — JSON-first configuration
+  - `ADR-002-input-backend-abstraction.md` — input backend abstraction
+  - `ADR-003-shizuku-optional.md` — Shizuku is optional
+  - `ADR-004-android-10-baseline.md` — Android 10 / API 29 baseline, phones only
+  - `ADR-005-gplv3.md` — GPLv3 for original project code
+- Recorded `ADR-INPUT-001.md` as pending, awaiting Phase 0 evidence.
+- Established contribution infrastructure under `.github/`: pull request template and issue
+  templates for bug reports, feature requests, and compatibility reports.
+- Designated `PROJECT_STRUCTURE.md` as canonical for folder organization, and corrected the
+  repository tree in `ARCHITECTURE.md` §4 to match it.
+- Defined a single decision-record naming convention in `CONTRIBUTING.md` §57.
+- Documented how the compatibility statuses, Phase-0 evidence grades, and claim-verification states
+  relate to one another in `docs/COMPATIBILITY.md` §4a.
+
 ---
 
 ## Versioning Policy

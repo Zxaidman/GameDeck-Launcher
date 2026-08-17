@@ -28,7 +28,7 @@ These documents answer different questions:
 - `ARCHITECTURE.md` — how the software is organized
 - `docs/PHASE-0.md` — the first major technical feasibility experiment
 
-GitHub specifically recommends contribution guidelines as a way to make expectations, issue reporting, pull requests, and project conventions clear to contributors. This file exists for that purpose. citeturn979184search0turn979184search1
+GitHub specifically recommends contribution guidelines as a way to make expectations, issue reporting, pull requests, and project conventions clear to contributors. This file exists for that purpose.
 
 ---
 
@@ -260,7 +260,7 @@ Revision if required
 Merge
 ```
 
-This follows the normal GitHub open-source workflow of using a fork/topic branch and submitting changes through a pull request. citeturn979184search1
+This follows the normal GitHub open-source workflow of using a fork/topic branch and submitting changes through a pull request.
 
 ---
 
@@ -669,7 +669,7 @@ A useful commit should answer:
 
 Keep unrelated changes in separate commits when practical.
 
-GitHub's open-source contribution guidance also recommends concise commit titles and keeping changes focused. citeturn979184search1
+GitHub's open-source contribution guidance also recommends concise commit titles and keeping changes focused.
 
 ---
 
@@ -925,7 +925,7 @@ Technical disagreement is allowed.
 
 Personal hostility is not.
 
-GitHub also recommends clear community expectations through contribution guidelines and related community-health files. citeturn979184search4turn979184search5
+GitHub also recommends clear community expectations through contribution guidelines and related community-health files.
 
 ---
 
@@ -1344,14 +1344,28 @@ Major technical decisions should use an ADR under:
 docs/adr/
 ```
 
-Example:
+The directory `docs/adr/` is the source of truth for which records exist. Check it directly rather
+than relying on a list quoted in another document.
+
+## Naming
+
+Default to a sequential number and a short topic:
 
 ```text
-ADR-001-json-first-config.md
-ADR-002-input-backend-abstraction.md
-ADR-003-shizuku-capability-model.md
-ADR-004-android-10-baseline.md
+ADR-NNN-topic.md
 ```
+
+Numbers are never reused and never renumbered, even if a record is later superseded. A superseded
+record stays in place with its status changed.
+
+A reserved prefix may be used instead when a decision is gated on an experiment or is scoped to a
+single domain, so that the record can be created before its number is known:
+
+```text
+ADR-INPUT-001.md   production input strategy, gated on Phase 0
+```
+
+Introduce a new prefix only when a domain genuinely needs one, and say so in the record itself.
 
 An ADR should explain:
 

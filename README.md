@@ -1335,6 +1335,28 @@ Recommended reading order:
 4. [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)
 5. [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
+The full set, and what each file is authoritative for:
+
+| Document | Authoritative for |
+| --- | --- |
+| [`README.md`](README.md) | Project overview, vision, status |
+| [`PRD.md`](PRD.md) | Product requirements, scope, non-goals, phases, MVP |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, boundaries, domain model, subsystem architecture |
+| [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) | Canonical folder organization and dependency rules |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Build/test workflow, testing levels, definition of done |
+| [`AI_DEVELOPMENT_GUIDE.md`](AI_DEVELOPMENT_GUIDE.md) | Rules for AI-assisted implementation |
+| [`CLAUDE.md`](CLAUDE.md) | Condensed operating brief for AI coding agents |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contributor workflow, style, commit/branch/PR/ADR conventions |
+| [`SECURITY.md`](SECURITY.md) | Security policy and threat boundaries |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Community conduct |
+| [`CHANGELOG.md`](CHANGELOG.md) | What has actually been established |
+| [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Dependency and license tracking |
+| [`docs/PHASE-0.md`](docs/PHASE-0.md) | Input feasibility spec: tests, evidence grades, acceptance criteria |
+| [`docs/INPUT_BACKENDS.md`](docs/INPUT_BACKENDS.md) | Input abstraction and backend categories |
+| [`docs/CONFIGURATION_SCHEMA.md`](docs/CONFIGURATION_SCHEMA.md) | JSON configuration model, versioning, validation |
+| [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | Device/application compatibility matrix and status definitions |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records — why each choice was made |
+
 ---
 
 # Building From Source

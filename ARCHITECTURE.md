@@ -162,7 +162,11 @@ Each feature must have a defined responsibility.
 
 ---
 
-# 4. Proposed Repository Structure
+# 4. Repository Structure
+
+`PROJECT_STRUCTURE.md` is the canonical source for folder organization. The tree below is reproduced
+here for architectural context only. If the two ever disagree, `PROJECT_STRUCTURE.md` wins and this
+section must be corrected.
 
 ```text
 GameDeck/
@@ -173,38 +177,40 @@ GameDeck/
 ├── core/
 │   ├── common/
 │   ├── model/
+│   ├── configuration/
 │   ├── input/
 │   ├── layout/
 │   ├── profile/
 │   ├── skin/
 │   ├── compatibility/
-│   ├── configuration/
 │   └── diagnostics/
 │
 ├── feature/
 │   ├── launcher/
 │   ├── gaming-session/
 │   ├── controller-editor/
-│   ├── settings/
 │   ├── skins/
+│   ├── settings/
 │   └── community/
 │
 ├── platform/
 │   ├── android/
-│   ├── overlay/
+│   ├── display/
 │   ├── foreground-app/
-│   └── display/
-│
-├── input/
-│   ├── api/
-│   ├── gamepad/
+│   ├── overlay/
 │   ├── shizuku/
-│   └── fallback/
+│   └── input/
+│       ├── gamepad/
+│       ├── shizuku/
+│       └── fallback/
 │
 ├── data/
 │   ├── builtin/
+│   ├── schema/
 │   ├── migrations/
-│   └── repositories/
+│   └── compatibility/
+│
+├── community/
 │
 ├── docs/
 │
@@ -217,6 +223,10 @@ GameDeck/
     ├── ISSUE_TEMPLATE/
     └── PULL_REQUEST_TEMPLATE.md
 ```
+
+Input implementations live under `platform/input/` because they are Android-specific. The
+platform-independent input contract (`InputBackend`, controller semantics, analog processing) lives in
+`core/input/`. See `PROJECT_STRUCTURE.md` §9 and §21.
 
 This is an initial logical structure. The exact Gradle modules may be simplified during Phase 1 if the module boundaries create unnecessary build complexity.
 
@@ -1069,15 +1079,22 @@ Every significant architecture choice should be recorded under:
 docs/adr/
 ```
 
-Example:
+The records that currently exist:
 
 ```text
-ADR-001-json-first-config.md
-ADR-002-input-backend-abstraction.md
-ADR-003-shizuku-is-optional.md
-ADR-004-gplv3.md
-ADR-005-android-10-minimum.md
+ADR-001-json-first-config.md          Accepted
+ADR-002-input-backend-abstraction.md  Accepted
+ADR-003-shizuku-optional.md           Accepted
+ADR-004-android-10-baseline.md        Accepted
+ADR-005-gplv3.md                      Accepted
+ADR-INPUT-001.md                      Pending Phase 0
 ```
+
+The directory `docs/adr/` is the source of truth for which records exist. Verify against it before
+citing a record by name; do not trust a list reproduced in prose, including this one.
+
+Naming follows `CONTRIBUTING.md` §57: sequential `ADR-NNN-topic.md` by default, with a reserved
+prefix only where a decision is gated on an experiment or scoped to one domain.
 
 A new contributor or AI agent should be able to determine why a decision was made.
 

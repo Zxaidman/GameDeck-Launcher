@@ -65,12 +65,21 @@ Verified test result
   ↓ AI assumption
 ```
 
-### Known documentation discrepancy
+### Single-source rules
 
-`ARCHITECTURE.md` §4 shows `input/` as a top-level module and lists ADR filenames that do not match
-the files in `docs/adr/`. `PROJECT_STRUCTURE.md` is canonical: input implementations live under
-`platform/input/{gamepad,shizuku,fallback}/`. Prefer `PROJECT_STRUCTURE.md` for placement questions
-and do not silently "fix" either document without saying so.
+Several lists used to be duplicated across documents and had drifted. One owner each, now:
+
+- **Folder placement** — `PROJECT_STRUCTURE.md` is canonical. `ARCHITECTURE.md` §4 reproduces the
+  tree for context and says so; if they ever disagree, the canonical document wins and the other is
+  corrected.
+- **Which decision records exist** — the directory `docs/adr/` itself. Never cite a record from a
+  list quoted in prose without checking the directory.
+- **Status vocabularies** — three exist for different purposes and are not interchangeable:
+  compatibility Status + Confidence (`docs/COMPATIBILITY.md` §3–§4), Phase-0 evidence Grades A–E
+  (`docs/PHASE-0.md` §28), and claim-verification states (`AI_DEVELOPMENT_GUIDE.md`). The mapping
+  between them is `docs/COMPATIBILITY.md` §4a. A Phase-0 grade never by itself sets a support status.
+
+When a document conflicts with its owner, fix the copy and say so — do not silently change the owner.
 
 ---
 
@@ -85,7 +94,10 @@ and do not silently "fix" either document without saying so.
 | ADR-005 | GPLv3 for original project code | Accepted |
 | ADR-INPUT-001 | Production input backend selection | **Pending Phase 0** |
 
-Significant new decisions require a new ADR in `docs/adr/`.
+Significant new decisions require a new ADR in `docs/adr/`. Naming (`CONTRIBUTING.md` §57):
+sequential `ADR-NNN-topic.md`, numbers never reused or renumbered; a reserved prefix
+(`ADR-INPUT-001.md`) only when a decision is gated on an experiment or scoped to one domain.
+Superseded records stay in place with their status changed.
 
 ---
 

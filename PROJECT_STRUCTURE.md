@@ -42,6 +42,7 @@ GameDeck/
 ├── ARCHITECTURE.md
 ├── DEVELOPMENT.md
 ├── AI_DEVELOPMENT_GUIDE.md
+├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
@@ -73,6 +74,7 @@ The repository root is intentionally kept for documents that every contributor o
 | `PROJECT_STRUCTURE.md`    | Canonical repository/folder organization            |
 | `DEVELOPMENT.md`          | Build, test, and development workflow               |
 | `AI_DEVELOPMENT_GUIDE.md` | Rules for AI-assisted implementation                |
+| `CLAUDE.md`               | Condensed operating brief for AI coding agents      |
 | `CONTRIBUTING.md`         | Contributor workflow and expectations               |
 | `SECURITY.md`             | Security policy                                     |
 | `CODE_OF_CONDUCT.md`      | Community conduct                                   |
@@ -482,6 +484,10 @@ platform/
 ├── shizuku/
 └── input/
 ```
+
+Two of these are large enough to get their own sections below: `platform/shizuku/` is §8 and
+`platform/input/` is §9. Section numbering in this document is flat, so those sections are still
+part of `platform/` despite their top-level numbers.
 
 ---
 
@@ -1011,6 +1017,7 @@ GameDeck/
 ├── ARCHITECTURE.md
 ├── DEVELOPMENT.md
 ├── AI_DEVELOPMENT_GUIDE.md
+├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
