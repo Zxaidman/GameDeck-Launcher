@@ -1,5 +1,8 @@
 # GameDeck Android — Input Backends
 
+**Document:** `docs/INPUT_BACKENDS.md`  
+**Status:** Active — backend selection pending Phase 0  
+
 ## Purpose
 
 This document defines how GameDeck abstracts controller input so the UI and gaming-session code do not depend on one Android injection mechanism.

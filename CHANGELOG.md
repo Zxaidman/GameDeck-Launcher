@@ -1,5 +1,8 @@
 # Changelog
 
+**Document:** `CHANGELOG.md`  
+**Status:** Active — records only what has actually been established  
+
 All notable changes to GameDeck Android will be documented in this file.
 
 The project is currently in an early architecture and feasibility stage, so this changelog intentionally documents only decisions and artifacts that have actually been established.
@@ -146,6 +149,34 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
   - repeatability
 - Defined the requirement to distinguish touch simulation, key-event injection, axis/event injection, and true virtual gamepad/HID identity.
 - Defined `ADR-INPUT-001` as the intended decision record for the production input strategy.
+
+### Build Foundation Established
+
+- Added a Gradle build: `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, and the
+  Gradle wrapper pinned to 8.14.3.
+- Added `gradle/libs.versions.toml` as the single declaration point for plugin and dependency
+  versions, per `DEVELOPMENT.md`.
+- Added two modules, keeping the module count small per `PROJECT_STRUCTURE.md` §24:
+  - `:app` — Android assembly layer, containing a manifest, a single activity, and a placeholder
+    screen. No feature, input, or configuration logic.
+  - `:core` — Kotlin/JVM module, so that the dependency rule in `PROJECT_STRUCTURE.md` §21 is
+    enforced by the compiler: Compose, Android UI, and Shizuku cannot resolve there.
+- Added `core/common/Outcome.kt` — the typed success/failure result that domain code returns instead
+  of throwing for expected failures, as required by `docs/CONFIGURATION_SCHEMA.md`.
+- Pinned Android 10 / API 29 as `minSdk`, per ADR-004.
+
+Verified:
+
+- `./gradlew :core:test` — 9 tests, all passing, on JDK 21 with Gradle 8.14.3.
+- The Gradle wrapper was generated and executed successfully.
+
+Not verified:
+
+- `./gradlew :app:assembleDebug` has never been run. The environment used to create the module has
+  no Android SDK, so the Android side has not been compiled, packaged, linted, or run on a device.
+- The AndroidX, Compose, and AGP versions are real published artifacts but have not been resolved
+  by a Gradle sync. `compileSdk` and `targetSdk` in particular need confirming on first sync.
+- No layout, skin, profile, input backend, overlay, or session behaviour exists.
 
 ### Documentation Artifacts Established
 
@@ -320,11 +351,16 @@ A failed experiment can still be valuable documentation.
 
 ## Links
 
-Version comparison links can be added after the GitHub repository URL and first release are known.
-
-Example:
+Version comparison links are added once the first release exists. Until then only the repository
+link below is meaningful, because there is no tag to compare against.
 
 ```text
-[Unreleased]: https://github.com/<OWNER>/<REPOSITORY>/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/<OWNER>/<REPOSITORY>/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Zxaidman/GameDeck-Launcher/commits/main
+```
+
+After the first release, the pattern becomes:
+
+```text
+[Unreleased]: https://github.com/Zxaidman/GameDeck-Launcher/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Zxaidman/GameDeck-Launcher/releases/tag/v0.1.0
 ```

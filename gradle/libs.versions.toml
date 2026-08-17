@@ -1,0 +1,55 @@
+# Version catalog — the single place where dependency versions are declared.
+#
+# DEVELOPMENT.md states that exact versions are pinned once the initial build exists.
+# This file is that pin. Every version below was confirmed to be a real published
+# artifact, but only the JVM-side pins have been resolved and compiled so far; the
+# Android-side pins require one Gradle sync on a machine with the SDK installed.
+# See CHANGELOG.md for what has and has not been verified.
+
+[versions]
+# Build toolchain
+agp = "8.13.2"
+kotlin = "2.2.21"
+jvmTarget = "17"
+
+# Android platform levels. minSdk is fixed by ADR-004 (Android 10 / API 29).
+compileSdk = "36"
+targetSdk = "36"
+minSdk = "29"
+
+# AndroidX / Compose
+composeBom = "2026.05.01"
+coreKtx = "1.17.0"
+activityCompose = "1.12.4"
+lifecycleRuntimeKtx = "2.9.4"
+
+# Testing.
+# Held on the JUnit 5 line deliberately: JUnit 6 requires junit-platform-launcher 2.x, which
+# conflicts with the launcher Gradle 8.14.3 injects into the test worker. Moving to JUnit 6 means
+# upgrading Gradle first.
+junitJupiter = "5.14.4"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# Compose versions come from the BOM, so the individual artifacts carry no version.
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+
+# The BOM aligns the Jupiter engine with the platform launcher. The launcher must be declared
+# explicitly: Gradle otherwise injects its own older one, which fails to run a newer engine.
+junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitJupiter" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

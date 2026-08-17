@@ -1,5 +1,8 @@
 # Security Policy
 
+**Document:** `SECURITY.md`  
+**Status:** Active — security policy and threat boundaries  
+
 ## GameDeck Android
 
 GameDeck is an open-source Android gaming project intended to provide a unified gaming launcher, virtual controller, game profiles, skins, and configuration system for Android phones.

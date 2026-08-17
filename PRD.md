@@ -1,12 +1,12 @@
 # GameDeck Android — Product Requirements Document v1.0
 
-**Document: `PRD.md`**\
-**Project status:** Product definition / architecture phase\
-**Target platform:** Android phones\
-**Minimum Android version:** Android 10 / API 29\
-**Technology:** Native Kotlin + Jetpack Compose\
-**License:** GPLv3\
-**Primary distribution model:** Open source, initially personal-use focused\
+**Document: `PRD.md`**  
+**Project status:** Product definition / architecture phase  
+**Target platform:** Android phones  
+**Minimum Android version:** Android 10 / API 29  
+**Technology:** Native Kotlin + Jetpack Compose  
+**License:** GPLv3  
+**Primary distribution model:** Open source, initially personal-use focused  
 **Primary development method:** AI-assisted development with human product direction and testing
 
 ---

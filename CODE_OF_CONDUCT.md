@@ -1,5 +1,8 @@
 # Code of Conduct
 
+**Document:** `CODE_OF_CONDUCT.md`  
+**Status:** Active — community conduct  
+
 ## GameDeck Android Community Code of Conduct
 
 GameDeck is an open-source project built to create a better gaming experience for Android users.

@@ -1,5 +1,8 @@
 # Third-Party Licenses
 
+**Document:** `THIRD_PARTY_LICENSES.md`  
+**Status:** Active — versions pending first dependency resolution  
+
 ## Purpose
 
 GameDeck Android is licensed under GNU GPLv3, but the project may depend on third-party libraries, frameworks, tools, and services with their own licenses.

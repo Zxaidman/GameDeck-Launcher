@@ -1,5 +1,8 @@
 # Contributing to GameDeck Android
 
+**Document:** `CONTRIBUTING.md`  
+**Status:** Active — contributor workflow and conventions  
+
 Thank you for considering contributing to GameDeck Android.
 
 GameDeck is an open-source project built around a simple idea:
@@ -14,19 +17,16 @@ This document explains how the project is developed, what contributors can expec
 
 ## 1. Start Here
 
-Before contributing, please read:
+Before contributing, work through the canonical reading order in
+[`README.md`](README.md#project-documentation). At minimum, read the first five entries:
 
-1. [`README.md`](README.md)
-2. [`PRD.md`](PRD.md)
-3. [`ARCHITECTURE.md`](ARCHITECTURE.md)
-4. [`docs/PHASE-0.md`](docs/PHASE-0.md)
+1. [`README.md`](README.md) — what GameDeck is and why it exists
+2. [`PRD.md`](PRD.md) — what the product is supposed to do
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the software is organized
+4. [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — where code belongs
+5. [`docs/PHASE-0.md`](docs/PHASE-0.md) — the first major technical feasibility experiment
 
-These documents answer different questions:
-
-- `README.md` — what GameDeck is and why it exists
-- `PRD.md` — what the product is supposed to do
-- `ARCHITECTURE.md` — how the software is organized
-- `docs/PHASE-0.md` — the first major technical feasibility experiment
+That order is maintained in `README.md` only. Do not add a competing list here.
 
 GitHub specifically recommends contribution guidelines as a way to make expectations, issue reporting, pull requests, and project conventions clear to contributors. This file exists for that purpose.
 

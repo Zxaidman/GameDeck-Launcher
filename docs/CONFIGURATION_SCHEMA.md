@@ -1,5 +1,8 @@
 # GameDeck Android — Configuration Schema
 
+**Document:** `docs/CONFIGURATION_SCHEMA.md`  
+**Status:** Active — schema version 1, no implementation yet  
+
 ## Purpose
 
 GameDeck is JSON-first. Configuration should be portable, inspectable, versioned, exportable, migration-friendly, safe to import, and independent of UI code or a specific input backend.

@@ -1,20 +1,40 @@
 # GameDeck Android — Development Guide
 
+**Document:** `DEVELOPMENT.md`  
+**Status:** Active — build and test workflow  
+
 ## Purpose
 
 This guide explains how to build, test, and work on GameDeck. It is intentionally practical for both human contributors and AI coding agents.
 
 ## Tooling
 
-The project is intended to use:
+The project uses:
 
 - Android Studio
 - Android SDK
-- JDK compatible with the repository Gradle/Android Gradle Plugin version
+- JDK 17 or newer (the build targets Java 17 bytecode; no exact JDK is provisioned, so any
+  supported JDK from 17 upwards works)
 - Git
 - a physical Android 10+ phone for Android-specific testing
 
-Exact versions should be pinned when the initial build is established.
+Versions are pinned in `gradle/libs.versions.toml`. That file is the only place a dependency or
+plugin version is declared — do not hardcode one in a module build script.
+
+## Commands
+
+```text
+./gradlew :core:test          run the JVM domain tests (no SDK required)
+./gradlew :app:assembleDebug  build the debug APK (requires the Android SDK)
+./gradlew build               everything
+```
+
+`:app` needs a configured SDK. Without one, Gradle reports `SDK location not found` and asks for
+`ANDROID_HOME` or `sdk.dir` in `local.properties`. `local.properties` is machine-specific and is
+not committed.
+
+A container or CI runner without the SDK can still run `:core:test`. Do not report a green
+`:core:test` as evidence that the Android side builds.
 
 ## Initial setup
 

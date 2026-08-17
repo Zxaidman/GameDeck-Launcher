@@ -1,5 +1,8 @@
 # GameDeck Android
 
+**Document:** `README.md`  
+**Status:** Project overview, vision, and status  
+
 > Turn the Android phone you already own into a game-focused handheld experience.
 
 GameDeck Android is an open-source, Android 10+ gaming launcher and virtual-controller project for people who want a unified way to play emulators, game-streaming clients, and cloud-gaming applications without needing a physical controller, telescopic controller, or a separate handheld device.
@@ -1327,13 +1330,20 @@ The goal is a useful gaming experience, not an impressive architecture diagram.
 
 # Project Documentation
 
-Recommended reading order:
+This is the canonical reading order for the project. Other documents refer to it rather than
+keeping their own copy:
 
-1. [`PRD.md`](PRD.md)
-2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
-3. [`docs/PHASE-0.md`](docs/PHASE-0.md)
-4. [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)
-5. [`CONTRIBUTING.md`](CONTRIBUTING.md)
+1. [`README.md`](README.md) — what the project is and why it exists
+2. [`PRD.md`](PRD.md) — what the product is supposed to do
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the software is organized
+4. [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — where code belongs
+5. [`docs/PHASE-0.md`](docs/PHASE-0.md) — the first feasibility experiment, and the current gate
+6. the relevant module documents under [`docs/`](docs/) and decision records under [`docs/adr/`](docs/adr/)
+7. [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) — what is actually known to work
+8. [`docs/CONFIGURATION_SCHEMA.md`](docs/CONFIGURATION_SCHEMA.md) — the JSON model
+
+Then [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request, and existing code and
+tests before changing them.
 
 The full set, and what each file is authoritative for:
 
@@ -1361,14 +1371,24 @@ The full set, and what each file is authoritative for:
 
 # Building From Source
 
-Build instructions will be expanded as the first working project is established.
+The repository now contains a Gradle build. It produces a launchable placeholder application only —
+Phase 0 is not complete, so there is no controller, input backend, overlay, or gaming session yet.
 
-Expected baseline:
+```bash
+git clone https://github.com/Zxaidman/GameDeck-Launcher.git
+cd GameDeck-Launcher
+./gradlew :core:test          # domain tests, no SDK required
+./gradlew :app:assembleDebug  # debug APK, requires the Android SDK
+```
+
+Baseline:
 
 - Android Studio
-- Android SDK
-- JDK version compatible with the project's Gradle/Android Gradle Plugin configuration
+- Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`)
+- JDK 17 or newer
 - Android 10+ test device recommended
+
+Dependency versions are pinned in `gradle/libs.versions.toml`.
 
 Do not assume the current branch is production-ready.
 

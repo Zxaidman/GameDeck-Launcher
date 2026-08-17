@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+**Document:** `CLAUDE.md`  
+**Status:** Active — condensed operating brief for AI coding agents  
+
 Guidance for Claude Code and other AI coding agents working in this repository.
 
 ---
@@ -10,21 +13,36 @@ Guidance for Claude Code and other AI coding agents working in this repository.
 environment. It aims to turn an ordinary phone into a handheld gaming device: one place to
 launch emulators/streaming clients, configure a virtual gamepad, pick a layout and skin, and play.
 
-**Current state: documentation and specification only. There is no source code yet.**
+**Current state: build foundation only. Phase 0 is not complete, and no product behaviour exists.**
 
-The repository contains no `app/`, `core/`, `feature/`, `platform/`, or `data/` directories, no
-Gradle files, no wrapper, no CI workflows. Consequences for any agent working here:
+What exists:
 
-- There is **nothing to build, run, lint, or test**. Do not invent `./gradlew` commands or claim
-  they were run.
-- The only meaningful verification available today is reading, cross-checking, and editing Markdown.
-- If asked to implement code, the first deliverable is usually the missing build foundation
-  (`settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `app/`), and that decision should follow
-  `PROJECT_STRUCTURE.md` §24 and §26 — start small, do not scaffold every directory.
+- A Gradle build: `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, the wrapper, and
+  `gradle/libs.versions.toml` as the single place versions are declared.
+- Two modules. `:app` is the assembly layer — manifest, one activity, a placeholder screen, nothing
+  else. `:core` is plain Kotlin/JVM and currently holds only `core/common/Outcome.kt`.
+- No `feature/`, `platform/`, or `data/` modules, no CI workflows, no input backend, no overlay, no
+  session, no configuration implementation.
 
-Planned stack (per `ARCHITECTURE.md`): Kotlin, Jetpack Compose, min SDK 29 (Android 10), Gradle
-Kotlin DSL, GPLv3. Exact tool versions are deliberately unpinned until the first build exists
-(`DEVELOPMENT.md`).
+`:core` is a Kotlin/JVM module rather than an Android library **on purpose**. It makes the boundary
+in `PROJECT_STRUCTURE.md` §21 a compile error rather than a review comment: Compose, Android UI, and
+Shizuku cannot resolve there. Do not convert it to an Android module to make an import work — if a
+domain type needs an Android API, it belongs in `platform/`.
+
+What an agent can actually verify here:
+
+```bash
+./gradlew :core:test        # runs; JVM only, no SDK needed
+./gradlew :app:assembleDebug   # needs the Android SDK — fails without it
+```
+
+The SDK is usually absent in a container, so `:app` cannot be built or tested there. That is a
+missing prerequisite, not a broken build — say which of the two you actually observed, and never
+report an assembly as passing when only `:core` ran.
+
+Stack, now pinned in `gradle/libs.versions.toml`: Kotlin, Jetpack Compose, AGP, min SDK 29
+(Android 10, fixed by ADR-004), Gradle Kotlin DSL, GPLv3. The Android-side dependency versions have
+not yet been resolved by a real sync — see `CHANGELOG.md` for what is verified and what is not.
 
 ---
 

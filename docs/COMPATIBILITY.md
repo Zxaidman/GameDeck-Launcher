@@ -1,5 +1,8 @@
 # GameDeck Android Compatibility
 
+**Document:** `docs/COMPATIBILITY.md`  
+**Status:** Active — populated as device evidence is produced  
+
 This document records what GameDeck actually supports on real devices and target applications.
 
 It is intended to answer a simple question:

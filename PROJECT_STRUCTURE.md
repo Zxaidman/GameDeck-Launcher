@@ -1,5 +1,8 @@
 # GameDeck Android — Project Structure
 
+**Document:** `PROJECT_STRUCTURE.md`  
+**Status:** Canonical — folder organization and dependency rules  
+
 ## Purpose
 
 This document is the canonical initial folder architecture for the GameDeck repository.
