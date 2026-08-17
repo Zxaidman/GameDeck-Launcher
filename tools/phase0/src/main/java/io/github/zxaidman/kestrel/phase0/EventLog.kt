@@ -1,5 +1,6 @@
 package io.github.zxaidman.kestrel.phase0
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -22,16 +23,21 @@ object EventLog {
 
     val entries = mutableStateListOf<String>()
 
-    var counter: Int = 0
-        private set
+    // Snapshot-backed, not a plain Int. A plain var is invisible to composition, so the on-screen
+    // count silently stopped matching the log — it only appeared to update when something else
+    // happened to recompose.
+    private val counterState = mutableIntStateOf(0)
+
+    val counter: Int
+        get() = counterState.intValue
 
     fun clear() {
         entries.clear()
-        counter = 0
+        counterState.intValue = 0
     }
 
     private fun add(line: String) {
-        counter += 1
+        counterState.intValue += 1
         while (entries.size >= MAX_ENTRIES) {
             entries.removeAt(entries.size - 1)
         }

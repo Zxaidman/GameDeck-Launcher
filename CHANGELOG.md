@@ -174,11 +174,71 @@ Verified, with the Android SDK installed:
   BOM 2026.05.01 and `compileSdk`/`targetSdk` 36 are confirmed mutually compatible.
 - `app-debug.apk` builds with identity `io.github.zxaidman.kestrel`, label Kestrel.
 
+Confirmed on hardware afterwards:
+
+- Both APKs install and launch on a Redmi Note 13 5G running HyperOS 3.0.3, side by side, with no
+  security warning shown during installation.
+
 Not verified:
 
-- Neither APK has been installed on a physical device or launched. Nothing about runtime behaviour,
-  rendering, or OEM firmware interaction is known.
 - No layout, skin, profile, input backend, overlay, or session behaviour exists.
+
+### Phase 0 — Tier 0 Executed on Hardware
+
+First real device evidence. See `docs/phase0/results/tier0-report.md` and the raw export beside it.
+
+- Ran the harness on a Redmi Note 13 5G (Dimensity 6080, Android 15 / API 35, HyperOS 3.0.3).
+- Recorded the baseline input inventory: eight devices, none of them a usable controller, as
+  expected with nothing attached.
+- Found that two devices on this stock unrooted phone are created through the kernel virtual-input
+  facility by vendor components. This is the first evidence bearing on the highest-value tier: the
+  mechanism exists and is in use on this hardware. It does not establish that an ordinary
+  application or a shell-privileged process can reach it.
+- Found that one of those devices advertises the gamepad source while advertising zero gamepad
+  buttons and zero axes. A capability check based on source flags alone would report a controller
+  present on this phone. This is why capability must be read from advertised keys and axes, and the
+  harness records all three.
+- Confirmed the volume keys originate from two separate hardware devices, so a backend must not
+  assume one device covers a logical group of controls.
+- Test 13 has a partial result: the harness survives backgrounding and re-registers its listener.
+
+Not verified:
+
+- No injection tier has been attempted. No evidence grade applies, since a grade describes a
+  mechanism and no mechanism has been exercised. `ADR-INPUT-001` remains Pending.
+- No physical controller has been attached, so there is no calibration reference for what a genuine
+  controller looks like on this device.
+
+### Fixed After First Device Run
+
+- The on-screen event counter was a plain integer, invisible to composition, so it stopped matching
+  the log it was counting. It is now snapshot-backed.
+- Neither screen applied window insets, so content drew underneath the status bar on Android 15,
+  which draws edge to edge by default at this target level. Both now inset for system bars.
+
+### Product Identity
+
+- Added an adaptive launcher icon to both applications: a double-chevron mark reading as swept wings
+  and ascent, drawn as vector art so it stays sharp at every density with no bitmap assets.
+- Earlier illustrative attempts at a falcon silhouette were rendered and inspected before being
+  rejected: at icon size they read as an aircraft or an insect. The geometric mark survives being
+  reduced to 48dp, which is the size that actually matters.
+- The harness carries the same mark in neutral steel rather than the product's colours, so the
+  experimental build is never mistaken for the product on a home screen.
+
+### Continuous Builds
+
+- Added `.github/workflows/build.yml`. Every push and pull request compiles, lints, tests, and
+  attaches both APKs as downloadable artifacts; a tag beginning with `v` additionally publishes a
+  release with both APKs attached, giving a link that can be opened directly on a phone.
+- This removes the need for a local toolchain to obtain an installable build.
+- Both APKs are debug-signed. Release signing requires a keystore in repository secrets and is
+  deliberately not set up; a debug-signed build must not be treated as distributable.
+
+Not verified:
+
+- The workflow has never executed. It cannot be run from the environment it was written in, so its
+  first run on GitHub is its first real test.
 
 ### Phase 0 Harness Established
 

@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -126,7 +129,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun exportReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.1")
+        report.put("harnessVersion", "phase0-0.0.2")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -173,7 +176,14 @@ private fun HarnessScreen(
     var tab by remember { mutableStateOf(TAB_DEVICES) }
     var status by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+    // Android 15 draws edge to edge by default at this target level, so content sits under the
+    // status and navigation bars unless it is inset explicitly.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(12.dp)
+    ) {
         Text(
             text = "Kestrel Phase 0 — observation only",
             style = MaterialTheme.typography.titleMedium,
