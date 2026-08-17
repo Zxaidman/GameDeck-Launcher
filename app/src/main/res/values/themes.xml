@@ -4,5 +4,5 @@
       Compose supplies the application's own theming. This platform theme exists only so the
       window has sensible defaults before the first frame is composed.
     -->
-    <style name="Theme.GameDeck" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Kestrel" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

@@ -1,11 +1,11 @@
-# GameDeck Android — Project Structure
+# Kestrel — Project Structure
 
 **Document:** `PROJECT_STRUCTURE.md`  
 **Status:** Canonical — folder organization and dependency rules  
 
 ## Purpose
 
-This document is the canonical initial folder architecture for the GameDeck repository.
+This document is the canonical initial folder architecture for the Kestrel repository.
 
 It exists so that:
 
@@ -25,7 +25,7 @@ Directories should be created when the corresponding implementation begins.
 # 1. Top-Level Structure
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 ├── core/
@@ -98,6 +98,10 @@ docs/
 ├── COMPATIBILITY.md
 ├── INPUT_BACKENDS.md
 ├── CONFIGURATION_SCHEMA.md
+│
+├── phase0/
+│   ├── README.md
+│   └── results/
 │
 ├── adr/
 │   ├── ADR-001-json-first-config.md
@@ -354,7 +358,7 @@ CompatibilityReport
 
 # 6. `feature/`
 
-`feature/` contains user-facing GameDeck functionality.
+`feature/` contains user-facing Kestrel functionality.
 
 ```text
 feature/
@@ -560,7 +564,7 @@ Responsibilities:
 - expose capabilities
 - perform narrowly scoped privileged operations
 
-Do not put unrelated GameDeck business logic here.
+Do not put unrelated Kestrel business logic here.
 
 ---
 
@@ -634,7 +638,7 @@ data/
 
 # 11. Built-In Content
 
-`data/builtin/` contains official GameDeck defaults.
+`data/builtin/` contains official Kestrel defaults.
 
 Examples:
 
@@ -688,7 +692,7 @@ Only create a migration when an actual schema version requires one.
 
 # 14. `data/compatibility/`
 
-Packaged, reviewed compatibility data that GameDeck ships with.
+Packaged, reviewed compatibility data that Kestrel ships with.
 
 This is distinct from:
 
@@ -1007,7 +1011,7 @@ Do not create every directory shown in this document as an empty folder.
 A recommended initial implementation might contain only:
 
 ```text
-GameDeck/
+Kestrel/
 ├── app/
 ├── core/
 ├── feature/
@@ -1065,7 +1069,7 @@ When Phase 0 completes, the accepted production input approach should be moved b
 The structure should make this conceptual separation obvious:
 
 ```text
-WHAT IS GAMEDECK?
+WHAT IS KESTREL?
         ↓
 core/
 

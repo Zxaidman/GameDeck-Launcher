@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-GameDeck needs a modern Android baseline while keeping initial device testing manageable.
+Kestrel needs a modern Android baseline while keeping initial device testing manageable.
 
 ## Decision
 

@@ -1,9 +1,9 @@
-# GameDeck Android Compatibility
+# Kestrel Compatibility
 
 **Document:** `docs/COMPATIBILITY.md`  
 **Status:** Active — populated as device evidence is produced  
 
-This document records what GameDeck actually supports on real devices and target applications.
+This document records what Kestrel actually supports on real devices and target applications.
 
 It is intended to answer a simple question:
 
@@ -23,14 +23,14 @@ Do not mark something as supported merely because:
 
 # 1. Purpose
 
-GameDeck operates at several layers of the Android platform:
+Kestrel operates at several layers of the Android platform:
 
 ```text
 Android version
       ↓
 OEM / device firmware
       ↓
-GameDeck
+Kestrel
       ↓
 Input backend
       ↓
@@ -53,7 +53,7 @@ classification.
 
 # 2. Compatibility Areas
 
-GameDeck compatibility is divided into:
+Kestrel compatibility is divided into:
 
 1. Android version
 2. Device / OEM
@@ -279,7 +279,7 @@ A compatibility entry should ideally include:
 - device model
 - Android version
 - security/firmware information when relevant
-- GameDeck version or Git commit
+- Kestrel version or Git commit
 - target application
 - target application version
 - input backend
@@ -299,7 +299,7 @@ Google Pixel 8
 Android:
 15
 
-GameDeck:
+Kestrel:
 commit abc123
 
 Target:
@@ -434,7 +434,7 @@ The exact final backend names should match `docs/INPUT_BACKENDS.md` once that do
 
 # 10. True Gamepad Requirement
 
-GameDeck distinguishes between several kinds of input.
+Kestrel distinguishes between several kinds of input.
 
 ## Level 1 — Touch simulation
 
@@ -513,7 +513,7 @@ Additional applications should be added as testing begins.
 
 # 12. Target Application Compatibility
 
-GameDeck initially targets gaming applications rather than arbitrary Android applications.
+Kestrel initially targets gaming applications rather than arbitrary Android applications.
 
 Application compatibility should include:
 
@@ -626,7 +626,7 @@ Streaming applications can behave differently from emulators because input may b
 Therefore testing should measure:
 
 ```text
-GameDeck
+Kestrel
    ↓
 Android target
    ↓
@@ -726,9 +726,9 @@ Track:
 - application-requested orientation
 - lifecycle behavior after rotation
 
-A target application's own orientation behavior may override GameDeck preferences.
+A target application's own orientation behavior may override Kestrel preferences.
 
-Do not claim orientation control merely because GameDeck itself rotates.
+Do not claim orientation control merely because Kestrel itself rotates.
 
 ---
 
@@ -862,7 +862,7 @@ Test:
 
 ### Shizuku unavailable
 
-GameDeck should clearly indicate unavailable capabilities.
+Kestrel should clearly indicate unavailable capabilities.
 
 ### Shizuku running
 
@@ -882,9 +882,9 @@ Test capabilities.
 
 ### Shizuku restarts
 
-Verify GameDeck detects capability changes.
+Verify Kestrel detects capability changes.
 
-### GameDeck restarts
+### Kestrel restarts
 
 Verify the application recovers.
 
@@ -901,7 +901,7 @@ Running / stopped
 Privilege:
 ADB / root
 
-GameDeck:
+Kestrel:
 version/commit
 
 Android:
@@ -971,7 +971,7 @@ A compatibility result should not be considered permanent.
 
 Important regression checkpoints:
 
-- new GameDeck release
+- new Kestrel release
 - major Android update
 - major OEM firmware update
 - major target-application update
@@ -1022,7 +1022,7 @@ Use this template:
 - Android:
 - API:
 - Firmware:
-- GameDeck:
+- Kestrel:
 - Commit:
 - Shizuku:
 - Privilege:
@@ -1086,7 +1086,7 @@ Evidence should not contain private user information.
 
 # 32. Compatibility Labels in the Application
 
-The eventual GameDeck UI may show labels such as:
+The eventual Kestrel UI may show labels such as:
 
 ```text
 ✓ Supported
@@ -1318,7 +1318,7 @@ The most important compatibility rule is:
 
 > **Do not confuse hope, theory, or a single successful experiment with support.**
 
-GameDeck should be known for telling users honestly:
+Kestrel should be known for telling users honestly:
 
 - what works
 - what partially works

@@ -1,4 +1,4 @@
-package io.github.zxaidman.gamedeck
+package io.github.zxaidman.kestrel
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

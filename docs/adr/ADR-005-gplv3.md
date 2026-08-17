@@ -6,11 +6,11 @@ Accepted
 
 ## Context
 
-GameDeck is intended to remain open source and community-oriented while allowing people to study, modify, and redistribute the software.
+Kestrel is intended to remain open source and community-oriented while allowing people to study, modify, and redistribute the software.
 
 ## Decision
 
-GameDeck's original project code is licensed under GNU GPLv3. The full license is provided in `LICENSE`.
+Kestrel's original project code is licensed under GNU GPLv3. The full license is provided in `LICENSE`.
 
 Third-party dependencies remain under their own licenses and must be tracked separately.
 

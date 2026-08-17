@@ -1,11 +1,11 @@
-# GameDeck Android — Input Backends
+# Kestrel — Input Backends
 
 **Document:** `docs/INPUT_BACKENDS.md`  
 **Status:** Active — backend selection pending Phase 0  
 
 ## Purpose
 
-This document defines how GameDeck abstracts controller input so the UI and gaming-session code do not depend on one Android injection mechanism.
+This document defines how Kestrel abstracts controller input so the UI and gaming-session code do not depend on one Android injection mechanism.
 
 The primary product goal is **gamepad-style input**. Touch/gesture simulation is a fallback, not the definition of gamepad support.
 
@@ -91,7 +91,7 @@ The runtime ordering is intentionally not finalized until Phase 0.
 
 ## Input semantics
 
-GameDeck internally uses controller semantics rather than Android-specific key codes.
+Kestrel internally uses controller semantics rather than Android-specific key codes.
 
 Examples:
 

@@ -9,7 +9,7 @@ Guidance for Claude Code and other AI coding agents working in this repository.
 
 ## 1. What this repository currently is
 
-**GameDeck Android** — an open-source Android 10+ gaming launcher and virtual-controller
+**Kestrel** — an open-source Android 10+ gaming launcher and virtual-controller
 environment. It aims to turn an ordinary phone into a handheld gaming device: one place to
 launch emulators/streaming clients, configure a virtual gamepad, pick a layout and skin, and play.
 
@@ -19,10 +19,17 @@ What exists:
 
 - A Gradle build: `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, the wrapper, and
   `gradle/libs.versions.toml` as the single place versions are declared.
-- Two modules. `:app` is the assembly layer — manifest, one activity, a placeholder screen, nothing
-  else. `:core` is plain Kotlin/JVM and currently holds only `core/common/Outcome.kt`.
+- Three modules. `:app` is the assembly layer — manifest, one activity, a placeholder screen,
+  nothing else. `:core` is plain Kotlin/JVM and currently holds only `core/common/Outcome.kt`.
+  `:tools:phase0` is the experimental feasibility harness.
 - No `feature/`, `platform/`, or `data/` modules, no CI workflows, no input backend, no overlay, no
   session, no configuration implementation.
+
+`:tools:phase0` is **not product code**. It is a measurement instrument with its own identifier and
+its own APK, it depends on neither `:app` nor `:core`, and it deliberately injects nothing — it only
+reports what Android delivers. Do not import from it, do not add it as a dependency, and do not
+promote anything out of it without first moving it behind `platform/input/`
+(`PROJECT_STRUCTURE.md` §27). Its procedure is `docs/phase0/README.md`.
 
 `:core` is a Kotlin/JVM module rather than an Android library **on purpose**. It makes the boundary
 in `PROJECT_STRUCTURE.md` §21 a compile error rather than a review comment: Compose, Android UI, and
@@ -201,7 +208,7 @@ modules are physically grouped.
 
 ### Display
 
-Never claim an external game was resized because GameDeck changed its own layout. Cross-app activity
+Never claim an external game was resized because Kestrel changed its own layout. Cross-app activity
 embedding is Android 13+ with trust/opt-in restrictions and must not be a dependency of the
 Android 10+ architecture.
 
@@ -250,7 +257,7 @@ insufficient, its license, Android compatibility, maintenance risk, and build im
 `THIRD_PARTY_LICENSES.md`.
 
 **Documentation upkeep:** device-specific results go to `docs/COMPATIBILITY.md` with device, Android
-version, firmware, GameDeck version/commit, target app, backend, result, and limitations. JSON
+version, firmware, Kestrel version/commit, target app, backend, result, and limitations. JSON
 changes update `docs/CONFIGURATION_SCHEMA.md`. Architecture changes update `ARCHITECTURE.md` and add
 an ADR. `CHANGELOG.md` records only what has actually been established.
 

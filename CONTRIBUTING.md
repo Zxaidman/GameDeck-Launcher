@@ -1,11 +1,11 @@
-# Contributing to GameDeck Android
+# Contributing to Kestrel
 
 **Document:** `CONTRIBUTING.md`  
 **Status:** Active — contributor workflow and conventions  
 
-Thank you for considering contributing to GameDeck Android.
+Thank you for considering contributing to Kestrel.
 
-GameDeck is an open-source project built around a simple idea:
+Kestrel is an open-source project built around a simple idea:
 
 > Give Android gaming enthusiasts a unified handheld-style gaming experience using the phone they already own, without requiring a physical controller or telescopic accessory.
 
@@ -20,7 +20,7 @@ This document explains how the project is developed, what contributors can expec
 Before contributing, work through the canonical reading order in
 [`README.md`](README.md#project-documentation). At minimum, read the first five entries:
 
-1. [`README.md`](README.md) — what GameDeck is and why it exists
+1. [`README.md`](README.md) — what Kestrel is and why it exists
 2. [`PRD.md`](PRD.md) — what the product is supposed to do
 3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the software is organized
 4. [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — where code belongs
@@ -34,7 +34,7 @@ GitHub specifically recommends contribution guidelines as a way to make expectat
 
 # 2. Project Context
 
-GameDeck is being developed by a project owner who has the product vision but does **not** have a formal professional background in Android software engineering.
+Kestrel is being developed by a project owner who has the product vision but does **not** have a formal professional background in Android software engineering.
 
 That is deliberately stated here because contributors should know who they are working with.
 
@@ -63,7 +63,7 @@ A contributor who identifies an AI-generated mistake is providing a valuable con
 
 # 3. Project Mission Comes First
 
-The purpose of GameDeck is not simply to accumulate features.
+The purpose of Kestrel is not simply to accumulate features.
 
 The core mission is:
 
@@ -85,7 +85,7 @@ A technically impressive feature that makes the product substantially harder to 
 
 # 4. Open Source and Project Purpose
 
-GameDeck is licensed under the GNU General Public License v3.0.
+Kestrel is licensed under the GNU General Public License v3.0.
 
 See [`LICENSE`](LICENSE).
 
@@ -108,13 +108,13 @@ The project's original purpose should not be assumed to be commercial simply bec
 
 # 5. Important GPLv3 Reality
 
-GameDeck uses GPLv3.
+Kestrel uses GPLv3.
 
 GPLv3 is a software freedom license and allows recipients to use, modify, and redistribute covered software under its terms.
 
 That means the project cannot honestly promise:
 
-> "Nobody will ever make money from GameDeck."
+> "Nobody will ever make money from Kestrel."
 
 The GPL permits redistribution, including commercial redistribution, as long as the license requirements are respected.
 
@@ -194,7 +194,7 @@ That should be respected.
 
 # 9. No Ownership Assumption
 
-GameDeck is currently maintained as an open-source project by its project owner.
+Kestrel is currently maintained as an open-source project by its project owner.
 
 Contributing code does not automatically make someone a project co-owner or maintainer.
 
@@ -216,7 +216,7 @@ Contributors should not assume that a successful project automatically has to be
 
 Likewise, the project owner should not force contributors to participate in commercial activities they did not agree to.
 
-If GameDeck ever introduces:
+If Kestrel ever introduces:
 
 - donations
 - sponsorships
@@ -280,7 +280,7 @@ Examples:
 - privileged Android API integration
 - major build-system change
 
-This is particularly important for GameDeck because AI-assisted implementation makes it easy to generate a large amount of code before discovering that the underlying architecture was wrong.
+This is particularly important for Kestrel because AI-assisted implementation makes it easy to generate a large amount of code before discovering that the underlying architecture was wrong.
 
 A short design discussion can prevent a large amount of wasted work.
 
@@ -366,7 +366,7 @@ The simplest design that satisfies the requirements is preferred.
 
 # 16. Android API Rules
 
-GameDeck is Android-specific software, so platform behavior matters.
+Kestrel is Android-specific software, so platform behavior matters.
 
 Before adding an Android API:
 
@@ -384,7 +384,7 @@ Never invent an Android API because an AI tool suggested it.
 
 # 17. Hidden APIs and Shizuku
 
-GameDeck may need system-level functionality that is not normally exposed to ordinary applications.
+Kestrel may need system-level functionality that is not normally exposed to ordinary applications.
 
 These experiments must be isolated.
 
@@ -447,7 +447,7 @@ When reporting a compatibility result, include:
 - manufacturer
 - device model
 - Android version
-- GameDeck commit/version
+- Kestrel commit/version
 - Shizuku state
 - relevant permissions
 - target application
@@ -502,7 +502,7 @@ Examples:
 
 # 21. Configuration and JSON
 
-GameDeck is intentionally JSON-first.
+Kestrel is intentionally JSON-first.
 
 New configuration types should:
 
@@ -569,9 +569,9 @@ Do not submit copyrighted artwork, trademarked assets, or third-party material u
 
 # 24. Licensing Your Contribution
 
-GameDeck is GPLv3.
+Kestrel is GPLv3.
 
-Unless an explicit project policy later states otherwise, by submitting code to GameDeck you are granting the project and recipients the rights to use your contribution under the project's GPLv3 licensing terms.
+Unless an explicit project policy later states otherwise, by submitting code to Kestrel you are granting the project and recipients the rights to use your contribution under the project's GPLv3 licensing terms.
 
 You do **not** automatically transfer your copyright ownership to the project owner simply by making a contribution.
 
@@ -977,7 +977,7 @@ Environment
 -----------
 Device:
 Android:
-GameDeck version/commit:
+Kestrel version/commit:
 Shizuku:
 Target application:
 Target version:
@@ -1110,7 +1110,7 @@ When contributing community content:
 
 # 47. No Vendor Lock-In
 
-Contributions should not unnecessarily force GameDeck to depend on:
+Contributions should not unnecessarily force Kestrel to depend on:
 
 - a proprietary cloud provider
 - a paid API
@@ -1152,9 +1152,9 @@ The project is not anti-commercial.
 
 The distinction is:
 
-> GameDeck's purpose is community-first, but GPLv3 software can be used commercially by others.
+> Kestrel's purpose is community-first, but GPLv3 software can be used commercially by others.
 
-A contributor who wants to build a commercial service around GameDeck should review the GPLv3 obligations independently and seek legal advice when appropriate.
+A contributor who wants to build a commercial service around Kestrel should review the GPLv3 obligations independently and seek legal advice when appropriate.
 
 ---
 
@@ -1400,7 +1400,7 @@ A feature is considered done when applicable:
 
 # 59. Final Principle
 
-GameDeck exists to solve a practical problem.
+Kestrel exists to solve a practical problem.
 
 Please optimize your contributions for:
 
@@ -1430,6 +1430,6 @@ A smaller feature that genuinely helps someone play a game is more valuable than
 
 # 60. Thank You
 
-Whether you contribute code, testing, research, documentation, layouts, skins, compatibility reports, or simply a carefully written bug report, your work can make GameDeck better for people who want a unified gaming experience from the Android hardware they already own.
+Whether you contribute code, testing, research, documentation, layouts, skins, compatibility reports, or simply a carefully written bug report, your work can make Kestrel better for people who want a unified gaming experience from the Android hardware they already own.
 
 Thank you for helping build it.

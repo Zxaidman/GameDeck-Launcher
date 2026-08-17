@@ -1,4 +1,4 @@
-package io.github.zxaidman.gamedeck.core.common
+package io.github.zxaidman.kestrel.core.common
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

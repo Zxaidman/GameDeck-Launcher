@@ -5,7 +5,7 @@
 
 ## Purpose
 
-GameDeck Android is licensed under GNU GPLv3, but the project may depend on third-party libraries, frameworks, tools, and services with their own licenses.
+Kestrel is licensed under GNU GPLv3, but the project may depend on third-party libraries, frameworks, tools, and services with their own licenses.
 
 This document is the repository-level index for those dependencies.
 
@@ -20,7 +20,7 @@ Before adding a dependency, contributors should verify:
 1. Exact dependency name.
 2. Exact version.
 3. License.
-4. Whether the license is compatible with the way GameDeck is distributed.
+4. Whether the license is compatible with the way Kestrel is distributed.
 5. Attribution/notice requirements.
 6. Whether the dependency introduces additional runtime dependencies.
 7. Whether it introduces unnecessary permissions, native code, telemetry, or other project risk.
@@ -66,11 +66,11 @@ https://github.com/RikkaApps/Shizuku
 
 Shizuku is expected to be an optional integration rather than a mandatory dependency.
 
-The project includes components under Apache License 2.0. The exact components and version used by GameDeck must be verified when the dependency is added.
+The project includes components under Apache License 2.0. The exact components and version used by Kestrel must be verified when the dependency is added.
 
-GameDeck must preserve applicable copyright and license notices.
+Kestrel must preserve applicable copyright and license notices.
 
-Do not copy large portions of Shizuku source into GameDeck merely for convenience. Prefer the documented dependency/API boundary.
+Do not copy large portions of Shizuku source into Kestrel merely for convenience. Prefer the documented dependency/API boundary.
 
 ---
 
@@ -78,7 +78,7 @@ Do not copy large portions of Shizuku source into GameDeck merely for convenienc
 
 AndroidX and Jetpack components are generally distributed under Apache License 2.0.
 
-The actual modules used by GameDeck should be recorded once the Gradle project exists.
+The actual modules used by Kestrel should be recorded once the Gradle project exists.
 
 Example future entries:
 
@@ -158,7 +158,7 @@ Do not include copyrighted controller artwork or third-party assets merely becau
 
 ## Community Content
 
-Community-created layouts and skins are not automatically GameDeck-owned.
+Community-created layouts and skins are not automatically Kestrel-owned.
 
 Community content should preserve its own:
 
@@ -167,13 +167,13 @@ Community content should preserve its own:
 - attribution
 - source where appropriate
 
-The application should not silently relicense third-party community content as GameDeck code.
+The application should not silently relicense third-party community content as Kestrel code.
 
 ---
 
 ## License Compatibility
 
-GameDeck's core project license is GPLv3.
+Kestrel's core project license is GPLv3.
 
 A third-party dependency being “open source” is not sufficient to establish compatibility.
 

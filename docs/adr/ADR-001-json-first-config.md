@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-GameDeck needs portable configuration for layouts, skins, profiles, controller definitions, aspect-ratio presets, and community content.
+Kestrel needs portable configuration for layouts, skins, profiles, controller definitions, aspect-ratio presets, and community content.
 
 ## Decision
 

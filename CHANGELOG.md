@@ -3,7 +3,7 @@
 **Document:** `CHANGELOG.md`  
 **Status:** Active — records only what has actually been established  
 
-All notable changes to GameDeck Android will be documented in this file.
+All notable changes to Kestrel will be documented in this file.
 
 The project is currently in an early architecture and feasibility stage, so this changelog intentionally documents only decisions and artifacts that have actually been established.
 
@@ -15,8 +15,8 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ### Project Definition
 
-- Established the GameDeck Android product vision.
-- Defined GameDeck as a gaming-focused Android launcher and virtual-controller environment.
+- Established the Kestrel product vision.
+- Defined Kestrel as a gaming-focused Android launcher and virtual-controller environment.
 - Defined Android phones running Android 10 or newer as the initial platform target.
 - Deferred tablet and foldable support until the phone experience is sufficiently stable.
 - Defined the initial application scope as:
@@ -178,9 +178,32 @@ Not verified:
   by a Gradle sync. `compileSdk` and `targetSdk` in particular need confirming on first sync.
 - No layout, skin, profile, input backend, overlay, or session behaviour exists.
 
+### Phase 0 Harness Established
+
+- Added `tools/phase0/` — the input feasibility harness, as its own application with its own
+  identifier (`io.github.zxaidman.kestrel.phase0`), no permissions, and no dependency on `:app` or
+  `:core`. Labelled experimental per `PROJECT_STRUCTURE.md` §27.
+- The harness observes only: it enumerates reported input devices, listens for device hot-plug, and
+  logs every key and motion event its window receives with the id and source of the originating
+  device. It injects nothing, so that a measured result cannot be produced by the instrument.
+- Added `docs/phase0/README.md` — the test procedure, structured as six tiers from baseline
+  inventory through to real target applications, with the OEM preparation steps the target device
+  requires.
+- Added `docs/phase0/results/` for exported evidence.
+
+Not verified:
+
+- The harness has never been compiled or run. It was written in an environment with no Android SDK.
+- No tier has been executed and no evidence has been recorded. `ADR-INPUT-001` remains Pending.
+
+### Rebranding
+
+- Renamed the project to Kestrel, for a distinctive mark.
+- Set the package identity to `io.github.zxaidman.kestrel`.
+
 ### Documentation Artifacts Established
 
-These files exist in the repository. No source code, build system, or CI configuration exists yet.
+These files exist in the repository.
 
 - Established the root documentation set: `README.md`, `PRD.md`, `ARCHITECTURE.md`,
   `PROJECT_STRUCTURE.md`, `DEVELOPMENT.md`, `AI_DEVELOPMENT_GUIDE.md`, `CLAUDE.md`,
@@ -331,7 +354,7 @@ Device/OEM-specific findings should also be recorded in compatibility documentat
 
 ## Development-Stage Notes
 
-GameDeck is currently an early-stage project.
+Kestrel is currently an early-stage project.
 
 The current goal is not to create a long changelog full of artificial version numbers.
 

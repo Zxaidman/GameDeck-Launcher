@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible problem in GameDeck
+about: Report a reproducible problem in Kestrel
 title: "[Bug] "
 labels: bug
 assignees: ""
@@ -8,7 +8,7 @@ assignees: ""
 
 ## Environment
 
-- GameDeck version/commit:
+- Kestrel version/commit:
 - Device manufacturer:
 - Device model:
 - Android/API:

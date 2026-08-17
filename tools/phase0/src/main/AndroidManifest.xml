@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      EXPERIMENTAL Phase 0 harness. Separate applicationId, separate APK, no permissions.
+      The harness observes input; it never injects. Injection candidates are driven from a shell.
+    -->
     <application
-        android:allowBackup="true"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:allowBackup="false"
+        android:icon="@android:drawable/ic_menu_info_details"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Kestrel">
+        android:theme="@style/Theme.KestrelPhase0">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".Phase0Activity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.Kestrel">
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

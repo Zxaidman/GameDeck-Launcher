@@ -1,4 +1,4 @@
-# GameDeck Android — Architecture
+# Kestrel — Architecture
 
 **Document:** `ARCHITECTURE.md`  
 **Status:** Initial architecture baseline  
@@ -12,7 +12,7 @@
 
 ## 1. Purpose
 
-This document defines how GameDeck should be structured internally.
+This document defines how Kestrel should be structured internally.
 
 It does not attempt to describe every Android implementation detail. Instead, it establishes stable boundaries so that:
 
@@ -31,7 +31,7 @@ The architecture MUST support the possibility that the best input mechanism chan
 
 ## 2.1 Capability over assumption
 
-GameDeck must ask:
+Kestrel must ask:
 
 > "What capabilities does this device currently provide?"
 
@@ -91,7 +91,7 @@ The UI communicates with `InputEngine`.
 
 ## 2.3 JSON-first
 
-GameDeck configuration should remain data-driven.
+Kestrel configuration should remain data-driven.
 
 The following should be JSON whenever practical:
 
@@ -130,7 +130,7 @@ No UI should expose direct modification of built-in configuration.
 
 ## 2.5 No giant subsystem
 
-Avoid creating one enormous `GameDeckManager`.
+Avoid creating one enormous `KestrelManager`.
 
 Each feature must have a defined responsibility.
 
@@ -139,7 +139,7 @@ Each feature must have a defined responsibility.
 # 3. High-Level System
 
 ```text
-                         GameDeck Application
+                         Kestrel Application
                                   │
           ┌───────────────────────┼───────────────────────┐
           │                       │                       │
@@ -169,7 +169,7 @@ here for architectural context only. If the two ever disagree, `PROJECT_STRUCTUR
 section must be corrected.
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 │   └── src/
@@ -375,7 +375,7 @@ This separation allows the same layout to use different visual styles.
 
 ## Profile
 
-A profile connects a target application to GameDeck behavior.
+A profile connects a target application to Kestrel behavior.
 
 ```text
 GamingProfile
@@ -549,7 +549,7 @@ The exact ordering will be determined by Phase 0.
 
 # 12. Real Gamepad Identity
 
-GameDeck's ultimate target is not merely:
+Kestrel's ultimate target is not merely:
 
 ```text
 "send a key event"
@@ -592,7 +592,7 @@ These are different capabilities.
 Shizuku is an optional platform adapter.
 
 ```text
-GameDeck process
+Kestrel process
        │
        ▼
 ShizukuCapabilityService
@@ -616,7 +616,7 @@ The UserService should be a narrow system-capability adapter.
 
 # 14. Shizuku Capability Detection
 
-GameDeck should expose something similar to:
+Kestrel should expose something similar to:
 
 ```kotlin
 data class PrivilegeState(
@@ -643,7 +643,7 @@ The application must not infer `ROOT` merely because Shizuku is installed.
 
 # 15. Fallback Input
 
-Touch mapping is a fallback capability, not the definition of GameDeck's controller system.
+Touch mapping is a fallback capability, not the definition of Kestrel's controller system.
 
 Android's AccessibilityService can dispatch gestures to the touchscreen, but that is still touchscreen interaction rather than a native virtual gamepad device.
 
@@ -797,7 +797,7 @@ The implementation must distinguish:
 
 ### UI composition
 
-What GameDeck can directly control in its own surface.
+What Kestrel can directly control in its own surface.
 
 ### External activity/window
 
@@ -807,7 +807,7 @@ What Android permits for the selected target application.
 
 What may require elevated privileges.
 
-GameDeck must never claim that an external game has been resized merely because GameDeck changed its own layout.
+Kestrel must never claim that an external game has been resized merely because Kestrel changed its own layout.
 
 ---
 
@@ -930,7 +930,7 @@ The engine must correctly handle:
 - Overlay disappearance
 - Application switching
 
-When a gaming session stops, GameDeck MUST release any active inputs.
+When a gaming session stops, Kestrel MUST release any active inputs.
 
 ---
 
@@ -1144,4 +1144,4 @@ not:
 Input implementation = finalized
 ```
 
-This keeps the remainder of GameDeck insulated from the main technical uncertainty.
+This keeps the remainder of Kestrel insulated from the main technical uncertainty.

@@ -1,11 +1,11 @@
-# GameDeck Android — AI Development Guide
+# Kestrel — AI Development Guide
 
 **Document:** `AI_DEVELOPMENT_GUIDE.md`  
 **Status:** Active — rules for AI-assisted implementation  
 
 ## Purpose
 
-AI coding tools are a major part of GameDeck development. This guide keeps fast code generation from becoming uncontrolled architecture drift.
+AI coding tools are a major part of Kestrel development. This guide keeps fast code generation from becoming uncontrolled architecture drift.
 
 The AI is a development assistant, not the source of truth.
 

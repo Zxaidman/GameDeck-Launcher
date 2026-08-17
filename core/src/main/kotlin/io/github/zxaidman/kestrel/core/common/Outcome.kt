@@ -1,4 +1,4 @@
-package io.github.zxaidman.gamedeck.core.common
+package io.github.zxaidman.kestrel.core.common
 
 /**
  * A failure that domain code can describe without throwing.

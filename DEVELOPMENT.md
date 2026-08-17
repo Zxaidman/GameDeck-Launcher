@@ -1,11 +1,11 @@
-# GameDeck Android — Development Guide
+# Kestrel — Development Guide
 
 **Document:** `DEVELOPMENT.md`  
 **Status:** Active — build and test workflow  
 
 ## Purpose
 
-This guide explains how to build, test, and work on GameDeck. It is intentionally practical for both human contributors and AI coding agents.
+This guide explains how to build, test, and work on Kestrel. It is intentionally practical for both human contributors and AI coding agents.
 
 ## Tooling
 
@@ -152,7 +152,7 @@ When modifying JSON:
 
 ## Compatibility work
 
-Every new device-specific result should update `docs/COMPATIBILITY.md` with device, Android version, firmware, GameDeck version/commit, target app, backend, result, and limitations.
+Every new device-specific result should update `docs/COMPATIBILITY.md` with device, Android version, firmware, Kestrel version/commit, target app, backend, result, and limitations.
 
 ## Pull request readiness
 

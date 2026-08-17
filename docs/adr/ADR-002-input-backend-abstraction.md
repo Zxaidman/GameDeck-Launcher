@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-GameDeck's most uncertain technical problem is delivering controller-style input on Android. Possible mechanisms include normal APIs, system-level access, Shizuku, root-assisted mechanisms, virtual devices, and touch fallback.
+Kestrel's most uncertain technical problem is delivering controller-style input on Android. Possible mechanisms include normal APIs, system-level access, Shizuku, root-assisted mechanisms, virtual devices, and touch fallback.
 
 ## Decision
 

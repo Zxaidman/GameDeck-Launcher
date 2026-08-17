@@ -20,7 +20,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GameDeck"
+rootProject.name = "Kestrel"
 
 // Gradle module count is kept deliberately small (PROJECT_STRUCTURE.md §24).
 //
@@ -33,3 +33,7 @@ rootProject.name = "GameDeck"
 // begins, per PROJECT_STRUCTURE.md §26.
 include(":app")
 include(":core")
+
+// EXPERIMENTAL — Phase 0 feasibility harness. Separate APK, not a dependency of :app.
+// Remove this module once Phase 0 concludes and ADR-INPUT-001 is decided.
+include(":tools:phase0")
