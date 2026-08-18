@@ -190,7 +190,8 @@ object ShizukuProbe {
     // Button and axis numbers below are Linux input-event constants, which are stable kernel ABI.
     // ---------------------------------------------------------------------------------------
 
-    private const val BUTTONS = "304, 305, 307, 308, 310, 311, 314, 315, 317, 318"
+    private const val BUTTONS =
+        "304, 305, 307, 308, 310, 311, 312, 313, 314, 315, 317, 318"
     private const val AXES = "0, 1, 2, 5, 9, 10, 16, 17"
 
     private fun absInfo(code: Int, min: Int, max: Int) =
@@ -237,6 +238,7 @@ object ShizukuProbe {
 
     private const val DESCRIPTOR_PATH = "/data/local/tmp/kestrel-uinput.json"
     private const val HELPER_LOG = "/data/local/tmp/kestrel-uinput.log"
+    private const val INJECT_PATH = "/data/local/tmp/kestrel-inject.json"
 
     /**
      * Starts the helper as a background process holding the device for 30 seconds.
@@ -268,14 +270,16 @@ object ShizukuProbe {
 
             Thread.sleep(1500)
 
-            // Exact name match. The previous check matched any command line containing the word,
-            // including the shell that was failing to run it, and so reported a false positive.
-            val alive = safeExec(bound, "pgrep -x uinput || echo NONE")
+            // Raw output, no derived claim. This check reported a false positive in one version
+            // (matching the shell that was failing to run the helper) and a false negative in the
+            // next (reporting NOT RUNNING while the device demonstrably lived its full 30 seconds).
+            // An instrument that asserts a conclusion its evidence does not support is worse than
+            // one that simply shows what it saw.
+            val alive = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
             val count = android.view.InputDevice.getDeviceIds().size
 
-            val running = alive.trim() != "NONE" && alive.isNotBlank()
-            EventLog.note("CREATE RESULT  [$label]: helper running=$running devices=$count")
+            EventLog.note("CREATE RESULT  [$label]: devices=$count, process lines=${alive.lines().size}")
 
             buildString {
                 appendLine("── virtual device attempt: $label")
@@ -283,17 +287,63 @@ object ShizukuProbe {
                 appendLine("starts with: ${valid.trim()}")
                 appendLine(started.trim())
                 appendLine()
-                appendLine("helper process (exact name match): ${alive.trim()}")
+                appendLine("processes matching uinput (raw):")
+                appendLine(if (alive.isBlank()) "  (none listed — the device may still exist; trust the Devices tab)" else alive)
                 appendLine("helper output: ${if (log.isBlank()) "(none — good, no error)" else log}")
                 appendLine("device count now: $count")
                 appendLine()
-                if (running) {
-                    appendLine("RUNNING. Open the Devices tab within 30 seconds and look for")
-                    appendLine("Kestrel Virtual Controller. Its full description is captured in the")
-                    appendLine("Events tab the moment it appears, and kept in the export.")
-                } else {
-                    appendLine("NOT RUNNING. The helper output above says why.")
-                }
+                appendLine("Open the Devices tab within 30 seconds and look for Kestrel Virtual")
+                appendLine("Controller. Its full description is captured in the Events tab the")
+                appendLine("moment it appears, and kept in the export whether or not it persists.")
+            }.trim()
+        }
+
+    /**
+     * Registers the device, then writes button presses to it.
+     *
+     * This is the last open question. The device exists and is classified as a controller; whether
+     * events written to it arrive attributed to *it*, rather than to the system virtual device, is
+     * the difference between a device that looks right and a controller that works.
+     *
+     * Event triples are (type, code, value) in Linux input terms: type 1 is a key, type 0 with
+     * code 0 is the synchronisation marker every report must end with. Stable kernel ABI, not
+     * values invented here.
+     */
+    fun createAndPress(context: Context, label: String, descriptor: String) =
+        withService(context, "Creating device and pressing A…") { bound ->
+            EventLog.note("CREATE+PRESS [$label] — register, then press BUTTON_A three times")
+
+            safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?")
+
+            val press = """{"id": 1, "command": "inject", "events": [1, 304, 1, 0, 0, 0]}"""
+            val release = """{"id": 1, "command": "inject", "events": [1, 304, 0, 0, 0, 0]}"""
+            val script = (1..3).joinToString("\n") { "$press\n$release" }
+            safeExec(bound, "printf '%s' '$script' > $INJECT_PATH; echo wrote=$?")
+
+            safeExec(bound, "rm -f $HELPER_LOG")
+            safeExec(
+                bound,
+                "( (cat $DESCRIPTOR_PATH; sleep 2; cat $INJECT_PATH; sleep 20) | uinput - ) " +
+                    "> $HELPER_LOG 2>&1 & echo launched"
+            )
+
+            // Registration, then the presses two seconds later.
+            Thread.sleep(4000)
+
+            val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
+            val procs = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
+
+            buildString {
+                appendLine("── create and press: $label")
+                appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
+                appendLine("processes matching uinput (raw):")
+                appendLine(if (procs.isBlank()) "  (none listed)" else procs)
+                appendLine()
+                appendLine("Now read the Events tab. What matters is the dev= on any BUTTON_A that")
+                appendLine("arrived. If it names the created device's id, the device is delivering")
+                appendLine("its own input and this is a complete result. If it says dev=-1, the")
+                appendLine("events came from the system device instead. If nothing arrived, the")
+                appendLine("inject format is wrong and the helper output above will say so.")
             }.trim()
         }
 

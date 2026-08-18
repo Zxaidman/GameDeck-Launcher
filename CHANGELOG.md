@@ -405,6 +405,48 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — A Created Controller Matches a Real One
+
+The Grade A prerequisite is met. See `docs/phase0/results/tier5-gradeA-report.md`.
+
+- A device created by Kestrel on a stock unrooted phone, with no computer attached, was compared
+  property by property against the physical controller recorded in the Tier 1 calibration on the
+  same phone. **Sources, raw source flags, controller number, external flag, gamepad
+  classification, axis count and the full axis list are identical.** The system assigned it
+  controller number 1 — the player slot it gives a real controller.
+- The only difference was two buttons, `BUTTON_L2` and `BUTTON_R2`, which the descriptor had simply
+  never declared. Now declared.
+- Reproduced across at least four creations, and it persisted for the full 30-second hold.
+- Device ids increment on each registration, which is correct: ids are per-registration handles,
+  never reused within a boot, and a physical controller replugged behaves the same way. Both
+  captured instances carry the same descriptor hash, and the device count returned to its baseline
+  after each removal, so nothing accumulated. **This settles a design rule: identity must be keyed
+  on the descriptor, never on the numeric id**, or per-controller settings would detach themselves
+  whenever a session restarted. It belongs in `core/input/`.
+
+Still not proven, and the reason this is not yet a pass:
+
+- **Nothing has been sent through the device.** It exists and is classified correctly; whether
+  events written to it arrive attributed to it rather than to the system virtual device is the
+  difference between a device that looks right and a controller that works.
+- No target application has been tested. Triggers, simultaneous input and repeatability are
+  untouched. `ADR-INPUT-001` remains Pending.
+
+### Phase 0 Harness — Stop Asserting What the Evidence Does Not Support
+
+- The helper liveness check reported `NOT RUNNING` while the device demonstrably existed for its
+  full thirty seconds. The same check had reported a false positive one version earlier. It is
+  replaced with raw process listing output and no derived claim.
+- Recorded as a principle, not just a fix: an instrument that asserts a conclusion its evidence does
+  not support is worse than one that shows what it saw. An operator can read raw output correctly;
+  nobody can recover the truth from a confident wrong summary. This harness exists precisely to not
+  do that.
+- Added an event-injection attempt through the created device, so the remaining question can be
+  answered: press a button on it and read which device the arriving event is attributed to.
+
+Verified: `./gradlew build` succeeds with lint clean.
+Not verified: the press test has not been run.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

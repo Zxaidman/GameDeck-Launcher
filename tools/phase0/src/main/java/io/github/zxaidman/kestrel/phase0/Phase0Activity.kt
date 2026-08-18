@@ -187,7 +187,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.8")
+        report.put("harnessVersion", "phase0-0.0.9")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -380,6 +380,17 @@ private fun ProbePanel() {
             ) {
                 Text("Create virtual controller — $label")
             }
+        }
+
+        Button(
+            onClick = {
+                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                ShizukuProbe.createAndPress(context, label, descriptor)
+            },
+            enabled = !ShizukuProbe.busy.value,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            Text("Create AND press A — the decisive test")
         }
 
         Row(
