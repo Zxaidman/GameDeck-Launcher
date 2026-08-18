@@ -27,6 +27,19 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets Share hand over the report as an actual .json file. The receiving application
+             gets a one-shot read grant for that single file; the provider is not exported, so
+             nothing can pull a file out of the harness without the harness offering it. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Required by the Shizuku library so it can hand the binder to this process. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

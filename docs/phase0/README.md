@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — a created device matches a real controller; event delivery through it untested  
+**Status:** Experimental — a created device delivers its own digital input; analog and target applications untested  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one
@@ -232,6 +232,10 @@ If it is present, the test is whether a virtual controller can be created such t
 2. it advertises `GAMEPAD`/`JOYSTICK` sources with real axes, and
 3. events from it arrive carrying that device's id.
 
+All three now hold on the reference device — see `docs/phase0/results/tier5-press-report.md`. That
+was one digital button. Analog axes, triggers, simultaneous input and repeatability are still open,
+and no target application has seen the device.
+
 Do not describe any result from this tier as a "true virtual gamepad" unless all three hold and a
 real target application also responds. That restriction is in `docs/INPUT_BACKENDS.md` and it is not
 negotiable.
@@ -253,7 +257,14 @@ Export from the harness after each tier — the export contains the device finge
 device inventory, and the event log, which together form the evidence record required by
 `docs/COMPATIBILITY.md` §5.
 
-Save exports as:
+Two ways to get an export into the repository. Either works:
+
+- **Push it directly** into `docs/phase0/results/inbox/` and say in one line what the run was. That
+  folder exists so evidence does not have to be re-uploaded through a chat window every time; read
+  its README for what happens to a file dropped there.
+- **Send it** using **Share**, which hands over the report as a `.json` file rather than as text.
+
+Exports are then renamed to:
 
 ```text
 docs/phase0/results/<tier>-<yyyymmdd>-redmi-note-13-5g.json

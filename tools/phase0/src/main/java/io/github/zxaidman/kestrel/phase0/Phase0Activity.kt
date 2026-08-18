@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.File
 import rikka.shizuku.Shizuku
 import org.json.JSONArray
 import org.json.JSONObject
@@ -187,7 +189,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.9")
+        report.put("harnessVersion", "phase0-0.0.10")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -216,21 +218,41 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         }
     }
 
+    /**
+     * Shares the report as an actual `.json` file.
+     *
+     * It used to share the report as text in the message body, which arrives as a wall of pasted
+     * characters that has to be copied back out into a file before anything can read it — and which
+     * some applications silently truncate. A file arrives as a file: it can be dropped straight into
+     * `docs/phase0/results/inbox/`.
+     *
+     * The file is written into a cache subdirectory that the provider in the manifest exposes, and
+     * the receiving application is granted read access to that one URI only.
+     */
     private fun shareReport() {
         try {
+            val directory = File(cacheDir, "reports").apply { mkdirs() }
+            // Old exports would otherwise accumulate in the cache unnoticed.
+            directory.listFiles()?.forEach { it.delete() }
+
+            val file = File(directory, "kestrel-phase0-${System.currentTimeMillis()}.json")
+            file.writeText(buildReport())
+
+            val uri = FileProvider.getUriForFile(this, "$packageName.reports", file)
             startActivity(
                 Intent.createChooser(
                     Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, "Phase 0 report")
-                        putExtra(Intent.EXTRA_TEXT, buildReport())
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_SUBJECT, file.name)
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     },
                     "Share Phase 0 report",
                 )
             )
-            ExportState.message.value = ""
+            ExportState.message.value = "Sharing ${file.name}"
         } catch (e: Exception) {
-            ExportState.message.value = "Share failed: ${e.javaClass.simpleName}"
+            ExportState.message.value = "Share failed: ${e.javaClass.simpleName}: ${e.message}"
         }
     }
 }

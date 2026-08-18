@@ -405,6 +405,57 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — A Created Controller Delivered Its Own Input
+
+The last open question at Tier 5 is answered. See `docs/phase0/results/tier5-press-report.md`.
+
+- A virtual controller created by Kestrel on a stock unrooted phone, with no computer attached, was
+  sent three `BUTTON_A` press/release pairs. **All six key events arrived at an ordinary
+  unprivileged window carrying `dev=17` — the id the platform had assigned to that device seconds
+  earlier — with `src=KEYBOARD|GAMEPAD` and `scan=304`, the exact key code the descriptor
+  declared.** The device is delivering its own input, not routing it through the system virtual
+  device.
+- All three unprivileged Tier 5 requirements now hold on this hardware: the device appears via
+  hot-plug, it advertises gamepad and joystick sources with ten real axes, and events from it carry
+  its own id.
+- `BUTTON_L2` and `BUTTON_R2` are present on the created device, confirming the earlier gap was a
+  descriptor omission and not a platform limit.
+- Axis ranges arrive **normalised** — sticks `-1…+1`, triggers `0…+1` — although the descriptor
+  declares raw kernel ranges. The platform performs that conversion itself.
+- Every `BUTTON_A` was accompanied by a `KEYCODE_DPAD_CENTER` on the same device id and scan code,
+  matching what Tier 1 recorded from a *physical* controller. Duplicate delivery is a platform
+  mapping, not an artifact of injection: the input layer must de-duplicate on
+  `(deviceId, scanCode)`.
+- The log also contains a `DPAD_CENTER` release with no preceding press. Button state tracking must
+  tolerate unmatched releases rather than assuming strict down-then-up ordering.
+
+Still not proven, and the reason this is still not a pass:
+
+- One button. No analog axis, trigger, D-pad or simultaneous input has been driven through the
+  created device.
+- No target application has seen it — Tier 6 is untouched, so `docs/INPUT_BACKENDS.md` still bars
+  the phrase "true virtual gamepad".
+- One device, one firmware, and delivery demonstrated once. Latency unmeasured. Shizuku required
+  throughout, so per ADR-003 this can only ever be the best backend, never the only one.
+- `ADR-INPUT-001` remains **Pending**. What has changed is the shape of the remaining work: it is
+  now extending a demonstrated mechanism rather than searching for one.
+
+### Phase 0 Harness — Share a File, and Report While Working
+
+- **Share now sends an actual `.json` file** through a non-exported `FileProvider`, rather than
+  pasting the report into a message body where it had to be copied back out and could be silently
+  truncated. The receiving application gets a read grant for that one file.
+- **Long-running actions report each step as it happens.** Results were previously assembled into
+  one string and shown only when the whole action finished, so the decisive create-and-press test
+  looked frozen: nothing appeared on screen until the device had already been created, pressed and
+  removed. Registration, press, and teardown now each report as they pass.
+- Added `docs/phase0/results/inbox/` as a drop-off point for raw exports, so evidence can be pushed
+  to the repository directly instead of re-uploaded through a chat window every run. It is a
+  staging area — files are renamed to the convention in `docs/phase0/README.md` §6 and moved out.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.10 has not been run on a device.
+
 ### Phase 0 — A Created Controller Matches a Real One
 
 The Grade A prerequisite is met. See `docs/phase0/results/tier5-gradeA-report.md`.

@@ -134,17 +134,29 @@ object ShizukuProbe {
 
     fun clearOutput() { output.value = "" }
 
+    /**
+     * Appends to the transcript immediately, from whichever thread is running the work.
+     *
+     * Results used to be assembled into one string and shown only when the whole action finished,
+     * so a test that holds a device for several seconds looked frozen: on device, nothing appeared
+     * until the device had already been created, pressed and removed — by which time the operator
+     * had no idea which part of it had worked. Each step now reports as it happens.
+     *
+     * Compose snapshot state is safe to write from a background thread, and the transcript is
+     * bounded so a long session cannot grow without limit.
+     */
+    private fun emit(text: String) {
+        val previous = output.value
+        output.value = (if (previous.isBlank()) text else "$previous\n$text").takeLast(20000)
+    }
+
     fun runProbes(context: Context) = withService(context, "Binding shell-privileged service…") { bound ->
-        buildString {
-            appendLine("Probe run — read-only. Nothing was injected or created.")
-            appendLine()
-            for ((label, command) in PROBES) {
-                appendLine("── $label")
-                appendLine("\$ $command")
-                appendLine(safeExec(bound, command))
-                appendLine()
-            }
-        }.trim()
+        emit("Probe run — read-only. Nothing was injected or created.")
+        for ((label, command) in PROBES) {
+            // Each result appears as it returns; some of these commands take a moment.
+            emit("\n── $label\n\$ $command\n${safeExec(bound, command).trim()}")
+        }
+        ""
     }
 
     /**
@@ -262,11 +274,16 @@ object ShizukuProbe {
             val size = safeExec(bound, "wc -c < $DESCRIPTOR_PATH")
             val valid = safeExec(bound, "head -c 60 $DESCRIPTOR_PATH")
 
+            emit("── virtual device attempt: $label")
+            emit("descriptor written: ${written.trim()}, bytes: ${size.trim()}")
+            emit("starts with: ${valid.trim()}")
+
             safeExec(bound, "rm -f $HELPER_LOG")
             val started = safeExec(
                 bound,
                 "( (cat $DESCRIPTOR_PATH; sleep 30) | uinput - ) > $HELPER_LOG 2>&1 & echo launched"
             )
+            emit("${started.trim()} — holding the device for 30 seconds, checking in 1.5s…")
 
             Thread.sleep(1500)
 
@@ -282,11 +299,6 @@ object ShizukuProbe {
             EventLog.note("CREATE RESULT  [$label]: devices=$count, process lines=${alive.lines().size}")
 
             buildString {
-                appendLine("── virtual device attempt: $label")
-                appendLine("descriptor written: ${written.trim()}, bytes: ${size.trim()}")
-                appendLine("starts with: ${valid.trim()}")
-                appendLine(started.trim())
-                appendLine()
                 appendLine("processes matching uinput (raw):")
                 appendLine(if (alive.isBlank()) "  (none listed — the device may still exist; trust the Devices tab)" else alive)
                 appendLine("helper output: ${if (log.isBlank()) "(none — good, no error)" else log}")
@@ -312,29 +324,38 @@ object ShizukuProbe {
     fun createAndPress(context: Context, label: String, descriptor: String) =
         withService(context, "Creating device and pressing A…") { bound ->
             EventLog.note("CREATE+PRESS [$label] — register, then press BUTTON_A three times")
+            emit("── create and press: $label")
 
-            safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?")
+            val wrote = safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?")
+            emit("descriptor: ${wrote.trim()}")
 
             val press = """{"id": 1, "command": "inject", "events": [1, 304, 1, 0, 0, 0]}"""
             val release = """{"id": 1, "command": "inject", "events": [1, 304, 0, 0, 0, 0]}"""
             val script = (1..3).joinToString("\n") { "$press\n$release" }
-            safeExec(bound, "printf '%s' '$script' > $INJECT_PATH; echo wrote=$?")
+            val wroteScript = safeExec(bound, "printf '%s' '$script' > $INJECT_PATH; echo wrote=$?")
+            emit("press script: ${wroteScript.trim()} (three press/release pairs)")
 
             safeExec(bound, "rm -f $HELPER_LOG")
-            safeExec(
+            val launched = safeExec(
                 bound,
                 "( (cat $DESCRIPTOR_PATH; sleep 2; cat $INJECT_PATH; sleep 20) | uinput - ) " +
                     "> $HELPER_LOG 2>&1 & echo launched"
             )
+            emit("${launched.trim()} — registering the device now")
 
-            // Registration, then the presses two seconds later.
-            Thread.sleep(4000)
+            // The helper waits two seconds after registration before writing the presses, so the
+            // device is enumerated and classified before anything is sent to it. Report each stage
+            // as it passes rather than going silent for the whole four seconds.
+            Thread.sleep(2000)
+            emit("registered — writing BUTTON_A presses now; watch the Events tab")
+
+            Thread.sleep(2000)
+            emit("presses sent — the device stays alive for about 20 more seconds")
 
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
             val procs = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
 
             buildString {
-                appendLine("── create and press: $label")
                 appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
                 appendLine("processes matching uinput (raw):")
                 appendLine(if (procs.isBlank()) "  (none listed)" else procs)
@@ -376,7 +397,7 @@ object ShizukuProbe {
     private fun withService(context: Context, pending: String, work: (IProbeService) -> String) {
         if (busy.value) return
         busy.value = true
-        if (output.value.isBlank()) output.value = pending
+        emit("\n$pending")
 
         val existing = service
         if (existing != null) {
@@ -420,12 +441,8 @@ object ShizukuProbe {
             } catch (e: Throwable) {
                 "Failed: ${e.javaClass.simpleName}: ${e.message}"
             }
-            val previous = output.value
-            output.value = if (previous.isBlank() || previous.endsWith("…")) {
-                result
-            } else {
-                (previous + "\n\n" + result).takeLast(20000)
-            }
+            // Work that reports progressively returns nothing more to add.
+            if (result.isNotBlank()) emit(result)
             busy.value = false
         }.start()
     }
