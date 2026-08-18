@@ -351,6 +351,39 @@ Verified: `./gradlew build` succeeds with lint clean.
 Not verified: no creation attempt has been run. Whether the helper accepts either schema, whether a
 device appears, and whether it carries controller semantics are all unknown.
 
+### Phase 0 — A Virtual Controller Was Created
+
+Milestone. See `docs/phase0/results/tier5-create-report.md`.
+
+- The `uinput` helper accepted the descriptor and **a device named Kestrel Virtual Controller was
+  registered with the input stack** on a stock unrooted phone, observed by an ordinary application
+  through the standard hot-plug callback. Repeated across two runs, ids 9 through 12. Both the
+  numeric and the named descriptor schema were accepted.
+- This is the prerequisite for a device identity, which the shell-injection path can never provide.
+- **It is not yet a pass.** The device was removed immediately in every case, well inside the window
+  it was meant to be held for, and nothing about it was captured: the hot-plug callback recorded
+  only its name, so its sources, axes and buttons — the properties that decide whether it is a
+  controller at all — were never read. A device that exists momentarily and is never characterised
+  is a strong signal, not evidence. `ADR-INPUT-001` remains Pending.
+- Established a design consequence regardless of the outcome: the device lives exactly as long as
+  the process holding its file descriptor. A production backend must own a long-lived process for
+  the duration of a session, since losing that process loses the controller mid-session. This
+  argues for a foreground service and must be reflected in `ARCHITECTURE.md` when the input backend
+  is designed.
+
+### Phase 0 Harness — Capture Devices as They Appear
+
+- Input devices are now described **inside the hot-plug callback**, at the instant they appear, and
+  the descriptions are kept in the export. This was the flaw that made the creation run inconclusive
+  rather than decisive: the device was seen to exist but never measured.
+- The helper is now started as a background process holding the device for 30 seconds, so it can be
+  inspected in the inventory, and its liveness is reported — which distinguishes "the helper exited"
+  from "the system rejected the device".
+- Added a destroy action so a virtual device is never left behind.
+
+Verified: `./gradlew build` succeeds with lint clean.
+Not verified: none of this has run on hardware.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

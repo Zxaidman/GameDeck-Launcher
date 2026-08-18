@@ -236,33 +236,50 @@ object ShizukuProbe {
     )
 
     /**
-     * Holds the device open for five seconds. While it exists the harness's hot-plug listener
-     * should log it appearing, and the Devices tab should show it — which is the only proof that
-     * matters, since a device that nothing can see has not been created in any useful sense.
+     * Starts the helper as a background process holding the device for 30 seconds.
+     *
+     * The device lives exactly as long as the process owning its file descriptor. Tying that to a
+     * single blocking command meant the device was gone before anything could inspect it. It also
+     * tells us something about the eventual implementation: a production backend must own a
+     * long-lived process for the whole session, because losing the process loses the controller.
      */
     fun createVirtualDevice(context: Context, label: String, descriptor: String) =
         withService(context, "Creating virtual device ($label)…") { bound ->
-            val before = android.view.InputDevice.getDeviceIds().size
-            EventLog.note("CREATE ATTEMPT [$label] — holding device open for 5s")
+            EventLog.note("CREATE ATTEMPT [$label] — background helper, 30s hold")
 
-            val command = "(echo '" + descriptor + "'; sleep 5) | uinput - 2>&1"
-            val result = safeExec(bound, command)
+            val command =
+                "nohup sh -c \"(echo '" + descriptor + "'; sleep 30) | uinput -\" " +
+                    "> /data/local/tmp/kestrel-uinput.log 2>&1 & echo started pid=\$!"
+            val started = safeExec(bound, command)
 
-            val after = android.view.InputDevice.getDeviceIds().size
-            EventLog.note("CREATE RESULT  [$label]: ${result.replace("\n", " ").take(160)}")
+            Thread.sleep(1500)
+            val alive = safeExec(bound, "pgrep -f 'uinput' | head -5")
+            val log = safeExec(bound, "cat /data/local/tmp/kestrel-uinput.log 2>&1 | head -20")
+            val count = android.view.InputDevice.getDeviceIds().size
+
+            EventLog.note("CREATE RESULT  [$label]: helper alive=${alive.isNotBlank()} devices=$count")
 
             buildString {
                 appendLine("── virtual device attempt: $label")
-                appendLine("device count before: $before, after: $after")
+                appendLine(started)
                 appendLine()
-                appendLine("helper output:")
-                appendLine(if (result.isBlank()) "(nothing)" else result)
+                appendLine("helper process after 1.5s: ${if (alive.isBlank()) "NOT RUNNING" else alive}")
+                appendLine("helper output: ${if (log.isBlank()) "(none)" else log}")
+                appendLine("device count now: $count")
                 appendLine()
-                appendLine("Check the Events tab for DEVICE ADDED, and the Devices tab during the")
-                appendLine("five seconds the device is held open. A rejection message here is a")
-                appendLine("result too: it states what the helper's schema actually requires.")
+                appendLine("If the helper is running, open the Devices tab within 30 seconds and")
+                appendLine("look for Kestrel Virtual Controller. Whatever appeared is described in")
+                appendLine("the Events tab and kept in the export even if it vanishes.")
             }.trim()
         }
+
+    /** Stops any helper, so a device is never left behind. */
+    fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
+        EventLog.note("DESTROY: stopping uinput helper")
+        val killed = safeExec(bound, "pkill -f uinput; echo exit=$?")
+        val remaining = safeExec(bound, "pgrep -f 'uinput' | head -5")
+        "── destroy virtual device\n$killed\nstill running: ${if (remaining.isBlank()) "none" else remaining}"
+    }
 
     /** Manual escape hatch for a stuck axis. */
     fun releaseAll(context: Context) = withService(context, "Releasing…") { bound ->

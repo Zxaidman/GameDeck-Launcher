@@ -133,8 +133,20 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     // Device hot-plug. A virtual device created from a shell should appear here without a refresh.
     override fun onInputDeviceAdded(deviceId: Int) {
-        val name = InputDevice.getDevice(deviceId)?.name ?: "unknown"
-        EventLog.note("DEVICE ADDED   id=$deviceId $name")
+        // Describe it immediately. A device created by the helper may exist only briefly, and once
+        // it is gone the live inventory cannot tell us what it was.
+        val device = InputDevice.getDevice(deviceId)
+        if (device != null) {
+            InputInventory.capture(device, "hot-plug added")
+            EventLog.note(
+                "DEVICE ADDED   id=$deviceId ${device.name}\n" +
+                    "      sources=${InputInventory.describeSources(device.sources)} " +
+                    "axes=${device.motionRanges.size} " +
+                    "gamepad=${InputInventory.looksLikeGamepad(device)}"
+            )
+        } else {
+            EventLog.note("DEVICE ADDED   id=$deviceId (already gone before it could be read)")
+        }
         refreshDevices()
     }
 
@@ -175,13 +187,17 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.6")
+        report.put("harnessVersion", "phase0-0.0.7")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
         val deviceArray = JSONArray()
         InputInventory.snapshot().forEach { deviceArray.put(it) }
         report.put("inputDevices", deviceArray)
+
+        val capturedArray = JSONArray()
+        InputInventory.capturedSnapshot().forEach { capturedArray.put(it) }
+        report.put("capturedDevices", capturedArray)
         report.put("eventLog", EventLog.asText())
         report.put("privilegeState", ShizukuProbe.status.value)
         report.put("probeOutput", ShizukuProbe.output.value)
@@ -370,6 +386,12 @@ private fun ProbePanel() {
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Button(
+                onClick = { ShizukuProbe.destroyVirtualDevice(context) },
+                enabled = !ShizukuProbe.busy.value,
+            ) {
+                Text("Destroy device")
+            }
             Button(
                 onClick = { ShizukuProbe.releaseAll(context) },
                 enabled = !ShizukuProbe.busy.value,

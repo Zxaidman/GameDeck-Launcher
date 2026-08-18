@@ -80,6 +80,27 @@ object InputInventory {
         }
     }.getOrDefault(false)
 
+    /**
+     * Devices captured the moment they appeared, by the hot-plug callback.
+     *
+     * A device created by the `uinput` helper can exist for a fraction of a second. Reading the
+     * live inventory afterwards finds nothing, which is exactly what made the first creation run
+     * inconclusive: the device was observed to exist but never described. These entries survive it.
+     */
+    val captured = mutableListOf<JSONObject>()
+
+    fun capture(device: InputDevice, note: String) {
+        val json = describe(device)
+        json.put("capturedBecause", note)
+        json.put("capturedAtMillis", System.currentTimeMillis())
+        synchronized(captured) {
+            captured.add(json)
+            while (captured.size > 40) captured.removeAt(0)
+        }
+    }
+
+    fun capturedSnapshot(): List<JSONObject> = synchronized(captured) { captured.toList() }
+
     fun snapshot(): List<JSONObject> {
         val out = mutableListOf<JSONObject>()
         for (id in InputDevice.getDeviceIds()) {
