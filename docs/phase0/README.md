@@ -88,6 +88,11 @@ than assumed:
 Run these in order. Each tier answers a different question, and a failure at one tier does not
 invalidate the ones below it.
 
+> **Revised order.** Tiers 0 and 1 are complete on the reference device. The evidence in their
+> reports moved Tier 5 to the front: it is the only path to a controller identity, the underlying
+> facility was found present and in use on that hardware, and two commands establish whether it is
+> reachable at all. Run Tier 5 next, then the rest.
+
 ### Tier 0 — Baseline device inventory
 
 Open the harness, **Devices** tab, with nothing connected.
@@ -97,6 +102,17 @@ before any intervention. Export the report and keep it — every later tier is c
 baseline.
 
 Expect only built-in devices. Note whether any of them advertise `GAMEPAD` or `JOYSTICK` sources.
+
+### Tier 1 — Instrument calibration — **DONE**
+
+Completed on the target device using a second phone running remote-gamepad software over Bluetooth.
+The reference signature and the resulting constraints on the input layer are in
+`docs/phase0/results/tier1-report.md`. Read that before writing any input code: it records that
+buttons with a system meaning are delivered twice, that each trigger reports on two axes, that the
+left stick synthesises D-pad keys, and that the system virtual device aggregates capabilities and
+will produce false positives.
+
+The original instructions are kept below for repeating the calibration on other hardware.
 
 ### Tier 1 — Instrument calibration (optional but strongly recommended)
 

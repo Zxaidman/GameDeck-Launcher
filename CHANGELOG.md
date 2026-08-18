@@ -209,6 +209,43 @@ Not verified:
 - No physical controller has been attached, so there is no calibration reference for what a genuine
   controller looks like on this device.
 
+### Phase 0 — Tier 1 Calibration Executed on Hardware
+
+A second phone running remote-gamepad software was paired over Bluetooth to act as a controller,
+supplying the calibration reference Tier 0 lacked. See `docs/phase0/results/tier1-report.md`.
+
+- Recorded the signature of a genuine controller on the reference device: sources
+  `KEYBOARD|GAMEPAD|JOYSTICK`, ten axes, twelve buttons, and a system-assigned controller number.
+  Anything Kestrel creates must match this to claim an equivalent result.
+- Found that every button carrying a system meaning is delivered twice on one scan code — notably
+  `BUTTON_B` also arrives as `BACK`, and `START`, `THUMBL` and `THUMBR` all collapse to
+  `DPAD_CENTER`. Input handling must match on the controller keycode and originating device, and
+  discard the fallback, or it will double-count every press.
+- Found that each trigger reports on two axes simultaneously, so the transformation layer must pick
+  one per trigger rather than treat them independently.
+- Found that the D-pad arrives both as hat axes and as synthesised key events, and that the left
+  stick also synthesises directional keys past a threshold.
+- Found that the system virtual device aggregates the capabilities of connected devices: it
+  advertised four keys with nothing attached and sixteen with a controller attached. Capability
+  detection must skip it, or it will report a controller present on a bare phone.
+- Confirmed that dead zones are declared per axis by the device, so the transformation layer should
+  read the declared value rather than hardcode one.
+
+Not verified:
+
+- This exercises the receiving half only. It does not show that Kestrel can create a controller for
+  applications on the same phone, because the software used works by making a second device
+  advertise itself as a Bluetooth peripheral to the first. The core question is unchanged and
+  `ADR-INPUT-001` remains Pending.
+- `BUTTON_A` was not pressed during the run, so one button has no observed delivery.
+
+Noted for possible future work:
+
+- The same mechanism suggests Kestrel could implement the peripheral role itself, turning a spare
+  phone into a controller for a main device. `BluetoothHidDevice` has been public since API 28,
+  within the project baseline. This is unverified, is not the core requirement, and would not help a
+  user with a single phone; it would need its own decision record if pursued.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching
