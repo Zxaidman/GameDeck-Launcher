@@ -94,7 +94,8 @@ Alongside it:
 - A **warning banner** appears whenever a Kestrel controller is present in the device list,
   visible without Shizuku and on the first screen, so an orphan announces itself instead of being
   discovered by its effects.
-- The helper's process id is recorded at launch and killed first, as a cheaper path before the scan.
+- The feeder, the stream follower and the watchdog are each matched by their own script path, so a
+  sweep can stop one without stopping the others.
 
 A holder owned by root cannot be killed from shell privilege and will still be listed afterwards.
 That is correct and deliberate: the vendor's own virtual-input process is one of those, and it must
