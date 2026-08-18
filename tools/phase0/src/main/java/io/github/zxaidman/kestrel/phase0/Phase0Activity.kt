@@ -175,7 +175,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.4")
+        report.put("harnessVersion", "phase0-0.0.5")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -335,15 +335,41 @@ private fun ProbePanel() {
                 "Nothing arriving is also a result worth recording.",
             fontSize = 12.sp,
         )
-        for ((label, description, command) in ShizukuProbe.INJECTIONS) {
+        for (injection in ShizukuProbe.INJECTIONS) {
             Button(
-                onClick = { ShizukuProbe.inject(context, label, command) },
+                onClick = { ShizukuProbe.inject(context, injection) },
                 enabled = !ShizukuProbe.busy.value,
                 modifier = Modifier.padding(top = 6.dp),
             ) {
-                Text("$label — $description")
+                Text("${injection.label} — ${injection.description}")
             }
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = { ShizukuProbe.releaseAll(context) },
+                enabled = !ShizukuProbe.busy.value,
+            ) {
+                Text("RELEASE ALL")
+            }
+            Button(
+                onClick = { ShizukuProbe.clearOutput() },
+                enabled = !ShizukuProbe.busy.value,
+            ) {
+                Text("Clear output")
+            }
+        }
+        Text(
+            text = "An injected axis stays where it is put. Nothing returns it to centre on its " +
+                "own, and while it is held the system emits directional keys without stopping. " +
+                "The stick test now auto-releases after 1.2 seconds; RELEASE ALL is the manual " +
+                "escape hatch if anything is ever left held.",
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
 
         if (ShizukuProbe.output.value.isNotEmpty()) {
             Text(

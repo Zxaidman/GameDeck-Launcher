@@ -106,13 +106,33 @@ object ShizukuProbe {
             "(dmesg 2>/dev/null | grep -i 'avc.*denied' | tail -5) || echo '(kernel log not readable)'",
     )
 
-    /** Injection attempts. Each is the platform's own tool, run in a shell-privileged process. */
-    val INJECTIONS = listOf(
-        Triple("A button", "gamepad source, digital", "input gamepad keyevent 96"),
-        Triple("D-pad up", "dpad source, digital", "input dpad keyevent 19"),
-        Triple("Stick X", "joystick source, analog axis", "input joystick motionevent MOVE --axis X,0.6"),
-        Triple("Stick X alt", "alternative axis syntax", "input joystick motionevent MOVE 0.6 0"),
+    data class Injection(
+        val label: String,
+        val description: String,
+        val command: String,
+        /**
+         * Sent automatically a moment after the command. An axis set by `motionevent` stays set:
+         * the system keeps treating the stick as held and emits repeating directional keys
+         * indefinitely. Measured on a real device — the first run produced over 360 repeats and was
+         * still going when the report was exported. Nothing releases it implicitly.
+         */
+        val release: String? = null,
     )
+
+    val INJECTIONS = listOf(
+        Injection("A button", "gamepad source, digital", "input gamepad keyevent 96"),
+        Injection("D-pad up", "dpad source, digital", "input dpad keyevent 19"),
+        Injection(
+            "Stick right", "joystick source, analog axis",
+            "input joystick motionevent MOVE 0.6 0",
+            release = RECENTRE,
+        ),
+    )
+
+    /** Returns every axis to rest. Also exposed on its own button, as an escape hatch. */
+    const val RECENTRE = "input joystick motionevent MOVE 0 0"
+
+    fun clearOutput() { output.value = "" }
 
     fun runProbes(context: Context) = withService(context, "Binding shell-privileged service…") { bound ->
         buildString {
@@ -132,22 +152,35 @@ object ShizukuProbe {
      * stimulus followed by whatever the system actually delivered — or by nothing, which is equally
      * a result.
      */
-    fun inject(context: Context, label: String, command: String) =
-        withService(context, "Injecting: $command") { bound ->
-            EventLog.note("INJECT ATTEMPT [$label]: $command")
-            val result = safeExec(bound, command)
-            EventLog.note("INJECT RESULT  [$label]: ${result.replace("\n", " ").take(120)}")
+    fun inject(context: Context, injection: Injection) =
+        withService(context, "Injecting: ${injection.command}") { bound ->
+            EventLog.note("INJECT ATTEMPT [${injection.label}]: ${injection.command}")
+            val result = safeExec(bound, injection.command)
+            EventLog.note("INJECT RESULT  [${injection.label}]: ${result.replace("\n", " ").take(120)}")
+
+            val releaseNote = injection.release?.let { release ->
+                // Long enough to observe the held state, short enough not to leave it stuck.
+                Thread.sleep(1200)
+                EventLog.note("AUTO-RELEASE   [${injection.label}]: $release")
+                val releaseResult = safeExec(bound, release)
+                EventLog.note("RELEASE RESULT [${injection.label}]: ${releaseResult.replace("\n", " ").take(120)}")
+                "\nAuto-release sent after 1.2s: $release\n$releaseResult"
+            } ?: ""
+
             buildString {
-                appendLine("Injection attempt: $label")
-                appendLine("\$ $command")
+                appendLine("── injection: ${injection.label}")
+                appendLine("\$ ${injection.command}")
                 appendLine(result)
-                appendLine()
-                appendLine("Now open the Events tab. Anything the system delivered appears there,")
-                appendLine("between the INJECT ATTEMPT and INJECT RESULT lines.")
-                appendLine("Check the src= on each event: KEYBOARD is key emulation, GAMEPAD or")
-                appendLine("JOYSTICK is controller semantics. An empty result is also a result.")
+                if (releaseNote.isNotEmpty()) appendLine(releaseNote)
             }.trim()
         }
+
+    /** Manual escape hatch for a stuck axis. */
+    fun releaseAll(context: Context) = withService(context, "Releasing…") { bound ->
+        EventLog.note("MANUAL RELEASE: $RECENTRE")
+        val result = safeExec(bound, RECENTRE)
+        "── release all axes\n\$ $RECENTRE\n$result"
+    }
 
     private fun safeExec(bound: IProbeService, command: String): String = try {
         bound.exec(command)
@@ -162,7 +195,7 @@ object ShizukuProbe {
     private fun withService(context: Context, pending: String, work: (IProbeService) -> String) {
         if (busy.value) return
         busy.value = true
-        output.value = pending
+        if (output.value.isBlank()) output.value = pending
 
         val existing = service
         if (existing != null) {
@@ -206,7 +239,12 @@ object ShizukuProbe {
             } catch (e: Throwable) {
                 "Failed: ${e.javaClass.simpleName}: ${e.message}"
             }
-            output.value = result
+            val previous = output.value
+            output.value = if (previous.isBlank() || previous.endsWith("…")) {
+                result
+            } else {
+                (previous + "\n\n" + result).takeLast(20000)
+            }
             busy.value = false
         }.start()
     }
