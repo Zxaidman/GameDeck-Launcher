@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — Tiers 0, 1 and the Tier 5 permission probe complete; no access attempted yet  
+**Status:** Experimental — virtual-input access confirmed; device creation not yet attempted  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one

@@ -318,6 +318,39 @@ See `docs/phase0/results/tier5-probe-report.md`.
 Verified: `./gradlew build` succeeds with lint clean.
 Not verified: none of the new tests has been run on hardware.
 
+### Phase 0 — Virtual-Input Access Confirmed
+
+The decisive question is answered. See `docs/phase0/results/tier5-open-report.md`.
+
+- A shell-privileged process obtained through Shizuku, with no computer attached, **opened the
+  kernel virtual-input node for writing** on a stock unrooted device with SELinux Enforcing. The
+  kernel denial log was empty, so policy permits it outright rather than permitting-and-auditing.
+- This was the prerequisite most likely to fail, and it did not. The path that could produce a
+  device with its own controller identity is open on this hardware. Creating and recognising such a
+  device is still unproven.
+- The full `input` usage text, captured intact, establishes a hard ceiling on the shell path:
+  `motionevent` accepts only `x` and `y`, and the `--axis` option belongs to `scroll` alone. The
+  shell path can therefore drive buttons, the D-pad and one analog stick, but **cannot address the
+  right stick or the triggers**. Against `docs/PHASE-0.md` §29, which requires a working trigger, it
+  cannot pass on its own. It is a fallback and a comparison baseline, not a candidate answer.
+- The release mechanism works: the axis returned to rest and the repeat flood stopped. Two further
+  repeats arrived after the release was issued, so a release must be issued early and confirmed,
+  not assumed effective the moment it is sent. Measured repeat rate is about 15 per second.
+
+### Phase 0 Harness — Virtual Device Creation Attempts
+
+- Added attempts to create a virtual controller through the platform `uinput` helper, holding the
+  device open for five seconds so it can be observed in the inventory and by the hot-plug listener.
+- Two descriptor schemas are attempted, because the helper's accepted schema is undocumented
+  on-device and its help output is empty. A rejection is informative: the error states what the
+  schema requires.
+- Button and axis numbers are Linux input-event constants, which are stable kernel ABI rather than
+  values invented for this project.
+
+Verified: `./gradlew build` succeeds with lint clean.
+Not verified: no creation attempt has been run. Whether the helper accepts either schema, whether a
+device appears, and whether it carries controller semantics are all unknown.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

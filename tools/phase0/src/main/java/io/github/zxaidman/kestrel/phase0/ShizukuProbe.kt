@@ -175,6 +175,95 @@ object ShizukuProbe {
             }.trim()
         }
 
+
+    // ---------------------------------------------------------------------------------------
+    // Virtual device creation.
+    //
+    // The helper reads a device description from standard input and destroys the device when that
+    // input closes, so the description is followed by a sleep: the device lives exactly as long as
+    // the process holding it, which is also how a production implementation would have to work.
+    //
+    // Two descriptor formats are attempted because the helper's accepted schema is not documented
+    // on-device and `uinput -h` prints nothing on this build. A rejection is as informative as an
+    // acceptance: the error text states what the schema actually wants.
+    //
+    // Button and axis numbers below are Linux input-event constants, which are stable kernel ABI.
+    // ---------------------------------------------------------------------------------------
+
+    private const val BUTTONS = "304, 305, 307, 308, 310, 311, 314, 315, 317, 318"
+    private const val AXES = "0, 1, 2, 5, 9, 10, 16, 17"
+
+    private fun absInfo(code: Int, min: Int, max: Int) =
+        """{"code": $code, "info": {"value": 0, "minimum": $min, "maximum": $max, """ +
+            """"fuzz": 0, "flat": 0, "resolution": 0}}"""
+
+    private val ABS_INFO = listOf(
+        absInfo(0, -32768, 32767),   // ABS_X      left stick
+        absInfo(1, -32768, 32767),   // ABS_Y
+        absInfo(2, -32768, 32767),   // ABS_Z      right stick
+        absInfo(5, -32768, 32767),   // ABS_RZ
+        absInfo(9, 0, 255),          // ABS_GAS    right trigger
+        absInfo(10, 0, 255),         // ABS_BRAKE  left trigger
+        absInfo(16, -1, 1),          // ABS_HAT0X  d-pad
+        absInfo(17, -1, 1),          // ABS_HAT0Y
+    ).joinToString(", ")
+
+    private val DESCRIPTOR_NUMERIC = """
+        {"id": 1, "command": "register", "name": "Kestrel Virtual Controller",
+         "vid": 6353, "pid": 20192, "bus": "usb",
+         "configuration": [
+           {"type": 100, "data": [1, 3]},
+           {"type": 101, "data": [$BUTTONS]},
+           {"type": 103, "data": [$AXES]}
+         ],
+         "abs_info": [$ABS_INFO]}
+    """.trimIndent().replace("\n", " ")
+
+    private val DESCRIPTOR_NAMED = """
+        {"id": 1, "command": "register", "name": "Kestrel Virtual Controller",
+         "vid": 6353, "pid": 20192, "bus": "usb",
+         "configuration": [
+           {"type": "UI_SET_EVBIT", "data": ["EV_KEY", "EV_ABS"]},
+           {"type": "UI_SET_KEYBIT", "data": [$BUTTONS]},
+           {"type": "UI_SET_ABSBIT", "data": [$AXES]}
+         ],
+         "abs_info": [$ABS_INFO]}
+    """.trimIndent().replace("\n", " ")
+
+    val CREATIONS = listOf(
+        "numeric schema" to DESCRIPTOR_NUMERIC,
+        "named schema" to DESCRIPTOR_NAMED,
+    )
+
+    /**
+     * Holds the device open for five seconds. While it exists the harness's hot-plug listener
+     * should log it appearing, and the Devices tab should show it — which is the only proof that
+     * matters, since a device that nothing can see has not been created in any useful sense.
+     */
+    fun createVirtualDevice(context: Context, label: String, descriptor: String) =
+        withService(context, "Creating virtual device ($label)…") { bound ->
+            val before = android.view.InputDevice.getDeviceIds().size
+            EventLog.note("CREATE ATTEMPT [$label] — holding device open for 5s")
+
+            val command = "(echo '" + descriptor + "'; sleep 5) | uinput - 2>&1"
+            val result = safeExec(bound, command)
+
+            val after = android.view.InputDevice.getDeviceIds().size
+            EventLog.note("CREATE RESULT  [$label]: ${result.replace("\n", " ").take(160)}")
+
+            buildString {
+                appendLine("── virtual device attempt: $label")
+                appendLine("device count before: $before, after: $after")
+                appendLine()
+                appendLine("helper output:")
+                appendLine(if (result.isBlank()) "(nothing)" else result)
+                appendLine()
+                appendLine("Check the Events tab for DEVICE ADDED, and the Devices tab during the")
+                appendLine("five seconds the device is held open. A rejection message here is a")
+                appendLine("result too: it states what the helper's schema actually requires.")
+            }.trim()
+        }
+
     /** Manual escape hatch for a stuck axis. */
     fun releaseAll(context: Context) = withService(context, "Releasing…") { bound ->
         EventLog.note("MANUAL RELEASE: $RECENTRE")

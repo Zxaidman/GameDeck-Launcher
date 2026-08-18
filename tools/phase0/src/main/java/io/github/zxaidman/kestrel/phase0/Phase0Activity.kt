@@ -175,7 +175,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.5")
+        report.put("harnessVersion", "phase0-0.0.6")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -342,6 +342,27 @@ private fun ProbePanel() {
                 modifier = Modifier.padding(top = 6.dp),
             ) {
                 Text("${injection.label} — ${injection.description}")
+            }
+        }
+
+        Text(
+            text = "Virtual device",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(
+            text = "Attempts to create a controller the system sees as its own device — the only " +
+                "route to a real device identity. Each holds the device open for five seconds; " +
+                "watch the Devices tab during that window, and the Events tab for DEVICE ADDED.",
+            fontSize = 12.sp,
+        )
+        for ((label, descriptor) in ShizukuProbe.CREATIONS) {
+            Button(
+                onClick = { ShizukuProbe.createVirtualDevice(context, label, descriptor) },
+                enabled = !ShizukuProbe.busy.value,
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                Text("Create virtual controller — $label")
             }
         }
 
