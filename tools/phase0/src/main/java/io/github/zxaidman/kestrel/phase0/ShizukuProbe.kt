@@ -292,14 +292,14 @@ object ShizukuProbe {
             // next (reporting NOT RUNNING while the device demonstrably lived its full 30 seconds).
             // An instrument that asserts a conclusion its evidence does not support is worse than
             // one that simply shows what it saw.
-            val alive = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
+            val alive = safeExec(bound, HOLDERS_DESCRIBED, 10000)
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
             val count = android.view.InputDevice.getDeviceIds().size
 
             EventLog.note("CREATE RESULT  [$label]: devices=$count, process lines=${alive.lines().size}")
 
             buildString {
-                appendLine("processes matching uinput (raw):")
+                appendLine("processes holding /dev/uinput:")
                 appendLine(if (alive.isBlank()) "  (none listed — the device may still exist; trust the Devices tab)" else alive)
                 appendLine("helper output: ${if (log.isBlank()) "(none — good, no error)" else log}")
                 appendLine("device count now: $count")
@@ -353,11 +353,11 @@ object ShizukuProbe {
             emit("presses sent — the device stays alive for about 20 more seconds")
 
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
-            val procs = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
+            val procs = safeExec(bound, HOLDERS_DESCRIBED, 10000)
 
             buildString {
                 appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
-                appendLine("processes matching uinput (raw):")
+                appendLine("processes holding /dev/uinput:")
                 appendLine(if (procs.isBlank()) "  (none listed)" else procs)
                 appendLine()
                 appendLine("Now read the Events tab. What matters is the dev= on any BUTTON_A that")
@@ -493,7 +493,8 @@ object ShizukuProbe {
         appendLine(
             safeExec(
                 bound,
-                "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & echo reader=started"
+                "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & " +
+                    "echo \$! > $PID_PATH; echo reader=started pid=\$(cat $PID_PATH)"
             ).trim()
         )
 
@@ -502,8 +503,8 @@ object ShizukuProbe {
 
         val helper = safeExec(bound, "head -c 400 $HELPER_LOG 2>&1")
         appendLine("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
-        val alive = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
-        appendLine("uinput process: ${if (alive.isBlank()) "(none listed)" else alive.trim()}")
+        val alive = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+        appendLine("holding /dev/uinput: ${if (alive.isBlank()) "(none)" else alive.trim()}")
     }
 
     /** Appends one report to the open device's stream. Single quotes only; the JSON contains none. */
@@ -537,7 +538,7 @@ object ShizukuProbe {
 
             EventLog.note("EXERCISE complete — every control returned to rest")
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -30")
-            safeExec(bound, "pkill -x uinput")
+            emit(stopEverything(bound).trim())
 
             buildString {
                 appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
@@ -613,7 +614,13 @@ object ShizukuProbe {
             }
 
             safeExec(bound, "rm -f $HELPER_LOG")
-            emit(safeExec(bound, "( ($schedule) | uinput - ) > $HELPER_LOG 2>&1 & echo cycling").trim())
+            emit(
+                safeExec(
+                    bound,
+                    "( ($schedule) | uinput - ) > $HELPER_LOG 2>&1 & echo \$! > $PID_PATH; " +
+                        "echo cycling, helper pid=\$(cat $PID_PATH)",
+                ).trim()
+            )
 
             Thread.sleep(3500)
             val count = android.view.InputDevice.getDeviceIds().size
@@ -638,14 +645,96 @@ object ShizukuProbe {
             }.trim()
         }
 
+    // ---------------------------------------------------------------------------------------
+    // Teardown.
+    //
+    // This was broken, silently, from the first version that created a device, and the way it broke
+    // is worth keeping written down.
+    //
+    // Every stop command matched on the process being called `uinput`. It is not. `ps -A | grep -i
+    // uinput` returned nothing on every single run — that was visible in the transcripts all along
+    // and was read as "nothing left running" when it actually meant "the search does not work".
+    // `pkill -x uinput` therefore killed nothing, ever, and `pgrep -x uinput || echo NONE` printed
+    // NONE for the same reason, confirming a teardown that had not happened. Runs appeared to stop
+    // only because their own schedule of sleeps ran out.
+    //
+    // What that cost, measured on the reference device: a created controller outlived Destroy,
+    // force-stop, clearing data, and **uninstalling the harness entirely**. It kept delivering
+    // input to the home screen and the browser with no application present at all. Only a reboot
+    // ended it.
+    //
+    // The fix does not ask what a process is called. It asks which processes have the virtual-input
+    // node open, which is the only property that actually decides whether the device exists.
+    // ---------------------------------------------------------------------------------------
+
+    private const val PID_PATH = "/data/local/tmp/kestrel-helper.pid"
+
+    /** Process ids holding /dev/uinput open, whatever they happen to be named. */
+    private const val HOLDER_IDS =
+        "for d in /proc/[0-9]*; do " +
+            "if ls -l \$d/fd 2>/dev/null | grep -q /dev/uinput; then echo \${d#/proc/}; fi; done"
+
+    /** The same, with each process's command line, for the transcript. */
+    private const val HOLDERS_DESCRIBED =
+        "for d in /proc/[0-9]*; do " +
+            "if ls -l \$d/fd 2>/dev/null | grep -q /dev/uinput; then " +
+            "echo \"\${d#/proc/}  \$(tr '\\0' ' ' < \$d/cmdline 2>/dev/null)\"; fi; done"
+
+    /**
+     * Stops everything holding the device, then says what is left.
+     *
+     * Three attempts, weakest first, because each covers what the previous one cannot:
+     * the process group started by this harness, then anything at all holding the node open, then a
+     * command-line sweep for our own leftovers. The bracket in the last pattern stops the command
+     * matching itself.
+     *
+     * A holder owned by root cannot be killed from shell privilege and will still be listed
+     * afterwards. That is correct: the vendor's own virtual-input process is one, and it must not
+     * be touched.
+     */
+    private fun stopEverything(bound: IProbeService): String = buildString {
+        val before = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+        appendLine("holding /dev/uinput before: ${if (before.isBlank()) "(none)" else "\n$before".trim()}")
+
+        safeExec(
+            bound,
+            "if [ -f $PID_PATH ]; then P=\$(cat $PID_PATH); " +
+                "kill -9 -\$P 2>/dev/null; kill -9 \$P 2>/dev/null; rm -f $PID_PATH; fi; echo ok",
+        )
+        safeExec(bound, "for p in \$($HOLDER_IDS); do kill -9 \$p 2>/dev/null; done; echo ok", 10000)
+        safeExec(bound, "pkill -f 'kestrel[-]' 2>/dev/null; echo ok")
+
+        Thread.sleep(600)
+        val after = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+        appendLine("holding /dev/uinput after:  ${if (after.isBlank()) "(none)" else "\n$after".trim()}")
+        appendLine("input devices now: ${android.view.InputDevice.getDeviceIds().size}")
+    }
+
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
-        EventLog.note("DESTROY: stopping uinput helper")
-        safeExec(bound, "pkill -x uinput; pkill -x tail")
-        Thread.sleep(400)
-        val remaining = safeExec(bound, "pgrep -x uinput || echo NONE")
+        EventLog.note("DESTROY: stopping every holder of the virtual-input node")
+        val report = stopEverything(bound)
         safeExec(bound, "rm -f $STREAM_PATH")
-        "── destroy virtual device\nstill running: ${remaining.trim()}"
+        "── destroy virtual device\n$report"
+    }
+
+    /**
+     * The same teardown, offered on its own and never disabled.
+     *
+     * A device can outlive the harness process, so it can also outlive any state the harness holds
+     * about it. This must therefore work from a cold start, with nothing running and nothing
+     * remembered, on a device created by a previous install.
+     */
+    fun stopOrphans(context: Context) = withService(context, "Searching for orphaned devices…") { bound ->
+        EventLog.note("ORPHAN SWEEP: looking for any process holding the virtual-input node")
+        "── stop orphaned devices\n" + stopEverything(bound)
+    }
+
+    /** Reports holders without touching them. Cheap enough to run beside the status check. */
+    fun listHolders(context: Context) = withService(context, "Listing holders…") { bound ->
+        val holders = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+        "── processes holding /dev/uinput\n" +
+            (if (holders.isBlank()) "(none — no virtual device is open)" else holders.trim())
     }
 
     /**
@@ -666,12 +755,8 @@ object ShizukuProbe {
             return
         }
         Thread {
-            val result = safeExec(
-                bound,
-                "pkill -x uinput; pkill -x tail; rm -f $STREAM_PATH; pgrep -x uinput || echo NONE",
-                4000,
-            )
-            emit("after reset — uinput processes: ${result.trim()}")
+            emit(stopEverything(bound).trim())
+            safeExec(bound, "rm -f $STREAM_PATH")
         }.start()
     }
 

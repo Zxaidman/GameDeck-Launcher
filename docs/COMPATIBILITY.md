@@ -549,18 +549,24 @@ Additional applications should be added as testing begins.
 
 Emulators tested with a Kestrel-created controller, on the device in §8:
 
-| Feature | Eden | NetherSX2 | RetroArch 1.22.2 |
-|---|---|---|---|
-| Listed as a connected controller | Yes, by name | Yes, by name and id | Yes, by name |
-| Auto-mapping | Full control set | Completed | Device selected as Port 1 |
-| A/B/X/Y | Bound (`Button 96/97/99/100`) | Bound (`Button96`, `Button100`) | Bound |
-| D-pad | Bound (`±Axis 15/16`) | Bound (`±Axis15/16`) | Bound |
-| Left Stick | Bound (`Axis 0/1`) | Untested | Bound |
-| Right Stick | Untested | Untested | Untested |
-| LB/RB | Bound (`Button 102/103`) | Untested | Bound |
-| **LT/RT** | **Bound as axes** (`Axis 17/18`) | Untested | Untested |
-| Simultaneous Inputs | Untested in-application | Untested | Untested |
-| Hold/Release | Untested in-application | Untested | Untested |
+| Feature | Eden | NetherSX2 | RetroArch 1.22.2 | PPSSPP | Dolphin |
+|---|---|---|---|---|---|
+| Listed as a connected controller | Yes, by name | Yes, by name and id | Yes, by name | Yes, as `pad1` | Yes, as `Android/1/Kestrel Virtual Controller` |
+| Auto-mapping | Full control set | Completed | Device selected as Port 1 | Bound through its mapping screen | Listed for selection |
+| A/B/X/Y | Bound (`Button 96/97/99/100`) | Bound (`Button96`, `Button100`) | Bound | Bound (`pad1.[A]`) | Untested |
+| D-pad | Bound (`±Axis 15/16`) | Bound (`±Axis15/16`) | Bound | Bound (`pad1.Y HAT+`) | Untested |
+| Left Stick | Bound (`Axis 0/1`) | Untested | Bound | Bound (`pad1.X Axis+`) | Untested |
+| Right Stick | Untested | Untested | Untested | Bound (`pad1.Z Axis+`) | Untested |
+| LB/RB | Bound (`Button 102/103`) | Untested | Bound | Untested | Untested |
+| **LT/RT** | **Bound as axes** (`Axis 17/18`) | Untested | Untested | Bound (`pad1.TriggerL+`) | Untested |
+| Simultaneous Inputs | Untested in-application | Untested | Untested | Untested | Untested |
+| Hold/Release | Untested in-application | Untested | Untested | Untested | Untested |
+
+One further observation, from outside the emulator category: a **browser gamepad tester** page
+reports the device through the web Gamepad API as `Kestrel Virtual Controller`, vendor `18d1`,
+product `4ee0`, connected, with sixteen buttons and live axis values. The browser has no controller
+heuristics of its own — it reports what the web platform hands it — so this is a target that was
+never written with any of this in mind treating the device as an ordinary controller.
 
 ```text
 Status: Experimental
@@ -568,6 +574,13 @@ Confidence: Low
 Level achieved: Level 4 — virtual gamepad identity (see §10)
 Evidence: docs/phase0/results/tier6-report.md
 ```
+
+**Lifecycle hazard, confirmed on this device.** A created controller is held by a process that is
+not the application's, so it survives force-stop, clearing data, and **uninstalling the
+application**, and keeps delivering input with nothing installed. On the reference device only a
+reboot ended it. Any backend built on this mechanism must hold the device inside a process the
+platform reclaims with the application, and must be able to find and destroy a controller it has
+no memory of creating. See `docs/phase0/results/tier5-orphan-report.md`.
 
 "Bound" records what the application's own binding screen displayed after auto-mapping. It is
 strong evidence that the application enumerated the device and accepted its controls, and it is

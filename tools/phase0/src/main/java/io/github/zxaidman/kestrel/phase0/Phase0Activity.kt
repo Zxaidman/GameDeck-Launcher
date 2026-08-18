@@ -213,7 +213,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.14")
+        report.put("harnessVersion", "phase0-0.0.15")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -350,9 +350,20 @@ private fun HarnessScreen(
             Button(onClick = onShare, enabled = !locked) { Text("Share") }
         }
 
-        // Never disabled. This is the control for the state where the others are stuck.
-        Button(onClick = { ShizukuProbe.forceReset(screenContext) }) {
-            Text("RESET — unlock controls and stop any helper")
+        // Neither of these is ever disabled. A created device can outlive the harness process, so
+        // it can also outlive anything the harness remembers about it — on the reference device one
+        // survived Destroy, force-stop, clearing data and uninstalling the application, and kept
+        // delivering input with nothing installed. Recovery must work from a cold start, on a
+        // device this install never created.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(onClick = { ShizukuProbe.forceReset(screenContext) }) { Text("RESET") }
+            Button(onClick = { ShizukuProbe.stopOrphans(screenContext) }) {
+                Text("STOP ANY DEVICE")
+            }
+            Button(onClick = { ShizukuProbe.listHolders(screenContext) }) { Text("What is open?") }
         }
 
         if (locked) {
@@ -361,6 +372,21 @@ private fun HarnessScreen(
                     "cannot operate them, and Back is held. Tabs still work. If nothing changes " +
                     "for a long time, press RESET.",
                 style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        // Visible without Shizuku, without the Probe tab, and on a fresh install: a device left
+        // behind by an earlier run is still delivering input to whatever is on screen, and the
+        // operator needs to know that before anything else on this screen matters.
+        val orphan = devices.any { it.name.contains("Kestrel", ignoreCase = true) }
+        if (orphan) {
+            Text(
+                text = "A Kestrel virtual controller is currently open on this device. If you did " +
+                    "not just start a test, it is left over from an earlier run and is still " +
+                    "sending input. Open the Probe tab and press STOP ANY DEVICE.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 6.dp),
             )
         }
 

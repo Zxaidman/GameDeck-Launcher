@@ -405,6 +405,61 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — A Created Controller Can Outlive Everything
+
+The most serious finding so far, and the reason teardown is now an architectural requirement rather
+than a detail. See `docs/phase0/results/tier5-orphan-report.md`.
+
+- A created controller could not be stopped by **Destroy device, force stop, clearing data, or
+  uninstalling the harness**. It kept delivering input to the home screen and the browser with the
+  application no longer installed, and only a reboot ended it. It stopped when its own ten-minute
+  schedule ran out — nothing the operator did contributed.
+- **Cause: every stop command matched on the process being called `uinput`, and it is not.** The
+  helper runs inside a runtime process with a different name, so `pkill -x uinput` killed nothing,
+  ever, and `pgrep -x uinput || echo NONE` reported success from the same broken search. This was
+  visible in every transcript from the first creation run — `(no output, exit=1)` on runs where the
+  device demonstrably existed — and was read as "nothing running" rather than "this search does not
+  work". Earlier changes fixed the *reporting* and never tested that a stop actually stopped
+  anything.
+- **Why it survives uninstalling:** the device belongs to whichever process holds `/dev/uinput`
+  open, and that process is not a child of the application. It was started through the privileged
+  service, runs as `shell`, and has no relationship to the application's lifecycle. Uninstalling
+  also runs no code, so an application cannot clean up on its way out.
+
+Fixed in the harness:
+
+- Teardown now asks **which processes have the node open**, by scanning `/proc/*/fd`, and kills
+  those whatever they are called. The same scan runs again afterwards and its result is printed:
+  the report is the state after the attempt, not a claim that the attempt worked.
+- **STOP ANY DEVICE** and **What is open?** are always available and never disabled — recovery must
+  work from a cold start on a device created by a previous install, because that is exactly what
+  this failure produces.
+- A warning banner appears whenever a Kestrel controller is present, on the first screen and
+  without Shizuku, so an orphan announces itself instead of being discovered by its effects.
+
+Required of the product, recorded now because the evidence exists now:
+
+- A production backend must hold the descriptor **inside a process the platform reclaims with the
+  application** — the Shizuku user service bound to the application's lifetime — never a detached
+  shell schedule.
+- Recovery must not depend on remembered state: Kestrel must find and destroy a controller it has
+  no record of creating.
+- Startup must sweep for an orphan before doing anything else.
+- Every teardown must re-read the state and report what it found. A stop that reports success
+  without checking is worse than no stop, because it stops anyone looking further.
+
+### Phase 0 — Two More Emulators, and a Browser
+
+- **PPSSPP** binds it — `pad1.Y HAT+`, `pad1.X Axis+`, `pad1.Z Axis+`, `pad1.TriggerL+`, `pad1.[A]`
+  — closing the gap left in `tier6-report.md`. Fourth emulator.
+- **Dolphin** lists it as `Android/1/Kestrel Virtual Controller` in its device chooser, beside the
+  phone's real input devices. Fifth.
+- A **browser gamepad tester** reports it through the web Gamepad API: name, vendor `18d1`, product
+  `4ee0`, connected, sixteen buttons, live axis values. The browser has no controller heuristics of
+  its own, so this is a target written with none of this in mind treating the device as an ordinary
+  controller.
+- Still not a streaming result. The streaming half of `docs/PHASE-0.md` §29 remains unmet.
+
 ### Phase 0 Harness — A Hold Long Enough to Set Up a Stream
 
 - Added a ten-minute hold alongside the two-minute one. Two minutes is enough to open a target's
