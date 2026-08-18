@@ -384,6 +384,27 @@ Milestone. See `docs/phase0/results/tier5-create-report.md`.
 Verified: `./gradlew build` succeeds with lint clean.
 Not verified: none of this has run on hardware.
 
+### Phase 0 Harness — Quoting Regression, Found and Fixed
+
+The 0.0.7 creation run failed for a reason entirely of this project's making, recorded here because
+the evidence trail must show why a run produced nothing.
+
+- 0.0.7 wrapped the helper invocation in a second `sh -c "..."` layer. The descriptor contains
+  double quotes, so the shell broke apart inside the device name and the helper never ran. The
+  device reported it plainly: `Virtual: no closing quote`. 0.0.6, which used a single level of
+  quoting, had created devices successfully.
+- The liveness check compounded it. Matching any command line containing "uinput" matched the very
+  shell that was failing to run it, so the harness reported `helper alive=true` while nothing was
+  running — a false positive that would have made a real failure look like a partial success.
+- Fixed by writing the descriptor to a file using only single quotes, which the JSON never contains,
+  and never nesting shells. The helper is launched from a single unnested command.
+- The liveness check now matches the process name exactly, and reports the descriptor's size and
+  first bytes so a malformed descriptor is visible rather than inferred.
+- Destroy now matches exactly too, and re-checks after stopping.
+
+The lesson is recorded rather than merely fixed: a harness that reports success without confirming
+it is worse than one that reports nothing, because it converts a null result into a false one.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

@@ -187,7 +187,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.7")
+        report.put("harnessVersion", "phase0-0.0.8")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 

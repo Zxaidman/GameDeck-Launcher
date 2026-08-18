@@ -86,7 +86,24 @@ must be reflected in `ARCHITECTURE.md` when the input backend is designed.
 - **A liveness check** reports whether the helper process still exists, which distinguishes the two
   explanations above.
 
-## 5. Next
+## 5. Follow-up run, and a self-inflicted failure
+
+The next run produced nothing, for a reason internal to the harness rather than to the device.
+
+The invocation had been wrapped in a second shell layer; the descriptor contains double quotes, so
+the shell broke apart inside the device name and the helper never ran. The device said so:
+`Virtual: no closing quote`. Worse, the liveness check matched any command line containing the word
+"uinput", which matched the failing shell itself, so the harness reported the helper as alive while
+nothing ran.
+
+Both are fixed: the descriptor is written to a file using only single quotes, no shell is nested,
+and liveness matches the process name exactly. Recorded here because an evidence trail that omits
+why a run produced nothing is not an evidence trail.
+
+Note the ordering: the earlier run, with simpler quoting, **did** create devices. The mechanism is
+not in doubt; the tooling around it was.
+
+## 6. Next
 
 1. Create the device again and read its captured properties. If they show `GAMEPAD`/`JOYSTICK`
    sources with axes and buttons, this becomes a Grade A candidate on evidence rather than on

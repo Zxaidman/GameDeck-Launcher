@@ -235,50 +235,75 @@ object ShizukuProbe {
         "named schema" to DESCRIPTOR_NAMED,
     )
 
+    private const val DESCRIPTOR_PATH = "/data/local/tmp/kestrel-uinput.json"
+    private const val HELPER_LOG = "/data/local/tmp/kestrel-uinput.log"
+
     /**
      * Starts the helper as a background process holding the device for 30 seconds.
      *
-     * The device lives exactly as long as the process owning its file descriptor. Tying that to a
-     * single blocking command meant the device was gone before anything could inspect it. It also
-     * tells us something about the eventual implementation: a production backend must own a
-     * long-lived process for the whole session, because losing the process loses the controller.
+     * Quoting discipline matters here more than it looks. An earlier version wrapped the command in
+     * a second `sh -c "..."` layer; the descriptor contains double quotes, so the shell broke apart
+     * inside the device name and the helper never ran — reported on device as
+     * `Virtual: no closing quote`. The descriptor is therefore written to a file first, using only
+     * single quotes, which the JSON never contains. Nothing here is nested.
+     *
+     * The device lives exactly as long as the process holding its file descriptor, which is why the
+     * pipeline holds it open rather than letting the helper reach end of input and exit. That is
+     * also the shape a production backend must take: a long-lived process per session.
      */
     fun createVirtualDevice(context: Context, label: String, descriptor: String) =
         withService(context, "Creating virtual device ($label)…") { bound ->
             EventLog.note("CREATE ATTEMPT [$label] — background helper, 30s hold")
 
-            val command =
-                "nohup sh -c \"(echo '" + descriptor + "'; sleep 30) | uinput -\" " +
-                    "> /data/local/tmp/kestrel-uinput.log 2>&1 & echo started pid=\$!"
-            val started = safeExec(bound, command)
+            // Single-quoted only. The descriptor contains double quotes but never single quotes.
+            val written = safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?")
+            val size = safeExec(bound, "wc -c < $DESCRIPTOR_PATH")
+            val valid = safeExec(bound, "head -c 60 $DESCRIPTOR_PATH")
+
+            safeExec(bound, "rm -f $HELPER_LOG")
+            val started = safeExec(
+                bound,
+                "( (cat $DESCRIPTOR_PATH; sleep 30) | uinput - ) > $HELPER_LOG 2>&1 & echo launched"
+            )
 
             Thread.sleep(1500)
-            val alive = safeExec(bound, "pgrep -f 'uinput' | head -5")
-            val log = safeExec(bound, "cat /data/local/tmp/kestrel-uinput.log 2>&1 | head -20")
+
+            // Exact name match. The previous check matched any command line containing the word,
+            // including the shell that was failing to run it, and so reported a false positive.
+            val alive = safeExec(bound, "pgrep -x uinput || echo NONE")
+            val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
             val count = android.view.InputDevice.getDeviceIds().size
 
-            EventLog.note("CREATE RESULT  [$label]: helper alive=${alive.isNotBlank()} devices=$count")
+            val running = alive.trim() != "NONE" && alive.isNotBlank()
+            EventLog.note("CREATE RESULT  [$label]: helper running=$running devices=$count")
 
             buildString {
                 appendLine("── virtual device attempt: $label")
-                appendLine(started)
+                appendLine("descriptor written: ${written.trim()}, bytes: ${size.trim()}")
+                appendLine("starts with: ${valid.trim()}")
+                appendLine(started.trim())
                 appendLine()
-                appendLine("helper process after 1.5s: ${if (alive.isBlank()) "NOT RUNNING" else alive}")
-                appendLine("helper output: ${if (log.isBlank()) "(none)" else log}")
+                appendLine("helper process (exact name match): ${alive.trim()}")
+                appendLine("helper output: ${if (log.isBlank()) "(none — good, no error)" else log}")
                 appendLine("device count now: $count")
                 appendLine()
-                appendLine("If the helper is running, open the Devices tab within 30 seconds and")
-                appendLine("look for Kestrel Virtual Controller. Whatever appeared is described in")
-                appendLine("the Events tab and kept in the export even if it vanishes.")
+                if (running) {
+                    appendLine("RUNNING. Open the Devices tab within 30 seconds and look for")
+                    appendLine("Kestrel Virtual Controller. Its full description is captured in the")
+                    appendLine("Events tab the moment it appears, and kept in the export.")
+                } else {
+                    appendLine("NOT RUNNING. The helper output above says why.")
+                }
             }.trim()
         }
 
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
         EventLog.note("DESTROY: stopping uinput helper")
-        val killed = safeExec(bound, "pkill -f uinput; echo exit=$?")
-        val remaining = safeExec(bound, "pgrep -f 'uinput' | head -5")
-        "── destroy virtual device\n$killed\nstill running: ${if (remaining.isBlank()) "none" else remaining}"
+        safeExec(bound, "pkill -x uinput")
+        Thread.sleep(400)
+        val remaining = safeExec(bound, "pgrep -x uinput || echo NONE")
+        "── destroy virtual device\nstill running: ${remaining.trim()}"
     }
 
     /** Manual escape hatch for a stuck axis. */
