@@ -405,6 +405,56 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — Every Control Delivered Through a Created Controller
+
+Six of the eight acceptance criteria in `docs/PHASE-0.md` §29 are now met by the mechanism. See
+`docs/phase0/results/tier5-exercise-report.md`.
+
+- Both sticks, both triggers, the d-pad and three simultaneous buttons were driven through a
+  created controller. **All eight stages produced input, every event attributed to that device's
+  own id**, and every control returned to rest with the rest delivered.
+- **Analog is real, not saturated.** A stick written at half of its declared range arrived as
+  `-0.500`, and a trigger at half arrived as `0.502`. The value is scaled through the whole path.
+- Digital, analog, triggers, simultaneous, hold/release and lifecycle are met. Repeatability and a
+  target application are not, and those are the two that need something other than the harness.
+- Three platform behaviours recorded from a physical controller in Tier 1 reappeared on the created
+  one, confirming they are applied to any controller rather than being artifacts of how this device
+  is made: a held stick synthesises d-pad keys with auto-repeat (thirteen from one axis write),
+  each trigger reports on two axis names at the same value, and buttons with a system meaning are
+  delivered twice — `BUTTON_A` also as `DPAD_CENTER`, `BUTTON_B` also as `BACK`, `BUTTON_Y` also as
+  `SPACE`.
+- Event ordering is looser than pairs: presses repeat while held and duplicates interleave with
+  real presses. Button state must be tracked per `(deviceId, scanCode)`, with repeats read as
+  continuation and unmatched releases idempotent.
+
+**The created controller operated the application that created it.** Mid-run, the stick's
+synthesised d-pad keys walked focus onto a harness button and `BUTTON_A`'s `DPAD_CENTER` duplicate
+activated it, opening the file picker and pausing the measurement. This is a **product design
+requirement, not a harness quirk**: Kestrel will create a controller and then show its own
+interface in front of the user, and that interface will be driven by that controller — including
+`BUTTON_B`, which reaches an activity as Back. `feature/gaming-session` and the overlay must be
+built for this.
+
+### Phase 0 Harness — One Clock, and an Instrument Its Own Stimulus Cannot Drive
+
+- **Removed a measurement fault.** The run was scheduled as one shell command while the harness ran
+  a matching schedule of its own to label the log. Two clocks, nothing tying them together: they
+  drifted about twenty seconds apart and every stage marker landed after the events it introduced.
+  The evidence survived only because the events describe themselves. The device is now opened on a
+  named pipe held open by a sleeping process, and each stage is written by the same thread that
+  writes its marker, immediately after it — a marker cannot drift from its events.
+- That is also the shape a production backend needs: a device outliving any single command, with
+  input pushed as it happens rather than scheduled in advance.
+- **Controls are locked while a test runs, and Back is held for the same window.** Events are still
+  recorded before the guard acts; only the activity's reaction to them is suppressed. An instrument
+  its own stimulus can operate is measuring itself.
+- Added a hold mode for Tier 6: the device stays open and cycles one control every few seconds for
+  about two minutes, with the schedule handed to the privileged process so it continues while the
+  harness is in the background and a target application's binding screen is open.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.12 has not been run on a device.
+
 ### Phase 0 — Delivery Through a Created Controller, Repeated
 
 - The create-and-press test was re-run on a later harness build in a separate session on the same

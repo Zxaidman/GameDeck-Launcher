@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — a created device delivers its own digital input; analog and target applications untested  
+**Status:** Experimental — a created device delivers every control; target applications and repeatability untested  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one
@@ -241,6 +241,16 @@ real target application also responds. That restriction is in `docs/INPUT_BACKEN
 negotiable.
 
 ### Tier 6 — Real target applications
+
+**This is the next tier to run.** Tier 5 is complete as far as the harness can measure it: every
+control was delivered through a created device — see `docs/phase0/results/tier5-exercise-report.md`.
+Six of the eight acceptance criteria in `docs/PHASE-0.md` §29 are met; a target application and
+repeatability are the two that remain.
+
+Use the harness's **Hold device for target testing** button. It opens the device, keeps it open,
+and cycles one control every few seconds for about two minutes, with the schedule running in the
+privileged process so it continues while the harness is in the background. Open the target's
+controller settings during that window.
 
 Only for tiers that produced controller-shaped input. Install at least one emulator and one
 streaming client from the list in `docs/PHASE-0.md` §7, open each one's control-mapping screen, and

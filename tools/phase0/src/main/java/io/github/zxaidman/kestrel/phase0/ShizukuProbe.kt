@@ -451,15 +451,54 @@ object ShizukuProbe {
         ),
     )
 
-    private const val STAGE_PATH = "/data/local/tmp/kestrel-stage"
+    private const val FIFO_PATH = "/data/local/tmp/kestrel.fifo"
 
     /** Seconds each stage holds its value before returning to rest. */
     private const val HOLD_SECONDS = 1
 
+    /** How long the holder keeps the device's stream open when nothing is being written. */
+    private const val SESSION_SECONDS = 300
+
+    /**
+     * Opens a device that stays alive, and can be written to on demand.
+     *
+     * The first version scheduled the whole run inside one shell command — descriptor, sleeps,
+     * stages — while the harness ran a matching schedule of its own to label the log. Two clocks,
+     * no shared reference: on the reference device they drifted by roughly twenty seconds, and
+     * every stage marker landed in the log after the events it was supposed to introduce. The
+     * evidence survived because the events describe themselves, but the labels were worthless.
+     *
+     * One clock now. A named pipe carries the stream, a sleeping process holds the write end open
+     * so the reader never sees end of input, and each stage is written by the same thread that
+     * writes its marker. A marker cannot drift from the events it names, because the write happens
+     * after it.
+     *
+     * This is also the shape a production backend needs: a device that outlives any single command,
+     * with input pushed to it as it happens rather than scheduled in advance.
+     */
+    private fun openSession(bound: IProbeService, descriptor: String): String {
+        safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH")
+        safeExec(bound, "rm -f $HELPER_LOG $FIFO_PATH; mkfifo $FIFO_PATH")
+
+        // Reader first. Opening a pipe for reading blocks until a writer arrives, so both ends go
+        // to the background and meet each other.
+        safeExec(bound, "( uinput - < $FIFO_PATH ) > $HELPER_LOG 2>&1 & echo reader")
+        safeExec(bound, "( sleep $SESSION_SECONDS ) > $FIFO_PATH & echo holder")
+        Thread.sleep(300)
+
+        safeExec(bound, "cat $DESCRIPTOR_PATH > $FIFO_PATH")
+        Thread.sleep(1200)
+        return safeExec(bound, "cat $HELPER_LOG 2>&1 | head -10")
+    }
+
+    /** Writes one report to the open device. Single quotes only; the JSON contains none. */
+    private fun send(bound: IProbeService, json: String) =
+        safeExec(bound, "printf '%s\\n' '$json' > $FIFO_PATH")
+
     /**
      * Creates the device, then drives every control on it in turn.
      *
-     * The stage markers go into the event log as the helper reaches them, so the log reads as
+     * Each stage writes its marker to the event log and then writes the events, so the log reads as
      * stimulus followed by whatever arrived — including nothing, which for a given control is a
      * result and must be recorded as one.
      */
@@ -468,46 +507,26 @@ object ShizukuProbe {
             EventLog.note("CREATE+EXERCISE [$label] — sticks, triggers, d-pad, simultaneous buttons")
             emit("── create and exercise: $label")
 
-            emit("descriptor: ${safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?").trim()}")
+            val opened = openSession(bound, descriptor)
+            emit("device opened${if (opened.isBlank()) "" else " — helper says: ${opened.trim()}"}")
 
-            // One file per half-stage: set, then release. Written before the helper starts, so no
-            // stage can be delayed by the harness still preparing it.
-            EXERCISE.forEachIndexed { index, (_, _, events) ->
-                events.forEachIndexed { half, json ->
-                    safeExec(bound, "printf '%s' '$json' > $STAGE_PATH-$index-$half.json")
-                }
-            }
-            emit("${EXERCISE.size} stages written")
-
-            val sequence = buildString {
-                append("cat $DESCRIPTOR_PATH; sleep 2")
-                EXERCISE.indices.forEach { index ->
-                    append("; cat $STAGE_PATH-$index-0.json; sleep $HOLD_SECONDS")
-                    append("; cat $STAGE_PATH-$index-1.json; sleep 1")
-                }
-                // The device must outlive the last release, or the release is never delivered.
-                append("; sleep 3")
-            }
-
-            safeExec(bound, "rm -f $HELPER_LOG")
-            emit(safeExec(bound, "( ($sequence) | uinput - ) > $HELPER_LOG 2>&1 & echo launched").trim())
-
-            Thread.sleep(2000)
-            emit("device registered — driving controls now")
-
-            // Track the helper's schedule so each marker lands in the log beside the events it
-            // caused. Two seconds per stage: one holding, one at rest.
-            EXERCISE.forEachIndexed { index, (name, expected, _) ->
+            EXERCISE.forEachIndexed { index, (name, expected, events) ->
                 EventLog.note("EXERCISE ${index + 1}/${EXERCISE.size}: $name — expect $expected")
                 emit("  ${index + 1}. $name")
-                Thread.sleep((HOLD_SECONDS + 1) * 1000L)
+
+                send(bound, events[0])
+                Thread.sleep(HOLD_SECONDS * 1000L)
+                send(bound, events[1])
+                Thread.sleep(700)
             }
 
             EventLog.note("EXERCISE complete — every control returned to rest")
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -30")
+            safeExec(bound, "pkill -x uinput")
 
             buildString {
                 appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
+                appendLine("device closed.")
                 appendLine()
                 appendLine("Read the Events tab. Each EXERCISE note is followed by whatever that")
                 appendLine("control produced. What matters for each: did anything arrive, what")
@@ -518,12 +537,63 @@ object ShizukuProbe {
             }.trim()
         }
 
+    /**
+     * Tier 6 support: opens the device and leaves it there, cycling one control at a time.
+     *
+     * A target application's own binding screen is better evidence than gameplay, because it states
+     * what it thinks it received. Reaching that screen means leaving the harness, so nothing here
+     * may depend on the harness staying in the foreground: the whole schedule is handed to the
+     * shell-privileged process, which is not subject to the battery restrictions that would
+     * otherwise stop a backgrounded measurement mid-run.
+     *
+     * The cycle is deliberately slow. A binding screen takes whatever arrives first, so a control
+     * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
+     * was pressed last.
+     */
+    fun holdForTarget(context: Context, label: String, descriptor: String) =
+        withService(context, "Opening a device and holding it for target testing…") { bound ->
+            EventLog.note("HOLD [$label] — device open, controls cycling for two minutes")
+            emit("── hold for target testing: $label")
+
+            val opened = openSession(bound, descriptor)
+            emit("device opened${if (opened.isBlank()) "" else " — helper says: ${opened.trim()}"}")
+
+            // Handed to the shell in one command, so it keeps running with the harness in the
+            // background. Four seconds apart: long enough to bind one control before the next.
+            val cycle = buildString {
+                append("(")
+                repeat(3) {
+                    EXERCISE.forEach { (_, _, events) ->
+                        append(" sleep 4; printf '%s\\n' '${events[0]}' > $FIFO_PATH;")
+                        append(" sleep 1; printf '%s\\n' '${events[1]}' > $FIFO_PATH;")
+                    }
+                }
+                append(" ) > /dev/null 2>&1 & echo cycling")
+            }
+            emit(safeExec(bound, cycle).trim())
+
+            buildString {
+                appendLine("The device is open and will cycle every control three times, about")
+                appendLine("four seconds apart, for roughly two minutes.")
+                appendLine()
+                appendLine("Leave this screen now. Open the target application, find its")
+                appendLine("controller or input settings, and look for two things:")
+                appendLine("  1. does it list Kestrel Virtual Controller as connected?")
+                appendLine("  2. on its binding screen, does a control get bound as it cycles?")
+                appendLine()
+                appendLine("Come back and press Destroy device when finished. The device closes")
+                appendLine("on its own after five minutes even if you forget.")
+            }.trim()
+        }
+
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
         EventLog.note("DESTROY: stopping uinput helper")
         safeExec(bound, "pkill -x uinput")
         Thread.sleep(400)
         val remaining = safeExec(bound, "pgrep -x uinput || echo NONE")
+        // The pipe is removed too, so a stale one cannot join a later session to an older reader.
+        safeExec(bound, "rm -f $FIFO_PATH")
         "── destroy virtual device\nstill running: ${remaining.trim()}"
     }
 

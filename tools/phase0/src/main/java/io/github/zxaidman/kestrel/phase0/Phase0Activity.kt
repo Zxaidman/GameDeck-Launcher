@@ -9,6 +9,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,6 +86,23 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
     private val permissionListener =
         Shizuku.OnRequestPermissionResultListener { _, _ -> ShizukuProbe.refreshStatus() }
 
+    /**
+     * Holds Back while a test is running, and only then.
+     *
+     * The created controller delivers `KEYCODE_BACK` alongside `BUTTON_B` — the platform's own
+     * fallback mapping, seen on a physical controller in Tier 1 and on the created one since. An
+     * unguarded Back finishes the activity, so a test that presses B would end the measurement it
+     * is halfway through and take the evidence with it.
+     *
+     * The event is still recorded before this runs: dispatch sees everything, and this only stops
+     * the activity acting on it. Enabled for the seconds a test lasts, so nothing traps the user.
+     */
+    private val runGuard = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            EventLog.note("BACK held — a test is running, the activity was not finished")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
@@ -97,8 +116,13 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         }
         ShizukuProbe.refreshStatus()
 
+        onBackPressedDispatcher.addCallback(this, runGuard)
+
         setContent {
             MaterialTheme {
+                LaunchedEffect(ShizukuProbe.busy.value) {
+                    runGuard.isEnabled = ShizukuProbe.busy.value
+                }
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HarnessScreen(
                         devices = devices,
@@ -189,7 +213,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.11")
+        report.put("harnessVersion", "phase0-0.0.12")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -295,23 +319,44 @@ private fun HarnessScreen(
             style = MaterialTheme.typography.bodySmall,
         )
 
+        // Every control is locked while a test runs, and this is not a cosmetic guard.
+        //
+        // Measured on the reference device: the created controller's own input operated the
+        // harness. The stick's synthesised d-pad keys walked focus onto a button and the fallback
+        // key for BUTTON_A activated it, which opened the file picker in the middle of a run and
+        // paused the activity being measured. An instrument that its own stimulus can drive is
+        // measuring itself. See `docs/phase0/results/tier5-exercise-report.md` §4.
+        val locked = ShizukuProbe.busy.value
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = { tab = TAB_DEVICES }) { Text("Devices (${devices.size})") }
-            Button(onClick = { tab = TAB_EVENTS }) { Text("Events (${EventLog.counter})") }
-            Button(onClick = { tab = TAB_PROBE }) { Text("Probe") }
+            Button(onClick = { tab = TAB_DEVICES }, enabled = !locked) {
+                Text("Devices (${devices.size})")
+            }
+            Button(onClick = { tab = TAB_EVENTS }, enabled = !locked) {
+                Text("Events (${EventLog.counter})")
+            }
+            Button(onClick = { tab = TAB_PROBE }, enabled = !locked) { Text("Probe") }
         }
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = onRefresh) { Text("Refresh") }
-            Button(onClick = { EventLog.clear() }) { Text("Clear log") }
-            Button(onClick = onSave) { Text("Save…") }
-            Button(onClick = onShare) { Text("Share") }
+            Button(onClick = onRefresh, enabled = !locked) { Text("Refresh") }
+            Button(onClick = { EventLog.clear() }, enabled = !locked) { Text("Clear log") }
+            Button(onClick = onSave, enabled = !locked) { Text("Save…") }
+            Button(onClick = onShare, enabled = !locked) { Text("Share") }
+        }
+
+        if (locked) {
+            Text(
+                text = "Test running — controls locked so the input under test cannot operate " +
+                    "this screen. Back is held too. Both release when the test finishes.",
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         if (ExportState.message.value.isNotEmpty()) {
@@ -425,6 +470,25 @@ private fun ProbePanel() {
         ) {
             Text("Create AND exercise everything — 20s")
         }
+        Button(
+            onClick = {
+                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                ShizukuProbe.holdForTarget(context, label, descriptor)
+            },
+            enabled = !ShizukuProbe.busy.value,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            Text("Hold device for target testing — 2 min")
+        }
+        Text(
+            text = "Opens the device and leaves it open, cycling one control every few seconds " +
+                "for about two minutes. Leave this screen, open a target application's controller " +
+                "settings, and see whether it lists the device and binds what it receives. The " +
+                "cycle runs in the privileged process, so it continues with this screen in the " +
+                "background.",
+            fontSize = 12.sp,
+        )
+
         Text(
             text = "Drives both sticks, both triggers, the d-pad and three buttons at once " +
                 "through the created device, each held for a second and then returned to rest. " +
