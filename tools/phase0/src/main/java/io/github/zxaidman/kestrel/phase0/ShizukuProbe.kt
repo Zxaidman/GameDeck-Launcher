@@ -451,49 +451,64 @@ object ShizukuProbe {
         ),
     )
 
-    private const val FIFO_PATH = "/data/local/tmp/kestrel.fifo"
+    private const val STREAM_PATH = "/data/local/tmp/kestrel-stream.json"
 
     /** Seconds each stage holds its value before returning to rest. */
     private const val HOLD_SECONDS = 1
 
-    /** How long the holder keeps the device's stream open when nothing is being written. */
-    private const val SESSION_SECONDS = 300
 
     /**
      * Opens a device that stays alive, and can be written to on demand.
      *
-     * The first version scheduled the whole run inside one shell command — descriptor, sleeps,
-     * stages — while the harness ran a matching schedule of its own to label the log. Two clocks,
-     * no shared reference: on the reference device they drifted by roughly twenty seconds, and
-     * every stage marker landed in the log after the events it was supposed to introduce. The
-     * evidence survived because the events describe themselves, but the labels were worthless.
+     * Two earlier designs failed here, and both failures are the reason this one is shaped as it
+     * is.
      *
-     * One clock now. A named pipe carries the stream, a sleeping process holds the write end open
-     * so the reader never sees end of input, and each stage is written by the same thread that
-     * writes its marker. A marker cannot drift from the events it names, because the write happens
-     * after it.
+     * The first scheduled the whole run inside one shell command — descriptor, sleeps, stages —
+     * while the harness ran a matching schedule of its own to label the log. Two clocks with
+     * nothing tying them together: on the reference device they drifted by roughly twenty seconds
+     * and every stage marker landed after the events it was meant to introduce.
+     *
+     * The second used a named pipe with a sleeping process holding the write end open. It froze the
+     * harness on the first real run. Opening a pipe blocks until the other end is opened, so any
+     * step in that handshake that does not complete — for any reason, and there are several — stops
+     * the thread forever, and the whole session was lost.
+     *
+     * This one cannot block. The stream is an ordinary file, appended to, and `tail -f` feeds it to
+     * the helper. Appending to a file never waits for a reader. There is still one clock: each
+     * stage is written by the same thread that writes its marker, immediately after it, so a marker
+     * cannot drift from the events it names.
      *
      * This is also the shape a production backend needs: a device that outlives any single command,
      * with input pushed to it as it happens rather than scheduled in advance.
      */
-    private fun openSession(bound: IProbeService, descriptor: String): String {
-        safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH")
-        safeExec(bound, "rm -f $HELPER_LOG $FIFO_PATH; mkfifo $FIFO_PATH")
+    private fun openSession(bound: IProbeService, descriptor: String): String = buildString {
+        appendLine(safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo descriptor=$?").trim())
 
-        // Reader first. Opening a pipe for reading blocks until a writer arrives, so both ends go
-        // to the background and meet each other.
-        safeExec(bound, "( uinput - < $FIFO_PATH ) > $HELPER_LOG 2>&1 & echo reader")
-        safeExec(bound, "( sleep $SESSION_SECONDS ) > $FIFO_PATH & echo holder")
-        Thread.sleep(300)
+        // Truncate rather than delete: the reader below follows this path, and replacing the file
+        // under it would leave it following one nothing writes to.
+        appendLine(safeExec(bound, ": > $STREAM_PATH; rm -f $HELPER_LOG; echo stream=$?").trim())
 
-        safeExec(bound, "cat $DESCRIPTOR_PATH > $FIFO_PATH")
-        Thread.sleep(1200)
-        return safeExec(bound, "cat $HELPER_LOG 2>&1 | head -10")
+        // tail -f never reaches end of input, so the helper keeps the device open and waits for
+        // whatever is appended next.
+        appendLine(
+            safeExec(
+                bound,
+                "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & echo reader=started"
+            ).trim()
+        )
+
+        appendLine(safeExec(bound, "printf '%s\\n' '$descriptor' >> $STREAM_PATH; echo register=$?").trim())
+        Thread.sleep(1500)
+
+        val helper = safeExec(bound, "head -c 400 $HELPER_LOG 2>&1")
+        appendLine("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
+        val alive = safeExec(bound, "ps -A 2>/dev/null | grep -i uinput | grep -v grep")
+        appendLine("uinput process: ${if (alive.isBlank()) "(none listed)" else alive.trim()}")
     }
 
-    /** Writes one report to the open device. Single quotes only; the JSON contains none. */
+    /** Appends one report to the open device's stream. Single quotes only; the JSON contains none. */
     private fun send(bound: IProbeService, json: String) =
-        safeExec(bound, "printf '%s\\n' '$json' > $FIFO_PATH")
+        safeExec(bound, "printf '%s\\n' '$json' >> $STREAM_PATH")
 
     /**
      * Creates the device, then drives every control on it in turn.
@@ -550,51 +565,113 @@ object ShizukuProbe {
      * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
      * was pressed last.
      */
+    private const val STAGE_PATH = "/data/local/tmp/kestrel-stage"
+
+    /**
+     * Tier 6 support: opens the device and leaves it there, cycling one control at a time.
+     *
+     * A target application's own binding screen is better evidence than gameplay, because it states
+     * what it thinks it received. Reaching that screen means leaving the harness, so nothing here
+     * may depend on the harness staying in the foreground: the whole schedule is handed to the
+     * shell-privileged process in one command, which is not subject to the battery restrictions
+     * that would otherwise stop a backgrounded measurement mid-run.
+     *
+     * This deliberately uses the plain pipeline rather than the appended stream the exercise test
+     * uses. The pipeline is the mechanism that has already delivered every control on this hardware;
+     * the stream exists to keep log markers aligned with events, and when the operator is in another
+     * application there are no markers to align. Proven mechanism where it is proven.
+     *
+     * The cycle is slow on purpose. A binding screen takes whatever arrives first, so a control
+     * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
+     * was pressed last.
+     */
     fun holdForTarget(context: Context, label: String, descriptor: String) =
         withService(context, "Opening a device and holding it for target testing…") { bound ->
-            EventLog.note("HOLD [$label] — device open, controls cycling for two minutes")
+            EventLog.note("HOLD [$label] — device open, controls cycling for about two minutes")
             emit("── hold for target testing: $label")
 
-            val opened = openSession(bound, descriptor)
-            emit("device opened${if (opened.isBlank()) "" else " — helper says: ${opened.trim()}"}")
+            emit(safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo descriptor=$?").trim())
 
-            // Handed to the shell in one command, so it keeps running with the harness in the
-            // background. Four seconds apart: long enough to bind one control before the next.
-            val cycle = buildString {
-                append("(")
+            EXERCISE.forEachIndexed { index, (_, _, events) ->
+                events.forEachIndexed { half, json ->
+                    safeExec(bound, "printf '%s' '$json' > $STAGE_PATH-$index-$half.json")
+                }
+            }
+            emit("${EXERCISE.size} controls prepared, three rounds each")
+
+            val schedule = buildString {
+                append("cat $DESCRIPTOR_PATH; sleep 3")
                 repeat(3) {
-                    EXERCISE.forEach { (_, _, events) ->
-                        append(" sleep 4; printf '%s\\n' '${events[0]}' > $FIFO_PATH;")
-                        append(" sleep 1; printf '%s\\n' '${events[1]}' > $FIFO_PATH;")
+                    EXERCISE.indices.forEach { index ->
+                        append("; cat $STAGE_PATH-$index-0.json; sleep 1")
+                        append("; cat $STAGE_PATH-$index-1.json; sleep 3")
                     }
                 }
-                append(" ) > /dev/null 2>&1 & echo cycling")
+                // The device must outlive its last release, or the release is never delivered.
+                append("; sleep 5")
             }
-            emit(safeExec(bound, cycle).trim())
+
+            safeExec(bound, "rm -f $HELPER_LOG")
+            emit(safeExec(bound, "( ($schedule) | uinput - ) > $HELPER_LOG 2>&1 & echo cycling").trim())
+
+            Thread.sleep(3500)
+            val count = android.view.InputDevice.getDeviceIds().size
+            val helper = safeExec(bound, "head -c 300 $HELPER_LOG 2>&1")
+            emit("device count now: $count")
+            emit("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
 
             buildString {
-                appendLine("The device is open and will cycle every control three times, about")
-                appendLine("four seconds apart, for roughly two minutes.")
+                appendLine("The device is open and cycles every control three times, about four")
+                appendLine("seconds apart, for roughly two minutes.")
                 appendLine()
-                appendLine("Leave this screen now. Open the target application, find its")
+                appendLine("Check the Devices tab first — if Kestrel Virtual Controller is not")
+                appendLine("listed there, nothing was created and the rest of this will show")
+                appendLine("nothing either.")
+                appendLine()
+                appendLine("Then leave this screen. Open the target application, find its")
                 appendLine("controller or input settings, and look for two things:")
                 appendLine("  1. does it list Kestrel Virtual Controller as connected?")
-                appendLine("  2. on its binding screen, does a control get bound as it cycles?")
+                appendLine("  2. on its binding screen, does a control bind itself as the cycle runs?")
                 appendLine()
-                appendLine("Come back and press Destroy device when finished. The device closes")
-                appendLine("on its own after five minutes even if you forget.")
+                appendLine("Come back and press Destroy device when finished.")
             }.trim()
         }
 
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
         EventLog.note("DESTROY: stopping uinput helper")
-        safeExec(bound, "pkill -x uinput")
+        safeExec(bound, "pkill -x uinput; pkill -x tail")
         Thread.sleep(400)
         val remaining = safeExec(bound, "pgrep -x uinput || echo NONE")
-        // The pipe is removed too, so a stale one cannot join a later session to an older reader.
-        safeExec(bound, "rm -f $FIFO_PATH")
+        safeExec(bound, "rm -f $STREAM_PATH")
         "── destroy virtual device\nstill running: ${remaining.trim()}"
+    }
+
+    /**
+     * Escape hatch for the harness itself.
+     *
+     * Never disabled, because the state it exists to recover from is the one where everything else
+     * is. A run that wedged left every control locked and the session unrecoverable; this unlocks
+     * them, stops any helper, and says what it found afterwards.
+     */
+    fun forceReset(context: Context) {
+        busy.value = false
+        emit("\n── RESET — controls unlocked")
+        EventLog.note("RESET pressed")
+
+        val bound = service
+        if (bound == null) {
+            emit("No privileged service is bound, so nothing was running to stop.")
+            return
+        }
+        Thread {
+            val result = safeExec(
+                bound,
+                "pkill -x uinput; pkill -x tail; rm -f $STREAM_PATH; pgrep -x uinput || echo NONE",
+                4000,
+            )
+            emit("after reset — uinput processes: ${result.trim()}")
+        }.start()
     }
 
     /** Manual escape hatch for a stuck axis. */
@@ -604,8 +681,12 @@ object ShizukuProbe {
         "── release all axes\n\$ $RECENTRE\n$result"
     }
 
-    private fun safeExec(bound: IProbeService, command: String): String = try {
-        bound.exec(command)
+    /**
+     * Every call is bounded. The service kills anything that overruns and says so, so a command
+     * that never returns costs one line in the transcript instead of the whole session.
+     */
+    private fun safeExec(bound: IProbeService, command: String, timeoutMs: Int = 6000): String = try {
+        bound.exec(command, timeoutMs)
     } catch (e: Throwable) {
         "(call failed: ${e.javaClass.simpleName}: ${e.message})"
     }
@@ -628,7 +709,7 @@ object ShizukuProbe {
         try {
             val args = Shizuku.UserServiceArgs(
                 ComponentName(context.packageName, ProbeService::class.java.name)
-            ).daemon(false).processNameSuffix("probe").debuggable(false).version(4)
+            ).daemon(false).processNameSuffix("probe").debuggable(false).version(5)
 
             Shizuku.bindUserService(args, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {

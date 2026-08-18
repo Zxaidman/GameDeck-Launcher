@@ -405,6 +405,37 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 Harness — An Instrument That Hangs Is Worse Than One That Fails
+
+The first Tier 6 attempt produced nothing. The harness froze on pressing the hold button, before
+any device was created: every control stayed locked, no device appeared in any target, and the
+session ended with no evidence at all. Recorded as a harness fault, not a device result — nothing
+was learned about the phone.
+
+Three things were wrong, and all three are fixed:
+
+- **A shell call could block forever.** The privileged service read its child's output to end of
+  file and waited for it without a limit. A backgrounded child keeps that output open after its
+  parent exits, so the read never ended. Every call is now bounded: output is drained on a separate
+  thread, the process is killed if it overruns, and the result says it timed out. A reading that
+  says "timed out" is a result; a frozen instrument is not.
+- **The named pipe was the wrong mechanism.** Opening a pipe waits for the other end, so any step
+  of that handshake that does not complete stops the thread. The stream is now an ordinary file,
+  appended to, followed by `tail -f`. Appending to a file never waits for a reader. The property
+  it was introduced for is kept: each stage is still written by the thread that writes its marker.
+- **The lock had no way out.** A run that wedged left every control disabled with no recovery.
+  There is now a RESET control that is never disabled — it unlocks the interface, stops any helper,
+  and reports what it found. Tab switching is no longer locked either: it cannot damage a
+  measurement, and locking it left the operator unable to watch the log being written.
+
+Target-application holding was also moved back onto the plain pipeline, the mechanism that has
+already delivered every control on this hardware. The appended stream exists to keep log markers
+aligned with events, and when the operator is in another application there are no markers to align.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.13 has not been run on a device. Tier 6 remains untested — the first
+attempt produced no measurement of any kind.
+
 ### Phase 0 — Every Control Delivered Through a Created Controller
 
 Six of the eight acceptance criteria in `docs/PHASE-0.md` §29 are now met by the mechanism. See

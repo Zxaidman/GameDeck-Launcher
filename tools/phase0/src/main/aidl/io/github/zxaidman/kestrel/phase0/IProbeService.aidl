@@ -1,9 +1,12 @@
 // EXPERIMENTAL — Phase 0 harness only.
 //
-// The interface to a small service that Shizuku starts with shell privileges. It exists purely to
-// run read-only probe commands and hand back their raw output. It must never grow the ability to
-// inject input: the harness measures, and a measuring instrument that can also produce the thing it
-// measures is worthless as evidence.
+// The interface to a small service that Shizuku starts with shell privileges. It runs one shell
+// command and hands back its raw output — nothing more.
+//
+// The harness never synthesises events into its own window. Stimulus is produced by the platform's
+// own tools in this separate process and travels the ordinary system input path, and every command
+// issued is written into the same log as the events that follow, so stimulus and response can
+// always be told apart in the record.
 package io.github.zxaidman.kestrel.phase0;
 
 interface IProbeService {
@@ -11,5 +14,9 @@ interface IProbeService {
     void destroy() = 16777114;
 
     // Runs a command and returns combined stdout and stderr.
-    String exec(String command) = 1;
+    //
+    // The timeout is not optional and not a nicety. A command that never returns froze the harness
+    // solid on a real run: the worker thread blocked forever, every control stayed disabled, and
+    // the session produced no evidence at all. An instrument must fail with a reading, not hang.
+    String exec(String command, int timeoutMs) = 1;
 }

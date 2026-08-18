@@ -213,7 +213,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.12")
+        report.put("harnessVersion", "phase0-0.0.13")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -301,6 +301,7 @@ private fun HarnessScreen(
     onShare: () -> Unit,
 ) {
     var tab by remember { mutableStateOf(TAB_DEVICES) }
+    val screenContext = LocalContext.current
 
     // Android 15 draws edge to edge by default at this target level, so content sits under the
     // status and navigation bars unless it is inset explicitly.
@@ -332,13 +333,11 @@ private fun HarnessScreen(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = { tab = TAB_DEVICES }, enabled = !locked) {
-                Text("Devices (${devices.size})")
-            }
-            Button(onClick = { tab = TAB_EVENTS }, enabled = !locked) {
-                Text("Events (${EventLog.counter})")
-            }
-            Button(onClick = { tab = TAB_PROBE }, enabled = !locked) { Text("Probe") }
+            // Tabs stay live. Switching one cannot damage a measurement, and locking them left the
+            // operator unable to watch the log being written during the run they were watching.
+            Button(onClick = { tab = TAB_DEVICES }) { Text("Devices (${devices.size})") }
+            Button(onClick = { tab = TAB_EVENTS }) { Text("Events (${EventLog.counter})") }
+            Button(onClick = { tab = TAB_PROBE }) { Text("Probe") }
         }
 
         Row(
@@ -351,10 +350,16 @@ private fun HarnessScreen(
             Button(onClick = onShare, enabled = !locked) { Text("Share") }
         }
 
+        // Never disabled. This is the control for the state where the others are stuck.
+        Button(onClick = { ShizukuProbe.forceReset(screenContext) }) {
+            Text("RESET — unlock controls and stop any helper")
+        }
+
         if (locked) {
             Text(
-                text = "Test running — controls locked so the input under test cannot operate " +
-                    "this screen. Back is held too. Both release when the test finishes.",
+                text = "Test running — Save, Share and Clear are locked so the input under test " +
+                    "cannot operate them, and Back is held. Tabs still work. If nothing changes " +
+                    "for a long time, press RESET.",
                 style = MaterialTheme.typography.bodySmall,
             )
         }
