@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — the harness exists, no results have been recorded yet  
+**Status:** Experimental — Tiers 0 and 1 complete on the reference device; no injection tier attempted  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one
@@ -112,9 +112,7 @@ buttons with a system meaning are delivered twice, that each trigger reports on 
 left stick synthesises D-pad keys, and that the system virtual device aggregates capabilities and
 will produce false positives.
 
-The original instructions are kept below for repeating the calibration on other hardware.
-
-### Tier 1 — Instrument calibration (optional but strongly recommended)
+#### Repeating the calibration on other hardware
 
 If you have any physical controller, pair it over Bluetooth and open the Devices tab again.
 

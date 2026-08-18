@@ -272,10 +272,10 @@ Noted for possible future work:
 - Both APKs are debug-signed. Release signing requires a keystore in repository secrets and is
   deliberately not set up; a debug-signed build must not be treated as distributable.
 
-Not verified:
+Verified:
 
-- The workflow has never executed. It cannot be run from the environment it was written in, so its
-  first run on GitHub is its first real test.
+- The workflow's first run completed successfully on GitHub-hosted runners, building, linting and
+  testing both modules and attaching both APKs as artifacts. No change to the workflow was needed.
 
 ### Phase 0 Harness Established
 
