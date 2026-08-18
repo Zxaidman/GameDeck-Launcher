@@ -585,9 +585,10 @@ object ShizukuProbe {
      * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
      * was pressed last.
      */
-    fun holdForTarget(context: Context, label: String, descriptor: String) =
+    fun holdForTarget(context: Context, label: String, descriptor: String, rounds: Int = 3) =
         withService(context, "Opening a device and holding it for target testing…") { bound ->
-            EventLog.note("HOLD [$label] — device open, controls cycling for about two minutes")
+            val minutes = (rounds * EXERCISE.size * 4 + 8) / 60
+            EventLog.note("HOLD [$label] — device open, controls cycling for about $minutes minutes")
             emit("── hold for target testing: $label")
 
             emit(safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo descriptor=$?").trim())
@@ -597,11 +598,11 @@ object ShizukuProbe {
                     safeExec(bound, "printf '%s' '$json' > $STAGE_PATH-$index-$half.json")
                 }
             }
-            emit("${EXERCISE.size} controls prepared, three rounds each")
+            emit("${EXERCISE.size} controls prepared, $rounds rounds each, about $minutes minutes")
 
             val schedule = buildString {
                 append("cat $DESCRIPTOR_PATH; sleep 3")
-                repeat(3) {
+                repeat(rounds) {
                     EXERCISE.indices.forEach { index ->
                         append("; cat $STAGE_PATH-$index-0.json; sleep 1")
                         append("; cat $STAGE_PATH-$index-1.json; sleep 3")
@@ -621,8 +622,8 @@ object ShizukuProbe {
             emit("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
 
             buildString {
-                appendLine("The device is open and cycles every control three times, about four")
-                appendLine("seconds apart, for roughly two minutes.")
+                appendLine("The device is open and cycles every control $rounds times, about four")
+                appendLine("seconds apart, for roughly $minutes minutes.")
                 appendLine()
                 appendLine("Check the Devices tab first — if Kestrel Virtual Controller is not")
                 appendLine("listed there, nothing was created and the rest of this will show")

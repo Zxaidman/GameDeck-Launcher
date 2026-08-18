@@ -213,7 +213,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.13")
+        report.put("harnessVersion", "phase0-0.0.14")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -485,6 +485,18 @@ private fun ProbePanel() {
         ) {
             Text("Hold device for target testing — 2 min")
         }
+        Button(
+            onClick = {
+                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                // Enough to set up a stream to a host before the device closes; two minutes is not.
+                ShizukuProbe.holdForTarget(context, label, descriptor, rounds = 18)
+            },
+            enabled = !ShizukuProbe.busy.value,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            Text("Hold device — 10 min, for streaming setup")
+        }
+
         Text(
             text = "Opens the device and leaves it open, cycling one control every few seconds " +
                 "for about two minutes. Leave this screen, open a target application's controller " +

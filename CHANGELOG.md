@@ -405,6 +405,17 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 Harness — A Hold Long Enough to Set Up a Stream
+
+- Added a ten-minute hold alongside the two-minute one. Two minutes is enough to open a target's
+  binding screen and enough to explain why the device disappeared partway through the last run; it
+  is not enough to pair a client with a host, start a stream, and then look at what the host sees.
+- The hold length is now one parameter rather than a fixed count, so the schedule and the message
+  describing it cannot disagree.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.14 has not been run on a device.
+
 ### Phase 0 — Emulators Accept a Kestrel-Created Controller
 
 Tier 6, on the reference device. See `docs/phase0/results/tier6-report.md`.
