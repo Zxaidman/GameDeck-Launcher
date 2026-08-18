@@ -11,6 +11,27 @@ operating system, that is called out rather than glossed over.
 
 ---
 
+## 0. You may not need any of this
+
+Every push builds both APKs automatically and attaches them to the build's page on GitHub:
+
+**<https://github.com/Zxaidman/Kestrel/actions>**
+
+Open the newest run, scroll to **Artifacts**, and download `kestrel-apks-…`. It is a zip holding
+both APKs. Downloading artifacts requires being signed in to GitHub, which the repository owner
+already is. Artifacts are kept for 30 days.
+
+For a permanent, signed-out-friendly link, publish a release: on GitHub go to **Releases → Draft a
+new release**, create a tag such as `v0.0.4`, and publish. That triggers the same workflow, which
+attaches both APKs to the release. Releases must be created by the repository owner — the automated
+environment used to develop this project is not permitted to push tags.
+
+Install by opening the downloaded APK on the phone. No cable and no toolchain are involved.
+
+The rest of this guide is only needed if you want to **change** the code rather than run it.
+
+---
+
 ## 1. What you are installing, and why
 
 Three things, and only the first two are required:

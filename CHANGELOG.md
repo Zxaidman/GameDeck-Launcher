@@ -311,6 +311,10 @@ See `docs/phase0/results/tier5-probe-report.md`.
 - Captured the full `input` usage text rather than a truncated head, which is what surfaced the
   gamepad and axis support above.
 
+- Documented how to obtain an installable build without any toolchain: build artifacts are attached
+  to every workflow run, and releases are published by tagging. Tag pushes must be done by the
+  repository owner, since the development environment's git proxy refuses them.
+
 Verified: `./gradlew build` succeeds with lint clean.
 Not verified: none of the new tests has been run on hardware.
 
