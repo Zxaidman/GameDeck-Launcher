@@ -405,6 +405,36 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — Delivery Through a Created Controller, Repeated
+
+- The create-and-press test was re-run on a later harness build in a separate session on the same
+  phone. Identical outcome: device created as **id 21**, all six `BUTTON_A` events arrived carrying
+  `dev=21`, `src=KEYBOARD|GAMEPAD`, `scan=304`, with the same `DPAD_CENTER` duplicate on each.
+- **Six registrations have now produced six different ids and one unchanging descriptor**
+  (`8cc7a295…`). Keying identity on the descriptor rather than the id is demonstrated, not argued.
+- Twelve buttons and ten axes present again, so the descriptor fix holds across builds.
+- Recorded as `docs/phase0/results/tier5-press-repeat-20260818-redmi-note-13-5g.json` and folded
+  into `tier5-press-report.md` §4a. Delivery is now n=2, which is a repeat, not yet repeatability:
+  `docs/PHASE-0.md` §29 wants the sequence surviving reboots and privilege restarts.
+
+### Phase 0 Harness — Exercise Every Control, Not One Button
+
+- Added a test that drives **both sticks, both triggers, the d-pad and three buttons at once**
+  through the created device, each held for a second and then returned to rest. One button proved
+  the device can deliver its own input; it did not prove it can deliver a *controller's* input, and
+  §29 names all of these.
+- Included **half-deflection stages** for a stick and a trigger. The descriptor declares raw kernel
+  ranges while the platform reports axes normalised, so a half value is the only way to distinguish
+  a real conversion from a value that saturates at 1.0.
+- Every stage returns its control to rest, and the device outlives its last release. A stuck axis
+  makes the platform emit directional keys without stopping — measured earlier at over 360 repeats
+  from a process that had already exited.
+- Stage markers go into the event log as the helper reaches them, so a control that produces
+  nothing is visible as a gap rather than lost in an undifferentiated stream.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.11 has not been run on a device.
+
 ### Phase 0 — A Created Controller Delivered Its Own Input
 
 The last open question at Tier 5 is answered. See `docs/phase0/results/tier5-press-report.md`.

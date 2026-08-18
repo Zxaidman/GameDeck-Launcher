@@ -368,6 +368,156 @@ object ShizukuProbe {
             }.trim()
         }
 
+    // ---------------------------------------------------------------------------------------
+    // The full exercise.
+    //
+    // One button proved the device can deliver its own input. It did not prove the device can
+    // deliver a *controller's* input: analog sticks, analog triggers, a hat, and several buttons
+    // held at once are what separate a controller from a key emitter, and the acceptance criteria
+    // in docs/PHASE-0.md §29 name all of them.
+    //
+    // Every stage sets a value, holds it, then returns it to rest. Nothing here may end with an
+    // axis left deflected — a stuck axis makes the system emit directional keys without stopping,
+    // which was measured earlier at over 360 repeats from a process that had already exited.
+    //
+    // Event triples are (type, code, value): type 3 is EV_ABS, type 1 is EV_KEY, and type 0 with
+    // code 0 is the SYN_REPORT every report must end with. Stable kernel ABI.
+    // ---------------------------------------------------------------------------------------
+
+    private fun inject(vararg events: Int) =
+        """{"id": 1, "command": "inject", "events": [${events.joinToString(", ")}]}"""
+
+    private const val SYN = "0, 0, 0"
+
+    /**
+     * Each stage is a label, what it should produce, and the events to write.
+     *
+     * The half-deflection stages matter as much as the full ones. The descriptor declares raw
+     * kernel ranges (±32768, 0–255) but the platform reports the axis normalised, so a half value
+     * is the only way to tell a real conversion from a value that happens to saturate at 1.0.
+     */
+    private val EXERCISE = listOf(
+        Triple(
+            "left stick — full right, then centre",
+            "AXIS_X near +1.0, then at rest",
+            listOf(inject(3, 0, 32767, 0, 0, 0), inject(3, 0, 0, 0, 0, 0)),
+        ),
+        Triple(
+            "left stick — half left, then centre",
+            "AXIS_X near -0.5 — proves the value is scaled, not saturated",
+            listOf(inject(3, 0, -16384, 0, 0, 0), inject(3, 0, 0, 0, 0, 0)),
+        ),
+        Triple(
+            "left stick — full up, then centre",
+            "AXIS_Y near -1.0 (up is negative), then at rest",
+            listOf(inject(3, 1, -32768, 0, 0, 0), inject(3, 1, 0, 0, 0, 0)),
+        ),
+        Triple(
+            "right stick — diagonal, then centre",
+            "AXIS_Z and AXIS_RZ together — the axes shell injection could never reach",
+            listOf(
+                inject(3, 2, 32767, 3, 5, -32768, 0, 0, 0),
+                inject(3, 2, 0, 3, 5, 0, 0, 0, 0),
+            ),
+        ),
+        Triple(
+            "triggers — both fully pressed, then released",
+            "AXIS_GAS and AXIS_BRAKE near +1.0 — analog, not a button",
+            listOf(
+                inject(3, 9, 255, 3, 10, 255, 0, 0, 0),
+                inject(3, 9, 0, 3, 10, 0, 0, 0, 0),
+            ),
+        ),
+        Triple(
+            "triggers — half pressed, then released",
+            "AXIS_GAS near +0.5",
+            listOf(inject(3, 9, 128, 0, 0, 0), inject(3, 9, 0, 0, 0, 0)),
+        ),
+        Triple(
+            "d-pad — right and down, then centre",
+            "AXIS_HAT_X +1 and AXIS_HAT_Y +1, or DPAD key events",
+            listOf(
+                inject(3, 16, 1, 3, 17, 1, 0, 0, 0),
+                inject(3, 16, 0, 3, 17, 0, 0, 0, 0),
+            ),
+        ),
+        Triple(
+            "three buttons at once — A, B, Y",
+            "three DOWN events before any UP — simultaneous state, not a queue",
+            listOf(
+                inject(1, 304, 1, 1, 305, 1, 1, 308, 1, 0, 0, 0),
+                inject(1, 304, 0, 1, 305, 0, 1, 308, 0, 0, 0, 0),
+            ),
+        ),
+    )
+
+    private const val STAGE_PATH = "/data/local/tmp/kestrel-stage"
+
+    /** Seconds each stage holds its value before returning to rest. */
+    private const val HOLD_SECONDS = 1
+
+    /**
+     * Creates the device, then drives every control on it in turn.
+     *
+     * The stage markers go into the event log as the helper reaches them, so the log reads as
+     * stimulus followed by whatever arrived — including nothing, which for a given control is a
+     * result and must be recorded as one.
+     */
+    fun createAndExercise(context: Context, label: String, descriptor: String) =
+        withService(context, "Creating device and exercising every control…") { bound ->
+            EventLog.note("CREATE+EXERCISE [$label] — sticks, triggers, d-pad, simultaneous buttons")
+            emit("── create and exercise: $label")
+
+            emit("descriptor: ${safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo wrote=$?").trim()}")
+
+            // One file per half-stage: set, then release. Written before the helper starts, so no
+            // stage can be delayed by the harness still preparing it.
+            EXERCISE.forEachIndexed { index, (_, _, events) ->
+                events.forEachIndexed { half, json ->
+                    safeExec(bound, "printf '%s' '$json' > $STAGE_PATH-$index-$half.json")
+                }
+            }
+            emit("${EXERCISE.size} stages written")
+
+            val sequence = buildString {
+                append("cat $DESCRIPTOR_PATH; sleep 2")
+                EXERCISE.indices.forEach { index ->
+                    append("; cat $STAGE_PATH-$index-0.json; sleep $HOLD_SECONDS")
+                    append("; cat $STAGE_PATH-$index-1.json; sleep 1")
+                }
+                // The device must outlive the last release, or the release is never delivered.
+                append("; sleep 3")
+            }
+
+            safeExec(bound, "rm -f $HELPER_LOG")
+            emit(safeExec(bound, "( ($sequence) | uinput - ) > $HELPER_LOG 2>&1 & echo launched").trim())
+
+            Thread.sleep(2000)
+            emit("device registered — driving controls now")
+
+            // Track the helper's schedule so each marker lands in the log beside the events it
+            // caused. Two seconds per stage: one holding, one at rest.
+            EXERCISE.forEachIndexed { index, (name, expected, _) ->
+                EventLog.note("EXERCISE ${index + 1}/${EXERCISE.size}: $name — expect $expected")
+                emit("  ${index + 1}. $name")
+                Thread.sleep((HOLD_SECONDS + 1) * 1000L)
+            }
+
+            EventLog.note("EXERCISE complete — every control returned to rest")
+            val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -30")
+
+            buildString {
+                appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
+                appendLine()
+                appendLine("Read the Events tab. Each EXERCISE note is followed by whatever that")
+                appendLine("control produced. What matters for each: did anything arrive, what")
+                appendLine("dev= was on it, and for the axes, what value — a half-deflection")
+                appendLine("stage reporting 1.000 means the value saturated rather than scaled.")
+                appendLine("A stage with nothing after it is a control that did not come through,")
+                appendLine("and that is a result worth exporting too.")
+            }.trim()
+        }
+
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
         EventLog.note("DESTROY: stopping uinput helper")

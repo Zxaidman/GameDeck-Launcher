@@ -189,7 +189,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.10")
+        report.put("harnessVersion", "phase0-0.0.11")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -414,6 +414,25 @@ private fun ProbePanel() {
         ) {
             Text("Create AND press A — the decisive test")
         }
+
+        Button(
+            onClick = {
+                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                ShizukuProbe.createAndExercise(context, label, descriptor)
+            },
+            enabled = !ShizukuProbe.busy.value,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            Text("Create AND exercise everything — 20s")
+        }
+        Text(
+            text = "Drives both sticks, both triggers, the d-pad and three buttons at once " +
+                "through the created device, each held for a second and then returned to rest. " +
+                "Leave the screen on and do not touch anything while it runs; read the Events " +
+                "tab afterwards. Half-deflection stages are the ones that prove an axis is " +
+                "analog rather than a switch.",
+            fontSize = 12.sp,
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),

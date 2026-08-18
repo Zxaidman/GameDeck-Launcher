@@ -2,7 +2,8 @@
 
 **Document:** `docs/phase0/results/tier5-press-report.md`  
 **Status:** Grade A mechanism demonstrated on one device — acceptance criteria not yet met in full  
-**Evidence:** `docs/phase0/results/tier5-press-20260817-redmi-note-13-5g.json`  
+**Evidence:** `docs/phase0/results/tier5-press-20260817-redmi-note-13-5g.json` (harness 0.0.9)  
+**Repeat:** `docs/phase0/results/tier5-press-repeat-20260818-redmi-note-13-5g.json` (harness 0.0.10)  
 **Device:** `Redmi/gold_in_global/gold:15/AP3A.240905.015.A2/OS3.0.3.0.VNQINXM:user/release-keys`  
 **Privilege:** Shizuku running, permission granted, identity `shell (uid 2000)` — **not root**  
 
@@ -86,8 +87,8 @@ strict down-then-up sequence per key code will desynchronise. Track button state
 **Identity is the descriptor, never the id.** Id 17 follows ids 13, 14 and 15 from earlier runs.
 The id is a per-registration handle and increments on every create; the descriptor
 `8cc7a295…` is stable across all of them. A profile, a binding, or a remembered layout must key on
-the descriptor. This was already argued in `tier5-gradeA-report.md` §3; this run is the fourth
-independent confirmation.
+the descriptor. This was already argued in `tier5-gradeA-report.md` §3; §4a below adds a sixth
+independent confirmation on a later harness build.
 
 **The device dies with the process holding it.** `DEVICE REMOVED id=17` follows the helper exiting.
 A production backend is therefore a long-lived process for the duration of a session, with an
@@ -111,8 +112,28 @@ grades exist:
   only one.
 - **Latency is unmeasured.** The harness timestamps arrival, not the interval from intent to
   delivery.
-- **Repeatability of this specific test is n=1.** Device creation is reproduced across four runs;
-  delivery through it, once.
+- **Repeatability of this specific test is n=2.** Device creation is reproduced across six runs;
+  delivery through it, twice. Two is not a repeatability claim — §29 wants the sequence surviving
+  reboots and privilege restarts.
+
+## 4a. Repeated on a later harness build
+
+Re-run on harness 0.0.10, a separate session on the same phone. Identical outcome: the device was
+created as **id 21**, and all six `BUTTON_A` events arrived carrying `dev=21`, `src=KEYBOARD|GAMEPAD`,
+`scan=304`, each accompanied by the same `DPAD_CENTER` duplicate.
+
+Two things this second run adds:
+
+- **The descriptor was identical** — `8cc7a295a758edbbada3044903f0f8fb0c1157f1`, the same hash as
+  id 17, and as ids 13, 14 and 15 before it. Six registrations, six different ids, one stable
+  descriptor. The rule that identity must key on the descriptor is now demonstrated rather than
+  argued.
+- **All twelve buttons and ten axes were present again**, so the descriptor fix is stable across
+  builds rather than a one-run coincidence.
+
+The one difference is the harness, not the device: id 21 follows 17 because ids increment per
+registration and the phone had not rebooted between the runs. That is the expected behaviour
+described in §3.
 
 ## 5. Effect on the acceptance criteria
 
