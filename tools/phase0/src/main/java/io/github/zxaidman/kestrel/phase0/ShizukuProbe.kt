@@ -292,7 +292,7 @@ object ShizukuProbe {
             // next (reporting NOT RUNNING while the device demonstrably lived its full 30 seconds).
             // An instrument that asserts a conclusion its evidence does not support is worse than
             // one that simply shows what it saw.
-            val alive = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+            val alive = safeExec(bound, LIST_HOLDERS, 5000)
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
             val count = android.view.InputDevice.getDeviceIds().size
 
@@ -353,7 +353,7 @@ object ShizukuProbe {
             emit("presses sent — the device stays alive for about 20 more seconds")
 
             val log = safeExec(bound, "cat $HELPER_LOG 2>&1 | head -20")
-            val procs = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+            val procs = safeExec(bound, LIST_HOLDERS, 5000)
 
             buildString {
                 appendLine("helper output: ${if (log.isBlank()) "(none — no error)" else log}")
@@ -493,8 +493,7 @@ object ShizukuProbe {
         appendLine(
             safeExec(
                 bound,
-                "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & " +
-                    "echo \$! > $PID_PATH; echo reader=started pid=\$(cat $PID_PATH)"
+                "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & echo reader=started"
             ).trim()
         )
 
@@ -503,7 +502,7 @@ object ShizukuProbe {
 
         val helper = safeExec(bound, "head -c 400 $HELPER_LOG 2>&1")
         appendLine("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
-        val alive = safeExec(bound, HOLDERS_DESCRIBED, 10000)
+        val alive = safeExec(bound, LIST_HOLDERS, 5000)
         appendLine("holding /dev/uinput: ${if (alive.isBlank()) "(none)" else alive.trim()}")
     }
 
@@ -553,188 +552,239 @@ object ShizukuProbe {
             }.trim()
         }
 
+    private const val LEASE_PATH = "/data/local/tmp/kestrel-lease"
+    private const val GUARD_PATH = "/data/local/tmp/kestrel-guard.sh"
+    private const val FEED_PATH = "/data/local/tmp/kestrel-feed.sh"
+    private const val FEED_STAGE = "/data/local/tmp/kestrel-feed"
+
     /**
-     * Tier 6 support: opens the device and leaves it there, cycling one control at a time.
+     * How the holder actually identifies itself, read off the reference device:
      *
-     * A target application's own binding screen is better evidence than gameplay, because it states
-     * what it thinks it received. Reaching that screen means leaving the harness, so nothing here
-     * may depend on the harness staying in the foreground: the whole schedule is handed to the
-     * shell-privileged process, which is not subject to the battery restrictions that would
-     * otherwise stop a backgrounded measurement mid-run.
+     * ```text
+     * 32267  app_process /system/bin com.android.commands.uinput.Uinput -
+     * ```
      *
-     * The cycle is deliberately slow. A binding screen takes whatever arrives first, so a control
-     * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
-     * was pressed last.
+     * Not `uinput`. Every teardown before this matched that name and therefore killed nothing,
+     * ever, while reporting success from the same broken search — the failure recorded in
+     * `docs/phase0/results/tier5-orphan-report.md`.
+     *
+     * The bracket stops a pattern matching the command that carries it, which would otherwise make
+     * every sweep appear to succeed by killing its own shell.
+     *
+     * This replaces a scan of every process's open file descriptors, which was right in principle
+     * and useless in practice: on a real phone it took longer than ten seconds and was killed by
+     * its own timeout, mid-answer. Kotlin nests block comments, so the path cannot be written here.
      */
-    private const val STAGE_PATH = "/data/local/tmp/kestrel-stage"
+    private const val HOLDER_PATTERN = "com.android.commands.uinput[.]Uinput"
+    private const val TAIL_PATTERN = "kestrel[-]stream"
+    private const val FEED_PATTERN = "kestrel[-]feed"
+    private const val GUARD_PATTERN = "kestrel[-]guard"
+
+    private const val LIST_HOLDERS =
+        "for p in \$(pgrep -f '" + HOLDER_PATTERN + "' 2>/dev/null); do " +
+            "echo \"\$p  \$(tr '\\0' ' ' < /proc/\$p/cmdline 2>/dev/null)\"; done"
 
     /**
-     * Tier 6 support: opens the device and leaves it there, cycling one control at a time.
-     *
-     * A target application's own binding screen is better evidence than gameplay, because it states
-     * what it thinks it received. Reaching that screen means leaving the harness, so nothing here
-     * may depend on the harness staying in the foreground: the whole schedule is handed to the
-     * shell-privileged process in one command, which is not subject to the battery restrictions
-     * that would otherwise stop a backgrounded measurement mid-run.
-     *
-     * This deliberately uses the plain pipeline rather than the appended stream the exercise test
-     * uses. The pipeline is the mechanism that has already delivered every control on this hardware;
-     * the stream exists to keep log markers aligned with events, and when the operator is in another
-     * application there are no markers to align. Proven mechanism where it is proven.
-     *
-     * The cycle is slow on purpose. A binding screen takes whatever arrives first, so a control
-     * every few seconds is bindable one at a time; a fast loop would bind everything to whatever
-     * was pressed last.
-     */
-    fun holdForTarget(context: Context, label: String, descriptor: String, rounds: Int = 3) =
-        withService(context, "Opening a device and holding it for target testing…") { bound ->
-            val minutes = (rounds * EXERCISE.size * 4 + 8) / 60
-            EventLog.note("HOLD [$label] — device open, controls cycling for about $minutes minutes")
-            emit("── hold for target testing: $label")
-
-            emit(safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; echo descriptor=$?").trim())
-
-            EXERCISE.forEachIndexed { index, (_, _, events) ->
-                events.forEachIndexed { half, json ->
-                    safeExec(bound, "printf '%s' '$json' > $STAGE_PATH-$index-$half.json")
-                }
-            }
-            emit("${EXERCISE.size} controls prepared, $rounds rounds each, about $minutes minutes")
-
-            val schedule = buildString {
-                append("cat $DESCRIPTOR_PATH; sleep 3")
-                repeat(rounds) {
-                    EXERCISE.indices.forEach { index ->
-                        append("; cat $STAGE_PATH-$index-0.json; sleep 1")
-                        append("; cat $STAGE_PATH-$index-1.json; sleep 3")
-                    }
-                }
-                // The device must outlive its last release, or the release is never delivered.
-                append("; sleep 5")
-            }
-
-            safeExec(bound, "rm -f $HELPER_LOG")
-            emit(
-                safeExec(
-                    bound,
-                    "( ($schedule) | uinput - ) > $HELPER_LOG 2>&1 & echo \$! > $PID_PATH; " +
-                        "echo cycling, helper pid=\$(cat $PID_PATH)",
-                ).trim()
-            )
-
-            Thread.sleep(3500)
-            val count = android.view.InputDevice.getDeviceIds().size
-            val helper = safeExec(bound, "head -c 300 $HELPER_LOG 2>&1")
-            emit("device count now: $count")
-            emit("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
-
-            buildString {
-                appendLine("The device is open and cycles every control $rounds times, about four")
-                appendLine("seconds apart, for roughly $minutes minutes.")
-                appendLine()
-                appendLine("Check the Devices tab first — if Kestrel Virtual Controller is not")
-                appendLine("listed there, nothing was created and the rest of this will show")
-                appendLine("nothing either.")
-                appendLine()
-                appendLine("Then leave this screen. Open the target application, find its")
-                appendLine("controller or input settings, and look for two things:")
-                appendLine("  1. does it list Kestrel Virtual Controller as connected?")
-                appendLine("  2. on its binding screen, does a control bind itself as the cycle runs?")
-                appendLine()
-                appendLine("Come back and press Destroy device when finished.")
-            }.trim()
-        }
-
-    // ---------------------------------------------------------------------------------------
-    // Teardown.
-    //
-    // This was broken, silently, from the first version that created a device, and the way it broke
-    // is worth keeping written down.
-    //
-    // Every stop command matched on the process being called `uinput`. It is not. `ps -A | grep -i
-    // uinput` returned nothing on every single run — that was visible in the transcripts all along
-    // and was read as "nothing left running" when it actually meant "the search does not work".
-    // `pkill -x uinput` therefore killed nothing, ever, and `pgrep -x uinput || echo NONE` printed
-    // NONE for the same reason, confirming a teardown that had not happened. Runs appeared to stop
-    // only because their own schedule of sleeps ran out.
-    //
-    // What that cost, measured on the reference device: a created controller outlived Destroy,
-    // force-stop, clearing data, and **uninstalling the harness entirely**. It kept delivering
-    // input to the home screen and the browser with no application present at all. Only a reboot
-    // ended it.
-    //
-    // The fix does not ask what a process is called. It asks which processes have the virtual-input
-    // node open, which is the only property that actually decides whether the device exists.
-    // ---------------------------------------------------------------------------------------
-
-    private const val PID_PATH = "/data/local/tmp/kestrel-helper.pid"
-
-    /** Process ids holding /dev/uinput open, whatever they happen to be named. */
-    private const val HOLDER_IDS =
-        "for d in /proc/[0-9]*; do " +
-            "if ls -l \$d/fd 2>/dev/null | grep -q /dev/uinput; then echo \${d#/proc/}; fi; done"
-
-    /** The same, with each process's command line, for the transcript. */
-    private const val HOLDERS_DESCRIBED =
-        "for d in /proc/[0-9]*; do " +
-            "if ls -l \$d/fd 2>/dev/null | grep -q /dev/uinput; then " +
-            "echo \"\${d#/proc/}  \$(tr '\\0' ' ' < \$d/cmdline 2>/dev/null)\"; fi; done"
-
-    /**
-     * Stops everything holding the device, then says what is left.
-     *
-     * Three attempts, weakest first, because each covers what the previous one cannot:
-     * the process group started by this harness, then anything at all holding the node open, then a
-     * command-line sweep for our own leftovers. The bracket in the last pattern stops the command
-     * matching itself.
-     *
-     * A holder owned by root cannot be killed from shell privilege and will still be listed
-     * afterwards. That is correct: the vendor's own virtual-input process is one, and it must not
-     * be touched.
+     * Stops everything this harness starts, then reports the state afterwards rather than claiming
+     * a result. The holder goes first: once it is gone the device is gone, and the rest is tidying.
      */
     private fun stopEverything(bound: IProbeService): String = buildString {
-        val before = safeExec(bound, HOLDERS_DESCRIBED, 10000)
-        appendLine("holding /dev/uinput before: ${if (before.isBlank()) "(none)" else "\n$before".trim()}")
+        val before = safeExec(bound, LIST_HOLDERS, 5000)
+        appendLine("holding the device before: ${if (before.isBlank()) "(none)" else before.trim()}")
 
-        safeExec(
-            bound,
-            "if [ -f $PID_PATH ]; then P=\$(cat $PID_PATH); " +
-                "kill -9 -\$P 2>/dev/null; kill -9 \$P 2>/dev/null; rm -f $PID_PATH; fi; echo ok",
-        )
-        safeExec(bound, "for p in \$($HOLDER_IDS); do kill -9 \$p 2>/dev/null; done; echo ok", 10000)
-        safeExec(bound, "pkill -f 'kestrel[-]' 2>/dev/null; echo ok")
+        safeExec(bound, "pkill -9 -f '$HOLDER_PATTERN' 2>/dev/null; echo ok")
+        safeExec(bound, "pkill -9 -f '$FEED_PATTERN' 2>/dev/null; echo ok")
+        safeExec(bound, "pkill -9 -f '$TAIL_PATTERN' 2>/dev/null; echo ok")
+        safeExec(bound, "pkill -9 -f '$GUARD_PATTERN' 2>/dev/null; echo ok")
+        safeExec(bound, "rm -f $STREAM_PATH $LEASE_PATH; echo ok")
 
         Thread.sleep(600)
-        val after = safeExec(bound, HOLDERS_DESCRIBED, 10000)
-        appendLine("holding /dev/uinput after:  ${if (after.isBlank()) "(none)" else "\n$after".trim()}")
+        val after = safeExec(bound, LIST_HOLDERS, 5000)
+        appendLine("holding the device after:  ${if (after.isBlank()) "(none)" else after.trim()}")
         appendLine("input devices now: ${android.view.InputDevice.getDeviceIds().size}")
     }
 
     /** Stops any helper, so a device is never left behind. */
     fun destroyVirtualDevice(context: Context) = withService(context, "Stopping helper…") { bound ->
-        EventLog.note("DESTROY: stopping every holder of the virtual-input node")
-        val report = stopEverything(bound)
-        safeExec(bound, "rm -f $STREAM_PATH")
-        "── destroy virtual device\n$report"
+        EventLog.note("DESTROY: stopping every holder of the device")
+        "── destroy virtual device\n" + stopEverything(bound)
     }
 
     /**
      * The same teardown, offered on its own and never disabled.
      *
-     * A device can outlive the harness process, so it can also outlive any state the harness holds
-     * about it. This must therefore work from a cold start, with nothing running and nothing
-     * remembered, on a device created by a previous install.
+     * A device outlives the process that created it, so it also outlives anything the harness
+     * remembers about it. This has to work from a cold start, on a device an earlier install
+     * created, with nothing running and nothing known.
      */
     fun stopOrphans(context: Context) = withService(context, "Searching for orphaned devices…") { bound ->
-        EventLog.note("ORPHAN SWEEP: looking for any process holding the virtual-input node")
+        EventLog.note("ORPHAN SWEEP")
         "── stop orphaned devices\n" + stopEverything(bound)
     }
 
-    /** Reports holders without touching them. Cheap enough to run beside the status check. */
+    /** Reports holders without touching them. */
     fun listHolders(context: Context) = withService(context, "Listing holders…") { bound ->
-        val holders = safeExec(bound, HOLDERS_DESCRIBED, 10000)
-        "── processes holding /dev/uinput\n" +
+        val holders = safeExec(bound, LIST_HOLDERS, 5000)
+        "── processes holding the device\n" +
             (if (holders.isBlank()) "(none — no virtual device is open)" else holders.trim())
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Sessions.
+    //
+    // A controller has to outlive the screen that created it, or it cannot be used to play
+    // anything: the operator opens something else and the device must still be there. The same
+    // property is what let a device survive uninstalling the application, which is intolerable.
+    //
+    // The difference between the feature and the fault is not persistence. It is who decides when
+    // it ends.
+    //
+    // A session therefore holds a lease. The application renews a timestamp every few seconds, and
+    // a watchdog in the privileged process destroys the device once that timestamp goes stale. The
+    // watchdog needs no cooperation from the application, which is the whole point: an application
+    // being force-stopped or uninstalled never gets to run any code, so anything that depends on it
+    // running cleanup is not a guarantee.
+    //
+    // Three processes, deliberately separate:
+    //   holder   tail -f on the stream, feeding the platform's helper — owns the device
+    //   feeder   appends control events to the stream — can be stopped without closing the device
+    //   guard    watches the lease, kills the other two when it expires
+    // ---------------------------------------------------------------------------------------
+
+    /** Seconds of silence from the application before the guard closes the device. */
+    private const val LEASE_TIMEOUT = 15
+
+    /**
+     * Renews the lease. Called on a timer by the foreground service.
+     *
+     * Silent by design: it must not touch the transcript, the busy flag, or anything being read.
+     * Returns false when no privileged service is bound, which is a true statement about the
+     * session and leads to the safe outcome — the guard closes the device.
+     */
+    fun renewLease(): Boolean {
+        val bound = service ?: return false
+        return try {
+            bound.exec("date +%s > $LEASE_PATH", 3000)
+            true
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    /** Writes the guard script and starts it. Its own path is what identifies it to a sweep. */
+    private fun startGuard(bound: IProbeService) {
+        val script = listOf(
+            "while :; do",
+            "T=\$(cat $LEASE_PATH 2>/dev/null)",
+            "[ -z \"\$T\" ] && T=0",
+            "N=\$(date +%s)",
+            "[ \$((N - T)) -gt $LEASE_TIMEOUT ] && break",
+            "sleep 3",
+            "done",
+            "pkill -9 -f '$HOLDER_PATTERN'",
+            "pkill -9 -f '$FEED_PATTERN'",
+            "pkill -9 -f '$TAIL_PATTERN'",
+            "rm -f $STREAM_PATH $LEASE_PATH",
+        ).joinToString(" ") { "'$it'" }
+
+        safeExec(bound, "date +%s > $LEASE_PATH")
+        safeExec(bound, "printf '%s\\n' $script > $GUARD_PATH")
+        safeExec(bound, "sh $GUARD_PATH > /dev/null 2>&1 & echo guard=started")
+    }
+
+    /**
+     * Opens a device that stays open until the lease expires or the operator ends it.
+     *
+     * The holder reads an ordinary file through `tail -f` rather than a pipe. That began as a fix
+     * for a freeze — opening a pipe waits for the other end, appending to a file never does — but
+     * it is also what makes pausing possible: the feeder can stop and restart without the holder
+     * ever seeing end of input, so the device survives a pause instead of vanishing during it.
+     */
+    fun startSession(context: Context, label: String, descriptor: String, cycling: Boolean) =
+        withService(context, "Opening a controller session…") { bound ->
+            EventLog.note("SESSION START [$label] — device held until stopped")
+            emit("── session: $label")
+
+            emit(stopEverything(bound).trim())
+
+            safeExec(bound, "printf '%s' '$descriptor' > $DESCRIPTOR_PATH; : > $STREAM_PATH")
+            safeExec(bound, "rm -f $HELPER_LOG")
+            emit(
+                safeExec(
+                    bound,
+                    "( tail -n +1 -f $STREAM_PATH | uinput - ) > $HELPER_LOG 2>&1 & echo holder=started"
+                ).trim()
+            )
+
+            startGuard(bound)
+            emit("guard watching the lease — the device closes ${LEASE_TIMEOUT}s after renewals stop")
+
+            safeExec(bound, "printf '%s\\n' '$descriptor' >> $STREAM_PATH")
+            Thread.sleep(1500)
+
+            val helper = safeExec(bound, "head -c 300 $HELPER_LOG 2>&1")
+            emit("helper: ${if (helper.isBlank()) "(silent — no error)" else helper.trim()}")
+            val holders = safeExec(bound, LIST_HOLDERS, 5000)
+            emit("holding the device: ${if (holders.isBlank()) "(none — nothing was created)" else holders.trim()}")
+
+            if (cycling) startFeeder(bound)
+
+            buildString {
+                appendLine("The controller stays open while the notification is showing.")
+                appendLine()
+                appendLine("It closes when you press Stop, and it also closes by itself within about")
+                appendLine("$LEASE_TIMEOUT seconds if this application is force-stopped, has its data cleared,")
+                appendLine("or is uninstalled — nothing in the application has to run for that.")
+                appendLine()
+                appendLine("Leave this screen and open whatever you want to test.")
+            }.trim()
+        }
+
+    /** Writes the cycling script and starts it. A separate process, so it can be paused. */
+    private fun startFeeder(bound: IProbeService) {
+        EXERCISE.forEachIndexed { index, (_, _, events) ->
+            events.forEachIndexed { half, json ->
+                safeExec(bound, "printf '%s' '$json' > $FEED_STAGE-$index-$half.json")
+            }
+        }
+
+        val lines = buildList {
+            add("while :; do")
+            EXERCISE.indices.forEach { index ->
+                add("cat $FEED_STAGE-$index-0.json >> $STREAM_PATH")
+                add("sleep 1")
+                add("cat $FEED_STAGE-$index-1.json >> $STREAM_PATH")
+                add("sleep 3")
+            }
+            add("done")
+        }.joinToString(" ") { "'$it'" }
+
+        safeExec(bound, "printf '%s\\n' $lines > $FEED_PATH")
+        safeExec(bound, "sh $FEED_PATH > /dev/null 2>&1 & echo feeder=started")
+        EventLog.note("SESSION: cycling every control, four seconds apart")
+    }
+
+    /** Stops the input without closing the device — the reason holder and feeder are separate. */
+    fun pauseCycle(context: Context) = withService(context, "Pausing input…") { bound ->
+        EventLog.note("SESSION PAUSE — input stopped, device still open")
+        safeExec(bound, "pkill -9 -f '$FEED_PATTERN' 2>/dev/null; echo ok")
+        // Nothing releases a control implicitly, so a pause mid-press would leave one held.
+        EXERCISE.forEach { (_, _, events) ->
+            safeExec(bound, "printf '%s\\n' '${events[1]}' >> $STREAM_PATH")
+        }
+        "── session paused\nInput stopped, every control returned to rest, device still open."
+    }
+
+    fun resumeCycle(context: Context) = withService(context, "Resuming input…") { bound ->
+        EventLog.note("SESSION RESUME")
+        startFeeder(bound)
+        "── session resumed\nCycling again."
+    }
+
+    /** Ends the session: the device, the input, and the watchdog that would have ended it anyway. */
+    fun stopSession(context: Context) = withService(context, "Closing the session…") { bound ->
+        EventLog.note("SESSION STOP")
+        "── session stopped\n" + stopEverything(bound)
     }
 
     /**

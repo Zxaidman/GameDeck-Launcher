@@ -23,8 +23,8 @@ android {
         applicationId = "io.github.zxaidman.kestrel.phase0"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 15
-        versionName = "phase0-0.0.15"
+        versionCode = 16
+        versionName = "phase0-0.0.16"
     }
 
     buildTypes {

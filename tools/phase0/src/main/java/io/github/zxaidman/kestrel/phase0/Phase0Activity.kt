@@ -3,7 +3,9 @@ package io.github.zxaidman.kestrel.phase0
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.input.InputManager
+import android.os.Build
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -83,6 +85,16 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         }
     }
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted) {
+                EventLog.note(
+                    "Notification permission refused — a session will still run and still stop, " +
+                        "but without the notification there is no visible handle on it"
+                )
+            }
+        }
+
     private val permissionListener =
         Shizuku.OnRequestPermissionResultListener { _, _ -> ShizukuProbe.refreshStatus() }
 
@@ -117,6 +129,15 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         ShizukuProbe.refreshStatus()
 
         onBackPressedDispatcher.addCallback(this, runGuard)
+
+        // The notification is the only always-available way to end a session, so asking for it is
+        // asking for the stop button rather than for the ability to interrupt anyone.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         setContent {
             MaterialTheme {
@@ -213,7 +234,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.15")
+        report.put("harnessVersion", "phase0-0.0.16")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -501,34 +522,53 @@ private fun ProbePanel() {
         ) {
             Text("Create AND exercise everything — 20s")
         }
-        Button(
-            onClick = {
-                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
-                ShizukuProbe.holdForTarget(context, label, descriptor)
-            },
-            enabled = !ShizukuProbe.busy.value,
-            modifier = Modifier.padding(top = 6.dp),
+        // A session, rather than a fixed-length hold. There is no timer to outlast and no timer to
+        // wait out: the device exists while the notification does, and ends when the operator says
+        // so or when the application stops renewing its lease.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Hold device for target testing — 2 min")
+            Button(
+                onClick = {
+                    val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                    SessionService.start(context)
+                    ShizukuProbe.startSession(context, label, descriptor, cycling = true)
+                },
+                enabled = !ShizukuProbe.busy.value,
+            ) {
+                Text("START session (cycling)")
+            }
+            Button(
+                onClick = {
+                    val (label, descriptor) = ShizukuProbe.CREATIONS.first()
+                    SessionService.start(context)
+                    ShizukuProbe.startSession(context, label, descriptor, cycling = false)
+                },
+                enabled = !ShizukuProbe.busy.value,
+            ) {
+                Text("START quiet")
+            }
         }
-        Button(
-            onClick = {
-                val (label, descriptor) = ShizukuProbe.CREATIONS.first()
-                // Enough to set up a stream to a host before the device closes; two minutes is not.
-                ShizukuProbe.holdForTarget(context, label, descriptor, rounds = 18)
-            },
-            enabled = !ShizukuProbe.busy.value,
-            modifier = Modifier.padding(top = 6.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Hold device — 10 min, for streaming setup")
+            Button(onClick = { ShizukuProbe.pauseCycle(context) }) { Text("Pause input") }
+            Button(onClick = { ShizukuProbe.resumeCycle(context) }) { Text("Resume") }
+            Button(onClick = { SessionService.stop(context) }) { Text("STOP session") }
         }
 
         Text(
-            text = "Opens the device and leaves it open, cycling one control every few seconds " +
-                "for about two minutes. Leave this screen, open a target application's controller " +
-                "settings, and see whether it lists the device and binds what it receives. The " +
-                "cycle runs in the privileged process, so it continues with this screen in the " +
-                "background.",
+            text = "A session keeps the controller open while you are somewhere else, which is " +
+                "what makes testing another application possible at all. Cycling drives one " +
+                "control every few seconds so a binding screen has something to bind; quiet opens " +
+                "the device and sends nothing. Pause stops the input and returns every control to " +
+                "rest without closing the device.\n\n" +
+                "It is not permanent. The notification is the handle: Stop there ends it from " +
+                "anywhere, and the device also closes by itself within about 15 seconds if this " +
+                "application is force-stopped, has its data cleared, or is uninstalled — nothing " +
+                "in the application has to run for that to happen.",
             fontSize = 12.sp,
         )
 

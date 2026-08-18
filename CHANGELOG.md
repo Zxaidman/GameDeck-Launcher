@@ -405,6 +405,46 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — Sessions: Persistence That the Owner Can End
+
+The orphan finding had an obvious reading — stop the device surviving — and it was wrong. A
+controller that dies when you leave the launcher cannot be used to play anything; the persistence
+is the feature. What was intolerable is that **nothing the owner did could end it**.
+
+The harness now runs a session instead of a fixed-length hold:
+
+- **A foreground service with an ongoing notification**, carrying Pause, Resume and Stop. A device
+  that exists invisibly is the problem; a device with a permanent handle on screen is not.
+- **A lease.** The service renews a timestamp in the privileged process every few seconds, and a
+  **watchdog** there closes the device about fifteen seconds after renewals stop. It needs no
+  cooperation from the application — which is the whole point, because force-stop, cleared data and
+  uninstall all end an application without letting it run any code. A teardown that depends on the
+  application running is not a guarantee; a lease that stops being renewed is.
+- **Pause stops input without closing the device.** Holder and feeder are separate processes: the
+  holder reads an ordinary file through `tail -f`, so the feeder can stop and restart without the
+  holder ever seeing end of input.
+- No timer to outlast and none to wait out. The device exists while the notification does.
+
+Recorded as a product rule in `docs/phase0/results/tier5-orphan-report.md` §4a: **persistence must
+be governed, not prevented.**
+
+### Phase 0 Harness — The Holder Names Itself
+
+- The `/proc` scan added in the previous version was the right question and the wrong instrument:
+  on the reference device it took longer than ten seconds and was killed by its own timeout,
+  mid-answer. It did get far enough to print what mattered —
+  `32267  app_process /system/bin com.android.commands.uinput.Uinput -`.
+- **The holder is `app_process`.** There was never a process called `uinput` for any of the earlier
+  sweeps to find. Teardown now matches that command line, which is specific, stable and returns
+  immediately, and re-reads the state afterwards.
+- Evidence: `docs/phase0/results/tier5-teardown-20260818-redmi-note-13-5g.json`. In it the sweep
+  times out while listing, and `input devices now: 8` records the device count returning to
+  baseline — the kill worked, the listing was what could not finish.
+
+Verified: `./gradlew build` succeeds with lint clean, with the SDK installed.
+Not verified: harness 0.0.16 has not been run on a device. The lease timeout, the watchdog, and
+every claim about force-stop and uninstall behaviour are **untested** until it is.
+
 ### Phase 0 — A Created Controller Can Outlive Everything
 
 The most serious finding so far, and the reason teardown is now an architectural requirement rather

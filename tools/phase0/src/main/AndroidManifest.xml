@@ -6,9 +6,18 @@
          must have Shizuku installed, running, and must approve the request. -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
+    <!-- A controller session outlives this screen on purpose: a controller that dies when you open
+         something else cannot be used to play anything. The notification is what makes that
+         visible and stoppable — while a device exists, the user can see it exists and end it from
+         anywhere. See docs/phase0/results/tier5-orphan-report.md for why that matters. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!--
-      EXPERIMENTAL Phase 0 harness. Separate applicationId, separate APK, no permissions.
-      The harness observes input; it never injects. Injection candidates are driven from a shell.
+      EXPERIMENTAL Phase 0 harness. Separate applicationId, separate APK.
+      The harness observes input; it never injects into its own window. Stimulus is produced by the
+      platform's own tools in a shell-privileged process and travels the ordinary input path.
     -->
     <application
         android:allowBackup="false"
@@ -26,6 +35,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Holds the session open and renews its lease. The lease is what makes the session
+             end when the user says so: the privileged watchdog closes the device seconds after
+             renewals stop, which covers force-stop, cleared data and uninstalling, none of which
+             let an application run any code on its way out. -->
+        <service
+            android:name=".SessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps an experimental virtual controller open, and visible, while
+                    input feasibility is measured against other applications." />
+        </service>
 
         <!-- Lets Share hand over the report as an actual .json file. The receiving application
              gets a one-shot read grant for that single file; the provider is not exported, so
