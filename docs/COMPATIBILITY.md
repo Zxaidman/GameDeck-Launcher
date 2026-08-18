@@ -401,6 +401,24 @@ Suggested table:
 
 Add individual device rows as they are actually tested.
 
+Tested devices:
+
+| Manufacturer | Device | Android | OEM Skin/Firmware | Shizuku ADB | Shizuku Root | Input | Overlay | Display | Overall |
+|---|---|---:|---|---|---|---|---|---|---|
+| Xiaomi | Redmi Note 13 5G (`2312DRAABI`) | 15 | HyperOS 3.0.3 (`OS3.0.3.0.VNQINXM`) | Working | Untested | Experimental | Untested | Untested | Experimental |
+
+```text
+Status: Experimental
+Confidence: Low
+Shizuku: ADB / shell (uid 2000)
+Evidence: docs/phase0/results/tier5-exercise-report.md, docs/phase0/results/tier6-report.md
+```
+
+Input is Experimental rather than Supported with Shizuku because §29 of `docs/PHASE-0.md` is not
+fully satisfied: no streaming client has been confirmed, and repeatability across reboots has not
+been established. Confidence is Low because every result comes from one device and one firmware.
+Root was never tested — the device is not rooted, so that cell is Untested, never Unsupported.
+
 ---
 
 # 9. Input Backend Compatibility
@@ -423,10 +441,30 @@ Suggested matrix:
 
 | Backend | Normal Android | Shizuku ADB | Shizuku Root | Buttons | Analog | Triggers | Simultaneous | Device Identity |
 |---|---|---|---|---|---|---|---|---|
-| Native/Gamepad | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Shizuku | N/A | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| Native/Gamepad | Unsupported | Experimental | Untested | Working | Working | Working | Working | Yes |
+| Shizuku | N/A | Limited | Untested | Working | Limited | Unsupported | Unknown | No |
 | System Injection | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | Touch Fallback | Unknown | N/A | N/A | Unknown | Unknown | Unknown | Unknown | No |
+
+```text
+Status: Experimental
+Confidence: Low
+Tested on: Xiaomi Redmi Note 13 5G, Android 15, HyperOS 3.0.3
+Evidence: docs/phase0/results/tier5-exercise-report.md, docs/phase0/results/tier6-report.md
+```
+
+Row by row, and only from what was actually observed on that one device:
+
+- **Native/Gamepad** here means a kernel virtual input device created through the platform's own
+  helper. It needs shell privilege, which an ordinary application cannot obtain, so the normal
+  column is Unsupported — that is a fact about privilege, not about the mechanism. With shell
+  privilege it produced a device the platform classifies as a controller, delivering buttons,
+  both sticks, analog triggers and simultaneous input under its own device id.
+- **Shizuku** here means the platform's `input` command run with shell privilege. It delivers
+  buttons, but `input motionevent` accepts only two coordinates, so the right stick and the
+  triggers are unreachable, and an axis it sets is never released implicitly. It has no device
+  identity of its own.
+- The remaining rows have not been tested and stay Unknown.
 
 The exact final backend names should match `docs/INPUT_BACKENDS.md` once that document exists.
 
@@ -496,18 +534,45 @@ Controller features must be tested independently.
 
 | Feature | PPSSPP | Dolphin | RetroArch | Moonlight | Steam Link |
 |---|---|---|---|---|---|
-| A/B/X/Y | Unknown | Unknown | Unknown | Unknown | Unknown |
-| D-pad | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Left Stick | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Right Stick | Unknown | Unknown | Unknown | Unknown | Unknown |
-| LB/RB | Unknown | Unknown | Unknown | Unknown | Unknown |
-| LT/RT | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Start | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Back | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Simultaneous Inputs | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Hold/Release | Unknown | Unknown | Unknown | Unknown | Unknown |
+| A/B/X/Y | Untested | Unknown | Bound | Unknown | Unknown |
+| D-pad | Untested | Unknown | Bound | Unknown | Unknown |
+| Left Stick | Untested | Unknown | Bound | Unknown | Unknown |
+| Right Stick | Untested | Unknown | Untested | Unknown | Unknown |
+| LB/RB | Untested | Unknown | Bound | Unknown | Unknown |
+| LT/RT | Untested | Unknown | Untested | Unknown | Unknown |
+| Start | Untested | Unknown | Untested | Unknown | Unknown |
+| Back | Untested | Unknown | Untested | Unknown | Unknown |
+| Simultaneous Inputs | Untested | Unknown | Untested | Unknown | Unknown |
+| Hold/Release | Untested | Unknown | Untested | Unknown | Unknown |
 
 Additional applications should be added as testing begins.
+
+Emulators tested with a Kestrel-created controller, on the device in §8:
+
+| Feature | Eden | NetherSX2 | RetroArch 1.22.2 |
+|---|---|---|---|
+| Listed as a connected controller | Yes, by name | Yes, by name and id | Yes, by name |
+| Auto-mapping | Full control set | Completed | Device selected as Port 1 |
+| A/B/X/Y | Bound (`Button 96/97/99/100`) | Bound (`Button96`, `Button100`) | Bound |
+| D-pad | Bound (`±Axis 15/16`) | Bound (`±Axis15/16`) | Bound |
+| Left Stick | Bound (`Axis 0/1`) | Untested | Bound |
+| Right Stick | Untested | Untested | Untested |
+| LB/RB | Bound (`Button 102/103`) | Untested | Bound |
+| **LT/RT** | **Bound as axes** (`Axis 17/18`) | Untested | Untested |
+| Simultaneous Inputs | Untested in-application | Untested | Untested |
+| Hold/Release | Untested in-application | Untested | Untested |
+
+```text
+Status: Experimental
+Confidence: Low
+Level achieved: Level 4 — virtual gamepad identity (see §10)
+Evidence: docs/phase0/results/tier6-report.md
+```
+
+"Bound" records what the application's own binding screen displayed after auto-mapping. It is
+strong evidence that the application enumerated the device and accepted its controls, and it is
+**not** evidence that gameplay works: nothing was played, and latency was not measured. Entries
+left Untested were not exercised — they must never be read across from the ones that were.
 
 ---
 
@@ -612,6 +677,18 @@ Future emulator entries should be added after actual testing.
 ---
 
 # 14. Streaming and Cloud-Gaming Compatibility
+
+```text
+Status: Untested
+Confidence: Unverified
+```
+
+A first attempt with Artemis produced no observation at all: the client exposes no screen listing
+connected controllers, so there was nothing to read. That is a limit of what could be seen, not a
+negative result. A streaming client is a pass-through — the question it answers is whether the
+**host** sees a gamepad, so confirming this requires streaming to a host and checking there. Until
+that is done, the streaming half of `docs/PHASE-0.md` §29 is unmet and `ADR-INPUT-001` stays
+pending.
 
 Initial streaming targets include:
 

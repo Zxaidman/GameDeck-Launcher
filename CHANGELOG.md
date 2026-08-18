@@ -405,6 +405,42 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — Emulators Accept a Kestrel-Created Controller
+
+Tier 6, on the reference device. See `docs/phase0/results/tier6-report.md`.
+
+- **Eden** lists `Kestrel Virtual Controller 0` in its own input-device filter, shows Player 1 as
+  Connected with type Pro Controller, and auto-mapped the full control set — face buttons to
+  `Button 96–100`, shoulders to `102/103`, d-pad to `±Axis 15/16`, left stick to `Axis 0/1`, and
+  **ZL/ZR to `Axis 17/18`**, meaning it classified the triggers as analog controls.
+- **NetherSX2** completed Automatic Mapping and wrote bindings naming the device *and its id*:
+  `Kestrel Virtual Controller[25]/Button96`, `[25]/-Axis16`. The harness's own log for the same
+  session records every event as `dev=25` — **the id the emulator stored is the id the platform
+  assigned, observed independently by two applications that know nothing about each other.**
+- **RetroArch 1.22.2** selected it as Port 1's Device Index, under its own description "The physical
+  controller as recognised by RetroArch."
+- Against `docs/COMPATIBILITY.md` §10 this is **Level 4 — virtual gamepad identity**, reached on
+  stock unrooted hardware. The restriction in `docs/INPUT_BACKENDS.md` on the phrase "true virtual
+  gamepad" is satisfied for emulators, on this one device and firmware.
+- The device survived several target applications being opened in turn, which is what a real
+  session needs. It disappeared partway through; the expected cause is the two-minute hold schedule
+  ending, but the export carries no timestamp proving that, so it is recorded as unexplained rather
+  than attributed.
+
+Not established, and stated because these are the reasons Phase 0 is still open:
+
+- **No streaming client confirmed.** Artemis exposes no screen listing connected controllers, so
+  the attempt produced no observation at all. A client is a pass-through; the question is whether
+  the host sees a gamepad, which means testing against a host.
+- **PPSSPP untested** — its settings screen was not located during the run. Recorded as untested,
+  never inferred from the three that worked.
+- One device, one firmware, no gameplay, no latency measurement.
+
+`docs/COMPATIBILITY.md` now carries the device row, the input-backend matrix, and the emulator
+feature matrix, all at Status Experimental / Confidence Low. `ADR-INPUT-001` gains an evidence
+table naming the four items still missing, and stays **Pending** — §29 requires a streaming client
+and repeatability, and neither is done.
+
 ### Phase 0 Harness — An Instrument That Hangs Is Worse Than One That Fails
 
 The first Tier 6 attempt produced nothing. The harness froze on pressing the hold button, before
