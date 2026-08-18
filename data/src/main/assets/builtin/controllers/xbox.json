@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "type": "controller-definition",
+  "id": "controller.xbox",
+  "name": "Xbox-style Controller",
+  "buttons": ["A", "B", "X", "Y", "LB", "RB", "START", "BACK", "GUIDE", "LEFT_STICK_CLICK", "RIGHT_STICK_CLICK"],
+  "axes": ["LEFT_X", "LEFT_Y", "RIGHT_X", "RIGHT_Y"],
+  "triggers": ["LT", "RT"],
+  "builtin": true,
+  "editable": false
+}

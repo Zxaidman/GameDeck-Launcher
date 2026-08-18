@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "type": "gaming-profile",
+  "id": "profile.ppsspp.default",
+  "name": "PPSSPP Default",
+  "builtin": true,
+  "editable": false,
+  "application": { "packageName": "org.ppsspp.ppsspp" },
+  "layout": "builtin.psp.default",
+  "skin": "builtin.minimal.dark",
+  "display": {
+    "orientation": "LANDSCAPE",
+    "scalingMode": "FIT",
+    "aspectRatio": "16:9"
+  },
+  "input": {
+    "preferredBackend": null,
+    "allowFallback": true,
+    "hapticsEnabled": true
+  }
+}

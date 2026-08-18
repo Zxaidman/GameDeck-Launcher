@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "type": "gaming-profile",
+  "id": "profile.moonlight.default",
+  "name": "Moonlight Default",
+  "builtin": true,
+  "editable": false,
+  "application": { "packageName": "com.limelight" },
+  "layout": "builtin.xbox.default",
+  "skin": "builtin.minimal.dark",
+  "display": {
+    "orientation": "LANDSCAPE",
+    "scalingMode": "FILL",
+    "aspectRatio": "16:9"
+  },
+  "input": {
+    "preferredBackend": null,
+    "allowFallback": true,
+    "hapticsEnabled": true
+  }
+}

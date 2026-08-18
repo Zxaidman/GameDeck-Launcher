@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "type": "gaming-profile",
+  "id": "profile.dolphin.default",
+  "name": "Dolphin Default",
+  "builtin": true,
+  "editable": false,
+  "application": { "packageName": "org.dolphinemu.dolphinemu" },
+  "layout": "builtin.gamecube.default",
+  "skin": "builtin.minimal.dark",
+  "display": {
+    "orientation": "LANDSCAPE",
+    "scalingMode": "FIT",
+    "aspectRatio": "4:3"
+  },
+  "input": {
+    "preferredBackend": null,
+    "allowFallback": true,
+    "hapticsEnabled": true
+  }
+}

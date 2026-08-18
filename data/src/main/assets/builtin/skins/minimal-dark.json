@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "type": "controller-skin",
+  "id": "builtin.minimal.dark",
+  "name": "Minimal Dark",
+  "builtin": true,
+  "editable": false,
+  "styles": {
+    "button": {
+      "backgroundColor": "#333333",
+      "borderColor": "#555555",
+      "borderWidth": 1,
+      "cornerRadius": 8,
+      "opacity": 0.85,
+      "labelColor": "#FFFFFF",
+      "labelSize": 14,
+      "pressedColor": "#666666",
+      "highlightColor": "#888888",
+      "shape": "CIRCLE"
+    },
+    "dpad": {
+      "backgroundColor": "#333333",
+      "borderColor": "#555555",
+      "borderWidth": 1,
+      "cornerRadius": 4,
+      "opacity": 0.85,
+      "labelColor": "#FFFFFF",
+      "labelSize": 12,
+      "pressedColor": "#666666",
+      "shape": "ROUNDED_RECTANGLE"
+    },
+    "stick": {
+      "backgroundColor": "#444444",
+      "borderColor": "#666666",
+      "borderWidth": 2,
+      "cornerRadius": 50,
+      "opacity": 0.8,
+      "labelColor": "#FFFFFF",
+      "labelSize": 12,
+      "pressedColor": "#666666",
+      "shape": "CIRCLE"
+    },
+    "trigger": {
+      "backgroundColor": "#2A2A2A",
+      "borderColor": "#444444",
+      "borderWidth": 1,
+      "cornerRadius": 4,
+      "opacity": 0.8,
+      "labelColor": "#CCCCCC",
+      "labelSize": 11,
+      "pressedColor": "#555555",
+      "shape": "ROUNDED_RECTANGLE"
+    }
+  },
+  "assets": {}
+}

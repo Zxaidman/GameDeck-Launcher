@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "type": "aspect-ratio-preset",
+  "presets": [
+    { "id": "4:3", "width": 4, "height": 3, "builtin": true },
+    { "id": "16:9", "width": 16, "height": 9, "builtin": true },
+    { "id": "18:9", "width": 18, "height": 9, "builtin": true },
+    { "id": "19.5:9", "width": 19, "height": 9, "builtin": true },
+    { "id": "20:9", "width": 20, "height": 9, "builtin": true },
+    { "id": "21:9", "width": 21, "height": 9, "builtin": true }
+  ]
+}
