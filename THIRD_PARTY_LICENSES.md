@@ -54,7 +54,8 @@ Gradle transitive dependencies should also be reviewed when practical.
 |---|---|---|---|---|---|
 | Kotlin | Primary language | TBD | Apache-2.0 | Yes | Verify exact distribution/version |
 | AndroidX / Jetpack Compose | Android UI/platform libraries | TBD | Apache-2.0 | Yes | Track actual modules used |
-| Shizuku / Shizuku API | Optional privileged/system capability integration | TBD | Apache-2.0 (verify exact used components/version) | Yes | Review exact version before distribution |
+| Shizuku API | Shell-privilege access for the Phase 0 harness only | 13.1.5 | Apache-2.0 | Yes | `dev.rikka.shizuku:api`. Used by `tools/phase0` only; never by `:app` or `:core`, verified by inspecting the product's runtime classpath |
+| Shizuku Provider | Companion provider required by the Shizuku API | 13.1.5 | Apache-2.0 | Yes | `dev.rikka.shizuku:provider`. Same restriction |
 
 ---
 

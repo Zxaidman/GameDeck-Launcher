@@ -29,6 +29,10 @@ lifecycleRuntimeKtx = "2.9.4"
 # upgrading Gradle first.
 junitJupiter = "5.14.4"
 
+# Shizuku, used ONLY by the experimental Phase 0 harness — never by the product.
+# ADR-003 keeps Shizuku optional; nothing in :app or :core may depend on this.
+shizuku = "13.1.5"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
@@ -47,6 +51,9 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junitJupiter" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

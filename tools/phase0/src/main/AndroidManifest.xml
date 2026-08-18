@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Lets the harness ask Shizuku for shell privilege. It grants nothing by itself: the user
+         must have Shizuku installed, running, and must approve the request. -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <!--
       EXPERIMENTAL Phase 0 harness. Separate applicationId, separate APK, no permissions.
@@ -21,6 +26,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Required by the Shizuku library so it can hand the binder to this process. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:ignore="ExportedContentProvider" />
 
     </application>
 

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import rikka.shizuku.Shizuku
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -54,10 +58,21 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
     private lateinit var inputManager: InputManager
     private var devices by mutableStateOf<List<InputDevice>>(emptyList())
 
+    private val permissionListener =
+        Shizuku.OnRequestPermissionResultListener { _, _ -> ShizukuProbe.refreshStatus() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
         refreshDevices()
+
+        // Guarded: the harness must still work with Shizuku absent, degrading to observation only.
+        try {
+            Shizuku.addRequestPermissionResultListener(permissionListener)
+        } catch (e: Throwable) {
+            EventLog.note("Shizuku listener unavailable: ${e.javaClass.simpleName}")
+        }
+        ShizukuProbe.refreshStatus()
 
         setContent {
             MaterialTheme {
@@ -69,6 +84,15 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
                     )
                 }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
+        } catch (e: Throwable) {
+            // Nothing to clean up when the library never attached.
         }
     }
 
@@ -129,7 +153,7 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private fun exportReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.2")
+        report.put("harnessVersion", "phase0-0.0.3")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -137,6 +161,8 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         InputInventory.snapshot().forEach { deviceArray.put(it) }
         report.put("inputDevices", deviceArray)
         report.put("eventLog", EventLog.asText())
+        report.put("privilegeState", ShizukuProbe.status.value)
+        report.put("probeOutput", ShizukuProbe.output.value)
 
         return try {
             val dir = getExternalFilesDir(null) ?: filesDir
@@ -166,6 +192,7 @@ private fun deviceHeadline(): String =
 
 private const val TAB_DEVICES = 0
 private const val TAB_EVENTS = 1
+private const val TAB_PROBE = 2
 
 @Composable
 private fun HarnessScreen(
@@ -199,6 +226,7 @@ private fun HarnessScreen(
         ) {
             Button(onClick = { tab = TAB_DEVICES }) { Text("Devices (${devices.size})") }
             Button(onClick = { tab = TAB_EVENTS }) { Text("Events (${EventLog.counter})") }
+            Button(onClick = { tab = TAB_PROBE }) { Text("Probe") }
         }
 
         Row(
@@ -216,7 +244,64 @@ private fun HarnessScreen(
 
         when (tab) {
             TAB_DEVICES -> DeviceList(devices)
-            else -> EventList()
+            TAB_EVENTS -> EventList()
+            else -> ProbePanel()
+        }
+    }
+}
+
+/**
+ * Tier 5, made runnable without a computer.
+ *
+ * Everything here reads state. Nothing creates a device or produces an event, so a result shown on
+ * this screen cannot have been manufactured by the harness itself.
+ */
+@Composable
+private fun ProbePanel() {
+    val context = LocalContext.current
+
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Text(
+            text = "Privilege state",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = ShizukuProbe.status.value,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(onClick = { ShizukuProbe.refreshStatus() }) { Text("Refresh status") }
+            Button(onClick = { ShizukuProbe.requestPermission() }) { Text("Grant permission") }
+        }
+
+        Button(
+            onClick = { ShizukuProbe.runProbes(context) },
+            enabled = !ShizukuProbe.busy.value,
+        ) {
+            Text(if (ShizukuProbe.busy.value) "Running…" else "Run probe")
+        }
+
+        if (ShizukuProbe.output.value.isNotEmpty()) {
+            Text(
+                text = ShizukuProbe.output.value,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        } else {
+            Text(
+                text = "\nThe probe asks whether a shell-privileged process can reach the kernel " +
+                    "virtual-input facility — the one path that could give Kestrel a real " +
+                    "controller identity. It only reads; it creates nothing.\n\n" +
+                    "Requires Shizuku installed, running, and permission granted.",
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
     }
 }

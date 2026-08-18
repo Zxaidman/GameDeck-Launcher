@@ -246,6 +246,35 @@ Noted for possible future work:
   within the project baseline. This is unverified, is not the core requirement, and would not help a
   user with a single phone; it would need its own decision record if pursued.
 
+### Phase 0 Harness — Privilege Probe
+
+- Added a Probe tab to the harness that reports the privilege state and runs read-only checks
+  through a shell-privileged service, using Shizuku. This makes the virtual-device tier runnable
+  from the phone alone, with no computer and no typed commands, which matters because the project
+  owner is not a developer.
+- The privilege state is reported as four separate facts — service running, permission granted,
+  identity actually obtained, and version — implementing the model in `ARCHITECTURE.md` §14 and
+  testing its central claim that none of those facts implies another.
+- The probe reads only: device node existence, permissions and owning group, readability and
+  writability from the obtained identity, presence of the helper command, and enforcement mode. It
+  creates no device and emits no event, so the harness still cannot manufacture the result it
+  measures.
+- Probe output and privilege state are included in the export, so they become evidence.
+- Added `dev.rikka.shizuku:api` and `dev.rikka.shizuku:provider` 13.1.5 to `tools/phase0` only, with
+  the justification recorded in the module's build script and the entries added to
+  `THIRD_PARTY_LICENSES.md`.
+
+Verified:
+
+- `./gradlew build` succeeds with lint clean.
+- The product's runtime classpath was inspected and contains no Shizuku artifact, so the boundary
+  required by ADR-003 and `PROJECT_STRUCTURE.md` §21 holds.
+
+Not verified:
+
+- The probe has never been run. Whether Shizuku binds, whether the service starts, and what the
+  device node permissions actually are on this firmware are all unknown until it runs on hardware.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

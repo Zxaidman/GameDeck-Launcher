@@ -177,6 +177,33 @@ same capability is reachable **without a PC attached**, since that is the only f
 person on a real phone. Record the privilege level Shizuku reports (`ADB_SHELL`, not `ROOT`, on this
 device).
 
+### Tier 5 — Virtual input device — **now runnable from the phone alone**
+
+The harness has a **Probe** tab that asks these questions directly, using Shizuku for the shell
+privilege. No computer, no typing commands.
+
+1. Start Shizuku (it stops on every reboot and must be restarted).
+2. Open the harness, **Probe** tab, press **Refresh status**.
+3. Press **Grant permission** if the status says permission is not granted, and approve the Shizuku
+   prompt.
+4. Press **Run probe**, then **Export** — the probe output is included in the export.
+
+The privilege state is reported as four separate facts, because none of them implies another:
+service running, permission granted, the identity actually obtained (`shell` uid 2000 or `root`
+uid 0), and the Shizuku version. `ARCHITECTURE.md` §14 requires exactly this separation; the Probe
+tab is where it is first tested against real hardware.
+
+The probe reads only. It checks whether the virtual-input device node exists, its permissions and
+owning group, whether it is readable and writable from that identity, whether the helper command is
+present, and what the enforcement mode is. It creates no device and produces no event, so a result
+shown there cannot have been manufactured by the harness.
+
+**What the answers mean.** If the node is writable from the shell identity, the highest-value path
+is open and the next step is attempting to create a device. If it is not, that is a firm ceiling for
+this device and firmware, and the remaining tiers can be run knowing it.
+
+#### The manual route, for reference
+
 ### Tier 5 — Virtual input device
 
 This is the only tier that could yield Grade A, because it is the only one that would create a
