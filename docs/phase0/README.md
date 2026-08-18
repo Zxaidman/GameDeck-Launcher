@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — Tiers 0 and 1 complete on the reference device; no injection tier attempted  
+**Status:** Experimental — Tiers 0, 1 and the Tier 5 permission probe complete; no access attempted yet  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one
@@ -186,7 +186,13 @@ privilege. No computer, no typing commands.
 2. Open the harness, **Probe** tab, press **Refresh status**.
 3. Press **Grant permission** if the status says permission is not granted, and approve the Shizuku
    prompt.
-4. Press **Run probe**, then **Export** — the probe output is included in the export.
+4. Press **Run probe**. Read the **ACTUAL OPEN for write** line especially: the permission-bit test
+   above it is blind to SELinux and can read as a pass when the real open would be refused.
+5. Press each **injection attempt** button in turn, then switch to the **Events** tab. The log shows
+   the command issued, then whatever the system delivered. Check the `src=` on each event —
+   `KEYBOARD` is key emulation, `GAMEPAD` or `JOYSTICK` is controller semantics. Nothing arriving is
+   also a result.
+6. Press **Save…** and choose a folder you can reach from a file manager.
 
 The privilege state is reported as four separate facts, because none of them implies another:
 service running, permission granted, the identity actually obtained (`shell` uid 2000 or `root`

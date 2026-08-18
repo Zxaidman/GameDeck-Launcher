@@ -275,6 +275,45 @@ Not verified:
 - The probe has never been run. Whether Shizuku binds, whether the service starts, and what the
   device node permissions actually are on this firmware are all unknown until it runs on hardware.
 
+### Phase 0 — Tier 5 Privilege Probe Executed on Hardware
+
+See `docs/phase0/results/tier5-probe-report.md`.
+
+- The privilege chain works end to end: Shizuku bound, permission was granted, and the identity
+  actually obtained was `shell`, uid 2000. Root was neither obtained nor expected.
+- `/dev/uinput` is `crw-rw----`, owned by `system`, group `net_bt_admin`, and the shell identity is
+  a member of that group. Both permission tests reported the node readable and writable.
+- `/system/bin/uinput` is present on this build.
+- **This is not yet a yes.** `test -w` calls access(2), which consults only the classic permission
+  bits and is blind to SELinux. SELinux is Enforcing, the node is labelled `uhid_device`, and no
+  actual open has been attempted. Policy is decided at open, and policy is where this usually fails.
+- Found a second candidate path that was not previously believed available: the platform `input`
+  command on this build advertises `gamepad`, `joystick` and `dpad` as injection sources, and
+  accepts named motion axes via `--axis`. If it behaves as advertised, a shell-privileged process
+  could deliver controller semantics with continuous axis values without creating a virtual device
+  at all.
+- Two paths now exist, both reachable from the phone alone: creating a virtual device, which could
+  carry a real device identity, and injecting through `input`, which could not. No evidence grade
+  applies to either yet and `ADR-INPUT-001` remains Pending.
+
+### Phase 0 Harness — Actual Access Tests and User-Chosen Export
+
+- Added an actual open-for-write test against the virtual-input node, because the permission-bit
+  test cannot see SELinux and would otherwise have been mistaken for a positive result.
+- Added injection attempts issued through the platform's own `input` tool in the shell-privileged
+  process, covering the gamepad and dpad sources and both candidate analog-axis syntaxes.
+- The command issued is written into the event log immediately before it runs and its result
+  immediately after, so the log interleaves stimulus and response and a delivered event can always
+  be traced to what caused it. The harness still does not synthesise events into its own window.
+- Export now opens the system file picker so the destination is chosen by the user, replacing the
+  previous write into the application's private directory, which was not reachable through an
+  ordinary file manager. Sharing is now a separate action.
+- Captured the full `input` usage text rather than a truncated head, which is what surfaced the
+  gamepad and axis support above.
+
+Verified: `./gradlew build` succeeds with lint clean.
+Not verified: none of the new tests has been run on hardware.
+
 ### Fixed After First Device Run
 
 - The on-screen event counter was a plain integer, invisible to composition, so it stopped matching

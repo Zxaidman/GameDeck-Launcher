@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import rikka.shizuku.Shizuku
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 
 /**
  * EXPERIMENTAL — Phase 0 input feasibility harness.
@@ -49,14 +49,35 @@ import java.io.File
  * product's dependency graph, and nothing in it may be promoted without first moving it behind the
  * abstraction in `platform/input/` (PROJECT_STRUCTURE.md §27).
  *
- * The harness deliberately injects nothing. It only observes. Injection candidates are driven from
- * a shell, and this screen shows what — if anything — actually arrived. See
- * `docs/phase0/README.md` for the procedure.
+ * The harness does not synthesise input into its own window. Injection attempts are issued by the
+ * platform's own `input` tool in a separate shell-privileged process, and travel the ordinary system
+ * input path; this window observes what arrives exactly as any other application would. The command
+ * issued is written into the same log as the events that follow, so a result can always be traced to
+ * the stimulus that caused it — or shown to have produced nothing. See `docs/phase0/README.md`.
  */
 class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
 
     private lateinit var inputManager: InputManager
     private var devices by mutableStateOf<List<InputDevice>>(emptyList())
+
+    private var pendingExport: String? = null
+
+    private val saveLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val content = pendingExport
+        pendingExport = null
+        when {
+            uri == null -> ExportState.message.value = "Save cancelled."
+            content == null -> ExportState.message.value = "Nothing to save."
+            else -> ExportState.message.value = try {
+                contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                "Saved. Open your file manager at the folder you chose."
+            } catch (e: Exception) {
+                "Save failed: ${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+    }
 
     private val permissionListener =
         Shizuku.OnRequestPermissionResultListener { _, _ -> ShizukuProbe.refreshStatus() }
@@ -80,7 +101,8 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
                     HarnessScreen(
                         devices = devices,
                         onRefresh = ::refreshDevices,
-                        onExport = ::exportReport,
+                        onSave = ::saveReport,
+                        onShare = ::shareReport,
                     )
                 }
             }
@@ -151,9 +173,9 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         return super.dispatchGenericMotionEvent(event)
     }
 
-    private fun exportReport(): String {
+    private fun buildReport(): String {
         val report = JSONObject()
-        report.put("harnessVersion", "phase0-0.0.3")
+        report.put("harnessVersion", "phase0-0.0.4")
         report.put("capturedAtMillis", System.currentTimeMillis())
         report.put("device", InputInventory.deviceReport())
 
@@ -163,27 +185,42 @@ class Phase0Activity : ComponentActivity(), InputManager.InputDeviceListener {
         report.put("eventLog", EventLog.asText())
         report.put("privilegeState", ShizukuProbe.status.value)
         report.put("probeOutput", ShizukuProbe.output.value)
+        return report.toString(2)
+    }
 
-        return try {
-            val dir = getExternalFilesDir(null) ?: filesDir
-            val file = File(dir, "phase0-report-${System.currentTimeMillis()}.json")
-            file.writeText(report.toString(2))
+    /** Lets the user choose the destination, so the file is somewhere they can actually reach. */
+    private fun saveReport() {
+        pendingExport = buildReport()
+        ExportState.message.value = "Choose a folder…"
+        try {
+            saveLauncher.launch("kestrel-phase0-${System.currentTimeMillis()}.json")
+        } catch (e: Exception) {
+            pendingExport = null
+            ExportState.message.value = "Could not open the file picker: ${e.javaClass.simpleName}"
+        }
+    }
 
+    private fun shareReport() {
+        try {
             startActivity(
                 Intent.createChooser(
                     Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_SUBJECT, "Phase 0 report")
-                        putExtra(Intent.EXTRA_TEXT, report.toString(2))
+                        putExtra(Intent.EXTRA_TEXT, buildReport())
                     },
                     "Share Phase 0 report",
                 )
             )
-            "Saved: ${file.absolutePath}"
+            ExportState.message.value = ""
         } catch (e: Exception) {
-            "Export failed: ${e.javaClass.simpleName}: ${e.message}"
+            ExportState.message.value = "Share failed: ${e.javaClass.simpleName}"
         }
     }
+}
+
+object ExportState {
+    val message = androidx.compose.runtime.mutableStateOf("")
 }
 
 private fun deviceHeadline(): String =
@@ -198,10 +235,10 @@ private const val TAB_PROBE = 2
 private fun HarnessScreen(
     devices: List<InputDevice>,
     onRefresh: () -> Unit,
-    onExport: () -> String,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
 ) {
     var tab by remember { mutableStateOf(TAB_DEVICES) }
-    var status by remember { mutableStateOf("") }
 
     // Android 15 draws edge to edge by default at this target level, so content sits under the
     // status and navigation bars unless it is inset explicitly.
@@ -235,11 +272,12 @@ private fun HarnessScreen(
         ) {
             Button(onClick = onRefresh) { Text("Refresh") }
             Button(onClick = { EventLog.clear() }) { Text("Clear log") }
-            Button(onClick = { status = onExport() }) { Text("Export") }
+            Button(onClick = onSave) { Text("Save…") }
+            Button(onClick = onShare) { Text("Share") }
         }
 
-        if (status.isNotEmpty()) {
-            Text(text = status, style = MaterialTheme.typography.bodySmall)
+        if (ExportState.message.value.isNotEmpty()) {
+            Text(text = ExportState.message.value, style = MaterialTheme.typography.bodySmall)
         }
 
         when (tab) {
@@ -284,6 +322,27 @@ private fun ProbePanel() {
             enabled = !ShizukuProbe.busy.value,
         ) {
             Text(if (ShizukuProbe.busy.value) "Running…" else "Run probe")
+        }
+
+        Text(
+            text = "Injection attempts",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(
+            text = "Each runs the system's own input tool with shell privilege. Press one, then " +
+                "read the Events tab: the log shows the command, then whatever actually arrived. " +
+                "Nothing arriving is also a result worth recording.",
+            fontSize = 12.sp,
+        )
+        for ((label, description, command) in ShizukuProbe.INJECTIONS) {
+            Button(
+                onClick = { ShizukuProbe.inject(context, label, command) },
+                enabled = !ShizukuProbe.busy.value,
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                Text("$label — $description")
+            }
         }
 
         if (ShizukuProbe.output.value.isNotEmpty()) {
