@@ -129,6 +129,42 @@ the product never performs that substitution on their behalf.
 
 Coordinates should use a device-independent or normalized representation rather than one phone's raw pixels as the canonical source.
 
+### How position and size are normalised, and why differently
+
+Normalising alone is not enough: a layout built on a 20:9 phone and opened on a squarer screen has
+to stay *playable*, and both naive approaches fail. Normalising position against full width and
+height moves a thumb-reachable control towards the middle of a wider screen. Normalising size
+against width and height independently turns a round button into an ellipse.
+
+So the two are normalised differently, on purpose:
+
+- **Position** is an offset from an **anchor** — one of nine points on the surface. A control pinned
+  to the bottom-left corner stays where a thumb rests, whatever the screen becomes. Offsets are
+  applied *inwards* from the anchor, so an author never writes a negative number to move a
+  right-hand control away from the right edge.
+- **Size** is measured against the surface's **shorter side only**, so a control keeps its shape and
+  its size relative to the hand holding the phone — and rotating the phone does not resize anything.
+
+Both are in the same unit, so a control and its offsets scale together and an arrangement holds its
+proportions.
+
+### Insets
+
+The usable surface excludes display cutouts and gesture areas. Those are device-specific, which is
+exactly why a layout must not encode them: the surface subtracts them, and the same layout lands
+correctly on a phone with a cutout and one without.
+
+A control that falls outside the usable area is **reported, not corrected**. Running a control off
+an edge can be a deliberate design, and the same principle as `ADR-007` applies — the product says
+what it sees rather than overruling the author.
+
+### Rotation
+
+Rotation is part of hit testing, not only of drawing. A touch is tested by rotating the *point* back
+around the control's centre and comparing against an upright rectangle, which is exact. A rotated
+control's bounding box is larger than its own width and height, and the bounding box is used only as
+an editor hint about overlap — never to decide which control receives a touch.
+
 ## Skin
 
 A skin defines appearance only.

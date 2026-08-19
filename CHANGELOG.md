@@ -405,6 +405,37 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Layout Geometry, in `core/`
+
+The arithmetic a layout editor and an overlay both depend on, pure and testable.
+
+- **Position and size are normalised differently, on purpose.** Position is an offset from one of
+  nine **anchors**, so a control pinned to a bottom corner stays where a thumb rests when the screen
+  shape changes; size is measured against the **shorter side only**, so a round button stays round
+  and rotating the phone resizes nothing. Normalising position against full width and height moves
+  thumb controls towards the middle of a wider screen; normalising size against both axes turns a
+  circle into an ellipse. Both failures are avoided by construction and both have tests.
+- Offsets apply **inwards** from the anchor, so an author never writes a negative number to move a
+  right-hand control away from the right edge.
+- **Insets** — cutouts, gesture areas — are subtracted by the surface rather than encoded in the
+  layout, so one layout lands correctly on a phone with a cutout and one without.
+- A control outside the usable area is **reported, not corrected**. Running a control off an edge
+  can be deliberate, and the same principle as `ADR-007` applies.
+- **Hit testing is exact under rotation**: the touch point is rotated back around the control's
+  centre rather than the bounding box being tested. Overlapping rotated controls would otherwise
+  answer for each other's touches.
+
+**A defect found by a failing test rather than papered over.** Bounds ignored rotation entirely, so
+a turned control was not merely approximated — it was wrong in both directions, reported as clear of
+a neighbour it visibly overlaps and as fitting inside a surface it hangs out of. Bounds are now
+rotation-aware, with a regression test that fails on the old behaviour. Two of the rotation tests
+had also asserted the wrong diagonal, which was confirmed against the rotation matrix before the
+code was touched — screen coordinates grow downwards, so a clockwise turn sends a long axis
+down-left.
+
+17 new tests, 61 in the module, no failures. `docs/CONFIGURATION_SCHEMA.md` gains the normalisation
+rules, the inset rule and the rotation rule.
+
 ### Phase 1 — The Configuration Schema, in `core/`
 
 Validation, identifiers and the document header, in plain Kotlin with no parser and no dependency.
