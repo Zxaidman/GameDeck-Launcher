@@ -49,6 +49,33 @@ trigger, and only targets that draw their own on-screen controls can work at all
 `docs/COMPATIBILITY.md` §10, Grade D in `docs/PHASE-0.md` §28, and never to be presented as a
 controller.
 
+## What a target application displays, and what decides it
+
+Two questions come up as soon as a created controller reaches a binding screen, and the answers
+constrain the descriptor rather than the interface.
+
+**Why the face buttons are 96, 97, 99, 100 and never 98.** Those are Android key codes:
+`BUTTON_A` 96, `BUTTON_B` 97, `BUTTON_C` **98**, `BUTTON_X` 99, `BUTTON_Y` 100, `BUTTON_Z` 101.
+The set comes from six-button arcade-style pads laid out A B C over X Y Z. Kestrel declares the
+four-button arrangement — `BTN_SOUTH`, `BTN_EAST`, `BTN_WEST`, `BTN_NORTH` — and deliberately does
+not declare `BTN_C`, so 98 never appears. Nothing is missing; the number belongs to a button this
+controller does not claim to have.
+
+**Whether a target shows names or numbers is the target's decision.** Some read the key code and
+print it; some recognise a controller by its vendor and product identifiers and apply a known
+layout, showing A/B/X/Y or PlayStation glyphs. Kestrel cannot make a target draw a glyph it has no
+asset for.
+
+What Kestrel *can* choose is the identity it presents. Declaring the identifiers of a widely
+recognised controller would make more targets show familiar names — and would also claim to be a
+device this is not. Targets then expect what that device offers, including rumble and touchpads
+that do not exist here, and a mismatch is worse than a number. **The default is Kestrel's own
+identity**, and any change is a decision to be recorded rather than a value to be quietly edited.
+
+The better answer for the user is on Kestrel's side of the boundary: Kestrel knows which control it
+sent, so its own interface can say "A" while a target says 96. That mapping belongs in the layout
+and profile model, not in the descriptor.
+
 ## Core abstraction
 
 Use an interface conceptually equivalent to:

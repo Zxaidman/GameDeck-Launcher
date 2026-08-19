@@ -405,6 +405,20 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Control Size Is a Hand's Judgement
+
+The first size was chosen by arithmetic — a fraction of the short side that seemed thumb-sized — and
+looked too large on the reference device in both orientations. That is the kind of number only a
+hand can settle, so it is now a setting with a default, and the default is what that hand asked for:
+**65% of the original**, adjustable from 35% to 130%.
+
+Resizing updates the windows already on screen rather than taking them down and putting them back,
+because removing a window drops whatever control was being held at that moment — a size change
+mid-play would leave a button stuck down.
+
+**The toggle does not scale.** It is the way out, and a way out that shrinks with a setting is one
+someone can make too small to use.
+
 ### Phase 1 — An Overlay That Covers Only Itself
 
 The first overlay locked the phone. It was one window the size of the screen whose touch handler

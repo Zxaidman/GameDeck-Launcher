@@ -38,6 +38,7 @@ public class ControllerOverlay(
     private val context: Context,
     private val engine: InputEngine,
     private var profile: AnalogProfile,
+    private var scale: Float = DEFAULT_SCALE,
 ) {
 
     private val windows = context.getSystemService(WindowManager::class.java)
@@ -63,7 +64,9 @@ public class ControllerOverlay(
     public fun show(): Boolean {
         if (toggle != null) return true
         val view = ToggleView(context) { toggleControls() }
-        val size = (unit * 0.11f).toInt()
+        // Deliberately not scaled with the controls. It is the way out, and a way out that shrinks
+        // with a setting is a way out someone can make too small to use.
+        val size = (unit * 0.10f).toInt()
         return runCatching {
             windows?.addView(
                 view,
@@ -91,15 +94,48 @@ public class ControllerOverlay(
         stick?.profile = profile
     }
 
+    /**
+     * Resizes the controls without taking them away and putting them back.
+     *
+     * Removing and re-adding the windows would drop any control being held at that moment, so a
+     * size change during play would leave a button stuck down. Existing windows are re-measured
+     * instead.
+     */
+    public fun resize(scale: Float) {
+        this.scale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
+        val size = clusterSize()
+        val margin = marginSize()
+        stick?.let { view ->
+            runCatching {
+                windows?.updateViewLayout(
+                    view,
+                    params(size, size, Gravity.BOTTOM or Gravity.START, margin, margin),
+                )
+            }
+        }
+        buttons?.let { view ->
+            runCatching {
+                windows?.updateViewLayout(
+                    view,
+                    params(size, size, Gravity.BOTTOM or Gravity.END, margin, margin),
+                )
+            }
+        }
+    }
+
+    private fun clusterSize(): Int = (unit * 0.46f * scale).toInt()
+
+    private fun marginSize(): Int = (unit * 0.04f).toInt()
+
     private fun toggleControls() {
         if (controlsVisible) hideControls() else showControls()
     }
 
     private fun showControls() {
         if (controlsVisible) return
-        val stickSize = (unit * 0.46f).toInt()
-        val buttonSize = (unit * 0.46f).toInt()
-        val margin = (unit * 0.04f).toInt()
+        val stickSize = clusterSize()
+        val buttonSize = clusterSize()
+        val margin = marginSize()
 
         val stickView = StickView(context, engine, profile)
         val buttonsView = ButtonsView(context, engine)
@@ -168,6 +204,19 @@ public class ControllerOverlay(
     }
 
     public companion object {
+
+        /**
+         * How large the controls are, as a fraction of the size they were first drawn at.
+         *
+         * The first size was chosen by arithmetic — a fraction of the short side that seemed
+         * thumb-sized — and looked too large on the reference device in both orientations. This is
+         * the kind of number only a hand can settle, so it is a setting with a default rather than
+         * a constant, and the default is what that hand asked for.
+         */
+        public const val DEFAULT_SCALE: Float = 0.65f
+        public const val MIN_SCALE: Float = 0.35f
+        public const val MAX_SCALE: Float = 1.3f
+
         /** Whether the user has allowed drawing over other applications. */
         public fun permitted(context: Context): Boolean = Settings.canDrawOverlays(context)
     }

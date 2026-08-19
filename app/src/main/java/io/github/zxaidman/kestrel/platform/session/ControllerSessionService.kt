@@ -37,6 +37,14 @@ public object SessionState {
     @Volatile
     public var profile: io.github.zxaidman.kestrel.core.input.AnalogProfile =
         io.github.zxaidman.kestrel.core.input.AnalogProfile.DEFAULT_STICK
+
+    /** How large the on-screen controls are drawn. A hand's judgement, not arithmetic. */
+    public val controlScale: androidx.compose.runtime.MutableState<Float> =
+        mutableStateOf(io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.DEFAULT_SCALE)
+
+    /** The overlay currently on screen, so a setting can reach it without restarting it. */
+    @Volatile
+    public var overlay: io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay? = null
 }
 
 /**
@@ -128,12 +136,13 @@ public class ControllerSessionService : Service() {
                 "Kestrel needs permission to draw over other applications. Grant it, then try again."
             return
         }
-        val view = ControllerOverlay(this, engine, SessionState.profile)
+        val view = ControllerOverlay(this, engine, SessionState.profile, SessionState.controlScale.value)
         if (!view.show()) {
             SessionState.detail.value = "Could not put the controls on screen."
             return
         }
         overlay = view
+        SessionState.overlay = view
         SessionState.overlayShown.value = true
         SessionState.detail.value =
             "Controls are on screen. The round K button at the top shows and hides them, and " +
@@ -143,6 +152,7 @@ public class ControllerSessionService : Service() {
     private fun hideOverlay() {
         overlay?.hide()
         overlay = null
+        SessionState.overlay = null
         SessionState.overlayShown.value = false
     }
 

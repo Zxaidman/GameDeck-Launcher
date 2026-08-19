@@ -272,6 +272,18 @@ public fun InputPreviewScreen(
                 }
                 Button(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
             }
+            Mono("\ncontrol size  %.0f%%".format(SessionState.controlScale.value * 100))
+            Slider(
+                value = SessionState.controlScale.value,
+                onValueChange = {
+                    SessionState.controlScale.value = it
+                    // Applied to the windows already on screen rather than by putting them up
+                    // again, so a control being held is not dropped mid-press.
+                    SessionState.overlay?.resize(it)
+                },
+                valueRange = io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MIN_SCALE
+                    ..io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MAX_SCALE,
+            )
             Mono(
                 "\nThe controls on this screen reach the controller only while Kestrel is in " +
                     "front, and that is a limit of where they are rather than of the controller: " +
