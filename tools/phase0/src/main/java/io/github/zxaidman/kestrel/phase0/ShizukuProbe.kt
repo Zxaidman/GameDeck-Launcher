@@ -619,6 +619,7 @@ object ShizukuProbe {
      */
     fun stopOrphans(context: Context) = withService(context, "Searching for orphaned devices…") { bound ->
         EventLog.note("ORPHAN SWEEP")
+        sessionOpen = false
         "── stop orphaned devices\n" + stopEverything(bound)
     }
 
@@ -653,6 +654,18 @@ object ShizukuProbe {
 
     /** Seconds of silence from the application before the guard closes the device. */
     private const val LEASE_TIMEOUT = 15
+
+    /**
+     * Whether a session has been opened from here and not yet stopped.
+     *
+     * Only used to decide whether a failed lease renewal is worth reporting. It records what this
+     * process asked for, not what exists — a device can outlive the process that opened it, so
+     * nothing may treat this as the truth about the device. That question has one honest answer,
+     * and it is asking what holds the node open.
+     */
+    @Volatile
+    var sessionOpen: Boolean = false
+        private set
 
     /**
      * Renews the lease. Called on a timer by the foreground service.
@@ -703,6 +716,7 @@ object ShizukuProbe {
     fun startSession(context: Context, label: String, descriptor: String, cycling: Boolean) =
         withService(context, "Opening a controller session…") { bound ->
             EventLog.note("SESSION START [$label] — device held until stopped")
+            sessionOpen = true
             emit("── session: $label")
 
             emit(stopEverything(bound).trim())
@@ -784,6 +798,7 @@ object ShizukuProbe {
     /** Ends the session: the device, the input, and the watchdog that would have ended it anyway. */
     fun stopSession(context: Context) = withService(context, "Closing the session…") { bound ->
         EventLog.note("SESSION STOP")
+        sessionOpen = false
         "── session stopped\n" + stopEverything(bound)
     }
 

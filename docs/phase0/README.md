@@ -1,7 +1,7 @@
 # Phase 0 — Harness and Test Procedure
 
 **Document:** `docs/phase0/README.md`  
-**Status:** Experimental — emulators accept a created controller; streaming and repeatability outstanding  
+**Status:** Complete against §29 on the reference device — one device, one firmware  
 
 This is the operating procedure for the Phase 0 input feasibility experiment defined in
 `docs/PHASE-0.md`. That document defines *what* must be proven and how evidence is graded. This one
@@ -242,10 +242,10 @@ negotiable.
 
 ### Tier 6 — Real target applications
 
-**Partly done.** Eden, NetherSX2 and RetroArch each list a Kestrel-created controller by name and
-auto-map it — see `docs/phase0/results/tier6-report.md`. PPSSPP was not reached, and no streaming
-client has been confirmed: a client is a pass-through, so that test means streaming to a host and
-checking whether the **host** sees a gamepad.
+**Done on the reference device.** Eden, NetherSX2, RetroArch, PPSSPP and Dolphin each list a
+Kestrel-created controller and bind it (`docs/phase0/results/tier6-report.md`), a browser reports it
+through the web Gamepad API, and a Windows streaming host shows it as a game controller with its
+axes moving (`docs/phase0/results/tier6-streaming-report.md`).
 
 Use the harness's **Hold device for target testing** button. It opens the device, keeps it open,
 and cycles one control every few seconds for about two minutes, with the schedule running in the

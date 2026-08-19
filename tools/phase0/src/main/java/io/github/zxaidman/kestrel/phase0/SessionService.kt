@@ -78,7 +78,10 @@ class SessionService : Service() {
         running = true
         heartbeat = Thread {
             while (running) {
-                if (!ShizukuProbe.renewLease()) {
+                // Only worth saying while a session is actually open. A failed renewal before one
+                // starts is the true state of an empty session, not a fault, and reporting it there
+                // put an alarming line in the log ahead of a run that went on to work perfectly.
+                if (!ShizukuProbe.renewLease() && ShizukuProbe.sessionOpen) {
                     EventLog.note("SESSION: lease renewal failed — the watchdog will close the device")
                 }
                 try {

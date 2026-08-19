@@ -545,6 +545,9 @@ Controller features must be tested independently.
 | Simultaneous Inputs | Untested | Unknown | Untested | Unknown | Unknown |
 | Hold/Release | Untested | Unknown | Untested | Unknown | Unknown |
 
+The Moonlight column above stays Unknown: the client tested was **Artemis**, and a result for one
+client is not a result for another. See §14.
+
 Additional applications should be added as testing begins.
 
 Emulators tested with a Kestrel-created controller, on the device in §8:
@@ -702,16 +705,24 @@ Future emulator entries should be added after actual testing.
 # 14. Streaming and Cloud-Gaming Compatibility
 
 ```text
-Status: Untested
-Confidence: Unverified
+Status: Experimental
+Confidence: Low
+Client: Artemis   Host: Apollo on Windows   Link: USB tethering
+Evidence: docs/phase0/results/tier6-streaming-report.md
 ```
 
-A first attempt with Artemis produced no observation at all: the client exposes no screen listing
-connected controllers, so there was nothing to read. That is a limit of what could be seen, not a
-negative result. A streaming client is a pass-through — the question it answers is whether the
-**host** sees a gamepad, so confirming this requires streaming to a host and checking there. Until
-that is done, the streaming half of `docs/PHASE-0.md` §29 is unmet and `ADR-INPUT-001` stays
-pending.
+A controller created on the phone was forwarded by the client and **appeared on the Windows host as
+a game controller**, listed with status OK, with its axes and buttons moving as the phone drove
+them. Nothing was touched at either end.
+
+The name the host displays is the host's own virtual pad, not ours: a streaming host does not relay
+a device identity, it reconstructs a controller locally and feeds it the state the client sends. So
+the host's naming says nothing about the phone. What it does establish is the point of the test —
+**the client accepted the device as a controller worth forwarding**, which a client that had
+rejected it, or read it as a keyboard, would not have done.
+
+Untested and not to be read across from this: Wi-Fi (the test used a cable), latency, behaviour
+under load, and any client other than Artemis. Nobody has played anything over the link.
 
 Initial streaming targets include:
 

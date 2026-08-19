@@ -49,17 +49,25 @@ Phase 0 has produced evidence against most of the list above, on one device — 
 | hold/release reliability | Working — every control returned to rest |
 | controller/device identity | Working — own device id, own descriptor, player slot 1 |
 | emulator compatibility | Three emulators list and auto-map it |
-| **streaming compatibility** | **Unconfirmed** |
+| streaming compatibility | Host sees a controller through Artemis to Apollo, over a cable |
 | Android-version compatibility | One version tested |
 | **OEM compatibility** | **One OEM tested** |
 | lifecycle safety | Session ends on demand, and on force-stop or uninstall within ~15s |
 | **latency** | **Unmeasured** |
 | **repeatability** | **Partial — one device, no reboot cycle** |
 
-The four in bold are why this record is still Pending. The mechanism that produced these results is
-a kernel virtual input device created through the platform's own helper with shell privilege; it is
-the candidate this decision is most likely to name, and naming it now would be recording a
-conclusion ahead of its evidence.
+Every acceptance criterion in `docs/PHASE-0.md` §29 is now satisfied on the reference device, so
+this record is ready to be decided rather than deferred. The two entries still in bold are not §29
+criteria; they are the reasons a decision should state its own scope.
+
+The mechanism that produced these results is a kernel virtual input device created through the
+platform's own helper with shell privilege, held for the length of a session by a lease that a
+privileged watchdog enforces. It is the candidate this decision would name.
+
+What a decision must not do is generalise past its evidence. Everything here comes from one device,
+one firmware and one OEM; latency has never been measured; and **no fallback path has been tested at
+all**, so what a user without Shizuku gets remains entirely unknown. Naming a preferred backend is
+supported by the evidence. Declaring the input problem solved is not.
 
 Whatever is decided, ADR-003 stands: the privilege this mechanism needs is optional to the product,
 so a backend built on it can only ever be the preferred one, never the only one.

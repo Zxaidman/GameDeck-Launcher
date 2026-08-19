@@ -405,6 +405,42 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — A Streaming Host Sees a Real Controller
+
+The last outstanding acceptance criterion is met. See `docs/phase0/results/tier6-streaming-report.md`.
+
+- A controller created on the phone was forwarded by Artemis and **appeared on the Windows host as
+  a game controller**, listed with status OK, with axes and buttons moving as the phone drove them.
+  Nothing was touched at either end.
+- The name the host shows is its own virtual pad — a host reconstructs a controller locally rather
+  than relaying a device identity — so it says nothing about the phone. What it establishes is that
+  **the client accepted the device as a controller worth forwarding**.
+- The session behaved as designed throughout: one holder alive across the whole test while the
+  operator was inside the client, pause and resume twice without the device closing, and a stop
+  verified by re-reading the state — holder present before, absent after, device count back to
+  baseline, with the harness's own listener recording the removal independently.
+
+**Every criterion in `docs/PHASE-0.md` §29 is now satisfied on the reference device**: digital,
+analog, triggers, simultaneous, hold/release, lifecycle, five emulators, one streaming client, and
+repeatability across many sessions and harness versions.
+
+Not established, and the reason a decision must state its scope: one device, one firmware, one OEM;
+**latency never measured**; nobody has played anything; the streaming test used a cable rather than
+Wi-Fi; and **no fallback path has been tested at all**, so what a user without Shizuku gets is still
+entirely unknown. That last gap is larger than everything else on this list.
+
+`ADR-INPUT-001` is now **ready to be decided** rather than deferred, and its evidence table records
+what supports a decision and what does not. It remains Pending until the project owner decides.
+
+### Phase 0 Harness — Say It Only When It Means Something
+
+- The heartbeat reported `lease renewal failed` before any session existed, which is the true state
+  of an empty session rather than a fault, and it put an alarming line at the top of a log for a run
+  that went on to work perfectly. It now speaks only while a session is open.
+- The flag that gates it records what this process asked for, never what exists. A device can
+  outlive the process that opened it, so the only honest answer to "is one open" stays the same:
+  ask what holds the node open.
+
 ### Phase 0 — The Session Model Verified on Hardware
 
 Operator-reported on the reference device with harness 0.0.16; no export was taken, so this is
