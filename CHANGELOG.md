@@ -405,6 +405,50 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — The Step That Was Missing: Controls Reach the Controller
+
+On-screen controls did nothing in an emulator, and the export explains why in one line:
+`"source": "touch pad (this screen)", "events": 4533`. The pad produced four and a half thousand
+events **into the application's own state**. Nothing ever wrote them to the device.
+
+**The path from a control to the controller had never been built.** Its absence was invisible in the
+way that matters most: the stick moved, the numbers moved, the controller existed with all ten axes
+and a matching descriptor, and five emulators recognised it — so everything looked right and nothing
+arrived. A target saw a controller that never moved.
+
+`InputEngine` is that path — the middle of `UI → InputEngine → backend → platform`. Three decisions
+in it are worth stating:
+
+- **The stream is held open.** Sending a control through a shell command would spawn a process per
+  event, which at the rate a thumb moves a stick is hundreds a second. The privileged service
+  already runs as shell, so it opens the stream once and writes to it. That is a design difference,
+  not a tuning one.
+- **Stick positions are coalesced, buttons are not.** Only the newest position matters — an old
+  stick position is not partial information, it is wrong information — so a writer runs at about
+  sixty a second and discards the rest. A press is a moment rather than a position and goes
+  immediately.
+- **Releasing centres the stick on the device, not only on screen**, and stopping a session
+  releases everything. A control left deflected keeps the platform emitting directional keys, which
+  Phase 0 measured at over 360 repeats.
+
+On-screen A, B, X and Y buttons went in alongside, pressing on touch down and releasing on touch
+up. Not an `onClick`: a click is reported after the finger lifts, so press and release would arrive
+together and holding a control would be impossible.
+
+`SessionState.engine` is null when there is no session, and the screen says so rather than
+accepting input with nowhere to send it.
+
+Evidence: `docs/phase0/results/app-session-20260819-redmi-note-13-5g.json`, the first export from
+Kestrel itself rather than the harness — device id 9, ten distinct axes, descriptor
+`8cc7a295…` matching every controller the harness ever made, holder pid 24298.
+
+Also confirmed on that run: the screen refreshes in place, stop works from the notification and
+in-application, force-stop and uninstall both end the session, and **the transformation is smooth
+past the dead zone under a thumb** — the question the harness's cycled values could never answer.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: nothing in this entry has been run on a device.
+
 ### Phase 1 — Six Faults From One Device Run
 
 Every item here came from the first run of the merged application on the reference device. Two were

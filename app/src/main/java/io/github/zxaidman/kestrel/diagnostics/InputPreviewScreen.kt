@@ -5,6 +5,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -233,12 +234,29 @@ public fun InputPreviewScreen(
             )
         }
 
-        Section("Touch pad — a stick you can push slowly") {
+        Section("Touch pad — drives the controller") {
             TouchStick(profile, state)
+
+            val engine = SessionState.engine
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HoldButton("A", 304)
+                HoldButton("B", 305)
+                HoldButton("X", 307)
+                HoldButton("Y", 308)
+            }
             Mono(
-                "\nDrag from the centre outwards, slowly. Past the dead zone the output should " +
-                    "start from nothing and grow. A created controller cycles fixed values, so it " +
-                    "cannot show this — only a finger can."
+                "\n" + if (engine == null) {
+                    "No session, so these controls go nowhere. Start a controller above."
+                } else {
+                    "reports delivered: ${engine.delivered}" +
+                        (if (engine.lastError.isNotBlank()) "\nlast error: ${engine.lastError}" else "")
+                } +
+                    "\n\nWith a session open, drag the pad or hold a button and the created " +
+                    "controller moves. Open an emulator's binding screen and it should bind what " +
+                    "you press here."
             )
         }
 
@@ -369,14 +387,24 @@ private fun TouchStick(profile: AnalogProfile, state: InputPreviewState) {
             .height(220.dp)
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragEnd = { raw = Offset.Zero },
-                    onDragCancel = { raw = Offset.Zero },
+                    // Releasing must centre the stick on the device too, not only on screen. A
+                    // control left deflected keeps the platform emitting directional keys.
+                    onDragEnd = {
+                        raw = Offset.Zero
+                        SessionState.engine?.stick(0.0, 0.0, profile)
+                    },
+                    onDragCancel = {
+                        raw = Offset.Zero
+                        SessionState.engine?.stick(0.0, 0.0, profile)
+                    },
                 ) { change, _ ->
                     val radius = min(size.width, size.height) / 2f
                     val dx = (change.position.x - size.width / 2f) / radius
                     val dy = (change.position.y - size.height / 2f) / radius
                     raw = Offset(dx.coerceIn(-1f, 1f), dy.coerceIn(-1f, 1f))
                     state.noteTouchStick(raw.x.toDouble(), raw.y.toDouble())
+                    // The step that was missing: what the thumb does reaches the controller.
+                    SessionState.engine?.stick(raw.x.toDouble(), raw.y.toDouble(), profile)
                 }
             }
     ) {
@@ -402,6 +430,35 @@ private fun TouchStick(profile: AnalogProfile, state: InputPreviewState) {
             center = centre + Offset((drawn.x * radius).toFloat(), (drawn.y * radius).toFloat()),
         )
     }
+}
+
+/**
+ * A button that presses on touch down and releases on touch up, like a real one.
+ *
+ * Deliberately not an `onClick`: a click is a completed gesture, reported after the finger lifts,
+ * which would send a press and a release together and make holding a control impossible. A
+ * controller button is a state with a duration, so the press and the release are separate events.
+ */
+@Composable
+private fun HoldButton(label: String, keyCode: Int) {
+    Text(
+        text = " $label ",
+        fontFamily = FontFamily.Monospace,
+        modifier = Modifier
+            .padding(4.dp)
+            .pointerInput(keyCode) {
+                detectTapGestures(
+                    onPress = {
+                        SessionState.engine?.button(keyCode, true)
+                        // Waits for the finger to lift or the gesture to be cancelled; either way
+                        // the button must be released, or it stays held on the device.
+                        tryAwaitRelease()
+                        SessionState.engine?.button(keyCode, false)
+                    },
+                )
+            },
+        style = MaterialTheme.typography.titleLarge,
+    )
 }
 
 private fun idOf(raw: String) =

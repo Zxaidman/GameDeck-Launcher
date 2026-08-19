@@ -101,7 +101,7 @@ public object ShizukuCapability {
         try {
             val args = Shizuku.UserServiceArgs(
                 ComponentName(context.packageName, PrivilegedShellService::class.java.name)
-            ).daemon(false).processNameSuffix("privileged").debuggable(false).version(1)
+            ).daemon(false).processNameSuffix("privileged").debuggable(false).version(2)
 
             Shizuku.bindUserService(args, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {

@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.compose.runtime.mutableStateOf
 import io.github.zxaidman.kestrel.MainActivity
+import io.github.zxaidman.kestrel.platform.input.InputEngine
 import io.github.zxaidman.kestrel.platform.input.virtual.VirtualControllerBackend
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 
@@ -18,6 +19,15 @@ import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 public object SessionState {
     public val open: androidx.compose.runtime.MutableState<Boolean> = mutableStateOf(false)
     public val detail: androidx.compose.runtime.MutableState<String> = mutableStateOf("")
+
+    /**
+     * The path from an on-screen control to the controller, or null when there is no session.
+     *
+     * Null is the honest state and the screen shows it as such. An engine that silently accepted
+     * input with nowhere to send it is exactly the failure this whole piece exists to fix.
+     */
+    @Volatile
+    public var engine: InputEngine? = null
 }
 
 /**
@@ -53,8 +63,21 @@ public class ControllerSessionService : Service() {
 
     private fun startSession() {
         withShell("start") { shell ->
-            SessionState.detail.value = VirtualControllerBackend.open(shell, packageName)
-            SessionState.open.value = VirtualControllerBackend.holders(shell).isNotBlank()
+            val opened = VirtualControllerBackend.open(shell, packageName)
+            val live = VirtualControllerBackend.holders(shell).isNotBlank()
+
+            val engine = if (live) {
+                InputEngine(shell).also { if (!it.start(VirtualControllerBackend.STREAM)) null }
+            } else {
+                null
+            }
+            SessionState.engine = engine
+            SessionState.open.value = live
+            SessionState.detail.value = opened + when {
+                !live -> "\n\nNo controller was created, so nothing can be sent to one."
+                engine == null -> "\n\nController created, but the write path did not open."
+                else -> "\n\nOn-screen controls are connected to it."
+            }
         }
     }
 
@@ -68,6 +91,8 @@ public class ControllerSessionService : Service() {
      */
     private fun stopSession() {
         withShell("stop") { shell ->
+            SessionState.engine?.stop()
+            SessionState.engine = null
             SessionState.detail.value = VirtualControllerBackend.close(shell)
             SessionState.open.value = VirtualControllerBackend.holders(shell).isNotBlank()
         }

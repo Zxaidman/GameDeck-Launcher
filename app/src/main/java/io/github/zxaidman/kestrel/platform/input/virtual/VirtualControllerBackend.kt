@@ -20,7 +20,8 @@ public object VirtualControllerBackend {
 
     private const val DIR = "/data/local/tmp"
     private const val DESCRIPTOR = "$DIR/kestrel-device.json"
-    private const val STREAM = "$DIR/kestrel-stream.json"
+    /** Where control events are written. Public so the engine can hold it open. */
+    public const val STREAM: String = "$DIR/kestrel-stream.json"
     private const val GUARD = "$DIR/kestrel-guard.sh"
     private const val LOG = "$DIR/kestrel-device.log"
 

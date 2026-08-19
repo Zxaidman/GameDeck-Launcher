@@ -1,6 +1,7 @@
 package io.github.zxaidman.kestrel.platform.shizuku
 
 import android.content.Context
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -19,8 +20,45 @@ class PrivilegedShellService : IPrivilegedShell.Stub {
     @Suppress("unused", "UNUSED_PARAMETER")
     constructor(context: Context) : super()
 
+    /**
+     * The controller's event stream, held open for as long as a session lasts.
+     *
+     * This process runs as shell, so it can write where the application cannot. Opening once and
+     * writing many times is the difference between a stick that responds and one that spawns a
+     * process per movement.
+     */
+    private var stream: FileOutputStream? = null
+
     override fun destroy() {
+        closeDeviceStream()
         exitProcess(0)
+    }
+
+    override fun openDeviceStream(path: String): Boolean = try {
+        closeDeviceStream()
+        stream = FileOutputStream(path, true)
+        true
+    } catch (e: Exception) {
+        stream = null
+        false
+    }
+
+    override fun writeDeviceStream(data: String): Boolean {
+        val open = stream ?: return false
+        return try {
+            open.write(data.toByteArray())
+            // Flushed every time: a buffered control is a control that arrives late or never.
+            open.flush()
+            true
+        } catch (e: Exception) {
+            stream = null
+            false
+        }
+    }
+
+    override fun closeDeviceStream() {
+        runCatching { stream?.close() }
+        stream = null
     }
 
     override fun exec(command: String, timeoutMs: Int): String = try {
