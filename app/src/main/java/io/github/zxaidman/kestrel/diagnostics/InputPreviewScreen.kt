@@ -247,6 +247,38 @@ public fun InputPreviewScreen(
                 HoldButton("X", 307)
                 HoldButton("Y", 308)
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {
+                        SessionState.profile = profile
+                        if (!io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay
+                                .permitted(context)
+                        ) {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    android.net.Uri.parse("package:" + context.packageName),
+                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } else {
+                            ControllerSessionService.showOverlay(context)
+                        }
+                    },
+                ) {
+                    Text(if (SessionState.overlayShown.value) "Controls shown" else "Show controls")
+                }
+                Button(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
+            }
+            Mono(
+                "\nThe controls on this screen reach the controller only while Kestrel is in " +
+                    "front, and that is a limit of where they are rather than of the controller: " +
+                    "touching them focuses Kestrel, and the platform sends a controller's events " +
+                    "to whichever window has focus. Show controls puts the same stick and buttons " +
+                    "in an overlay that never takes focus, which is how they reach a target."
+            )
             Mono(
                 "\n" + if (engine == null) {
                     "No session, so these controls go nowhere. Start a controller above."

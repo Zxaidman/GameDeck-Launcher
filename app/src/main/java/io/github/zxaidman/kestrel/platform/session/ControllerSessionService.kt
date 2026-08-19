@@ -11,7 +11,9 @@ import android.os.Build
 import android.os.IBinder
 import androidx.compose.runtime.mutableStateOf
 import io.github.zxaidman.kestrel.MainActivity
+import android.view.WindowManager
 import io.github.zxaidman.kestrel.platform.input.InputEngine
+import io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay
 import io.github.zxaidman.kestrel.platform.input.virtual.VirtualControllerBackend
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 
@@ -28,6 +30,14 @@ public object SessionState {
      */
     @Volatile
     public var engine: InputEngine? = null
+
+    /** Whether the controls are drawn over other applications. */
+    public val overlayShown: androidx.compose.runtime.MutableState<Boolean> = mutableStateOf(false)
+
+    /** The shaping the overlay applies. Set from the screen so a change is felt immediately. */
+    @Volatile
+    public var profile: io.github.zxaidman.kestrel.core.input.AnalogProfile =
+        io.github.zxaidman.kestrel.core.input.AnalogProfile.DEFAULT_STICK
 }
 
 /**
@@ -46,9 +56,20 @@ public class ControllerSessionService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private var overlay: ControllerOverlay? = null
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_SHOW_OVERLAY -> {
+                showOverlay()
+                return START_STICKY
+            }
+            ACTION_HIDE_OVERLAY -> {
+                hideOverlay()
+                return START_STICKY
+            }
             ACTION_STOP -> {
+                hideOverlay()
                 stopSession()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -89,6 +110,47 @@ public class ControllerSessionService : Service() {
      * lose the binder — and restarting is exactly what happens when a user swipes the application
      * away — so stop must be able to reconnect rather than assume it is already connected.
      */
+    /**
+     * Puts the controls on screen, in a window that never takes focus.
+     *
+     * Without this the controls cannot work at all: touching them focuses Kestrel, and the platform
+     * delivers a controller's events to the focused window, so the input goes back to Kestrel rather
+     * than to the target. Measured, not assumed — see
+     * `docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json`.
+     */
+    private fun showOverlay() {
+        if (overlay != null) return
+        val engine = SessionState.engine ?: run {
+            SessionState.detail.value = "No session, so there is nothing for the controls to drive."
+            return
+        }
+        if (!ControllerOverlay.permitted(this)) {
+            SessionState.detail.value =
+                "Kestrel needs permission to draw over other applications. Grant it, then try again."
+            return
+        }
+        val view = ControllerOverlay(this, engine, SessionState.profile)
+        val added = runCatching {
+            getSystemService(WindowManager::class.java)
+                ?.addView(view, ControllerOverlay.layoutParams())
+        }
+        if (added.isFailure) {
+            SessionState.detail.value =
+                "Could not show the controls: ${added.exceptionOrNull()?.javaClass?.simpleName}"
+            return
+        }
+        overlay = view
+        SessionState.overlayShown.value = true
+    }
+
+    private fun hideOverlay() {
+        overlay?.let { view ->
+            runCatching { getSystemService(WindowManager::class.java)?.removeView(view) }
+        }
+        overlay = null
+        SessionState.overlayShown.value = false
+    }
+
     private fun stopSession() {
         withShell("stop") { shell ->
             SessionState.engine?.stop()
@@ -145,6 +207,19 @@ public class ControllerSessionService : Service() {
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setOngoing(true)
             .setContentIntent(open)
+            .addAction(
+                Notification.Action.Builder(
+                    null,
+                    "Controls",
+                    PendingIntent.getService(
+                        this,
+                        2,
+                        Intent(this, ControllerSessionService::class.java)
+                            .setAction(ACTION_SHOW_OVERLAY),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    ),
+                ).build()
+            )
             .addAction(Notification.Action.Builder(null, "Stop", stop).build())
             .build()
     }
@@ -152,6 +227,8 @@ public class ControllerSessionService : Service() {
     public companion object {
         public const val ACTION_START: String = "io.github.zxaidman.kestrel.SESSION_START"
         public const val ACTION_STOP: String = "io.github.zxaidman.kestrel.SESSION_STOP"
+        public const val ACTION_SHOW_OVERLAY: String = "io.github.zxaidman.kestrel.OVERLAY_SHOW"
+        public const val ACTION_HIDE_OVERLAY: String = "io.github.zxaidman.kestrel.OVERLAY_HIDE"
 
         private const val CHANNEL = "kestrel.session"
         private const val NOTIFICATION_ID = 1
@@ -165,6 +242,18 @@ public class ControllerSessionService : Service() {
         public fun stop(context: Context) {
             context.startService(
                 Intent(context, ControllerSessionService::class.java).setAction(ACTION_STOP)
+            )
+        }
+
+        public fun showOverlay(context: Context) {
+            context.startService(
+                Intent(context, ControllerSessionService::class.java).setAction(ACTION_SHOW_OVERLAY)
+            )
+        }
+
+        public fun hideOverlay(context: Context) {
+            context.startService(
+                Intent(context, ControllerSessionService::class.java).setAction(ACTION_HIDE_OVERLAY)
             )
         }
     }

@@ -405,6 +405,47 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Controls Cannot Live in an Ordinary Window
+
+The on-screen stick appeared to do nothing in an emulator. The export says otherwise, and the real
+answer is more useful than the reported one:
+
+```json
+"source": "Kestrel Virtual Controller (id 14)", "events": 2005, "lastButton": "DPAD_RIGHT"
+```
+
+**The stick worked.** Two thousand events arrived from the created controller, and `DPAD_RIGHT` is
+the key the platform synthesises from a *held stick* — it cannot appear unless an axis moved. They
+arrived at **Kestrel**.
+
+The platform delivers a controller's events to the **focused window**, and touching a control inside
+an ordinary activity makes that activity focused. So Kestrel wrote to the controller, the controller
+moved, and the platform handed the result back to Kestrel. The operator had already found the same
+rule from the other side without naming it: buttons only reached the target "if the emulator has
+focus before the button goes down". The stick can never satisfy that, because a drag has to begin
+with a touch on Kestrel.
+
+**Nothing was wrong with the controller, the write path or the transformation.** Every part measured
+correct and the arrangement was still unusable — a pipeline can be right end to end and deliver to
+the wrong place.
+
+`platform/overlay/` now exists: the stick and four face buttons in a `TYPE_APPLICATION_OVERLAY`
+window with `FLAG_NOT_FOCUSABLE`, so the target keeps focus and the controller's events go where the
+player is looking. `FLAG_NOT_TOUCH_MODAL` lets touches outside the controls through to what is
+underneath. Multi-touch is tracked by pointer id, because holding a direction while pressing a
+button is the ordinary case rather than an advanced one.
+
+Drawn with a plain `View` rather than Compose: a window put up by a service has no lifecycle owner,
+and giving it one is more machinery than a stick and four buttons justify.
+
+Recorded in `docs/phase0/results/tier6-focus-report.md`, with what it implies beyond the overlay —
+a layout editor cannot be tested by playing through it, since editing happens in a focused window,
+and the overlay permission is now a second thing a user must grant rather than an optional extra.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: the overlay has not been run on a device. It is a designed answer to a measured
+problem, and only the problem is measured so far.
+
 ### Phase 1 — The Step That Was Missing: Controls Reach the Controller
 
 On-screen controls did nothing in an emulator, and the export explains why in one line:

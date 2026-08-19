@@ -12,6 +12,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- The controls must be drawn over the target, in a window that never takes focus: the
+         platform delivers a controller's events to the focused window, so controls inside an
+         ordinary activity send their input back to Kestrel. Measured — see
+         docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
