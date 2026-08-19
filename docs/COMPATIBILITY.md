@@ -575,12 +575,22 @@ Level achieved: Level 4 — virtual gamepad identity (see §10)
 Evidence: docs/phase0/results/tier6-report.md
 ```
 
-**Lifecycle hazard, confirmed on this device.** A created controller is held by a process that is
-not the application's, so it survives force-stop, clearing data, and **uninstalling the
-application**, and keeps delivering input with nothing installed. On the reference device only a
-reboot ended it. Any backend built on this mechanism must hold the device inside a process the
-platform reclaims with the application, and must be able to find and destroy a controller it has
-no memory of creating. See `docs/phase0/results/tier5-orphan-report.md`.
+**Lifecycle hazard, found and addressed on this device.** A created controller is held by a process
+that is not the application's, so it initially survived force-stop, clearing data, and
+**uninstalling the application**, and kept delivering input with nothing installed — only a reboot
+ended it (`docs/phase0/results/tier5-orphan-report.md`).
+
+The mechanism is not the fault, and removing the persistence would remove the feature: a controller
+that dies when the user leaves the launcher cannot be used to play anything. What was missing was a
+way for the owner to end it. A session is now held by a lease renewed by a visible foreground
+service, with a privileged watchdog that closes the device when renewals stop. Verified on this
+device: the session survives leaving the application and switching between applications, ends
+immediately on Stop, and ends within 10–20 seconds on force stop or uninstall
+(`docs/phase0/results/tier5-session-report.md`).
+
+Any backend built on this mechanism inherits the requirement: **persistence must be governed, not
+prevented** — held by a lease rather than a schedule, watched by something that outlives the
+application, and visible while it exists.
 
 "Bound" records what the application's own binding screen displayed after auto-mapping. It is
 strong evidence that the application enumerated the device and accepted its controls, and it is

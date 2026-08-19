@@ -405,6 +405,39 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 0 — The Session Model Verified on Hardware
+
+Operator-reported on the reference device with harness 0.0.16; no export was taken, so this is
+recorded as observation rather than as a machine-readable evidence file. See
+`docs/phase0/results/tier5-session-report.md`.
+
+- **Survives** leaving the harness, switching applications, and removing the harness from the
+  recent list, for as long as it was left running. Every target tested during the session — five
+  emulators and the browser gamepad tester — recognised the controller as a physical one
+  throughout.
+- **Ends immediately** on Stop, from the notification or in the application. Pause and Resume stop
+  and restart input without closing the device, from either place.
+- **Ends within 10–20 seconds** on force stop and on uninstall. No reboot is needed any more.
+- That window is the design: renewal every 4 seconds, the watchdog waking every 3 and acting on a
+  lease older than 15, so the worst case is about 18. It is a dead-man's switch, and the threshold
+  is a judgement — tuned tighter it would tear down a controller mid-session because the platform
+  froze the application for a moment, and losing a controller during play is a worse failure than
+  a device lingering fifteen seconds after an uninstall.
+
+This makes the **lifecycle** criterion in `docs/PHASE-0.md` §29 met in a stronger sense than "the
+harness can destroy what it created": the device can be ended by every means a user would reach
+for, including the two that give an application no chance to run any code.
+
+Recorded as an available option, not a decision: the guard could also watch the privileged
+service's own process, which ends the instant the application is uninstalled, using the lease as a
+backstop. Not implemented — the current behaviour meets the requirement, and that change should be
+made against a measured need rather than a guess.
+
+Not established: one device and one firmware; timings are wall-clock estimates by a person, not
+measurements; behaviour across a reboot, with Shizuku restarted mid-session, and under memory
+pressure is untested — the last of these being exactly where a dead-man's switch is most likely to
+fire when it should not.
+
 ### Phase 0 — Sessions: Persistence That the Owner Can End
 
 The orphan finding had an obvious reading — stop the device surviving — and it was wrong. A

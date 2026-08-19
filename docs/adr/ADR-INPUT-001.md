@@ -52,7 +52,7 @@ Phase 0 has produced evidence against most of the list above, on one device — 
 | **streaming compatibility** | **Unconfirmed** |
 | Android-version compatibility | One version tested |
 | **OEM compatibility** | **One OEM tested** |
-| lifecycle safety | Device destroyed on demand, no residue |
+| lifecycle safety | Session ends on demand, and on force-stop or uninstall within ~15s |
 | **latency** | **Unmeasured** |
 | **repeatability** | **Partial — one device, no reboot cycle** |
 
