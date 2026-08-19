@@ -405,6 +405,46 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — One Application, and a Watchdog Watching the Right Thing
+
+**The watchdog was watching the wrong signal.** On the reference device a session died twice in the
+background while its notification stayed on screen. The cause is now understood: the platform froze
+the application, the heartbeat stopped, and the watchdog did exactly what it had been told — a
+frozen application looked identical to a dead one.
+
+That was the wrong question. A frozen application is alive and its session should survive; only a
+dead or removed one should end it. The watchdog now checks two things directly, neither of which
+needs the application to run any code:
+
+- **its process still exists** — force-stop removes it, so force-stop still ends the session
+- **its package is still installed** — uninstalling removes it, so uninstalling still ends it
+
+The safety property from `docs/phase0/results/tier5-orphan-report.md` is intact and the false
+positive is gone. Freezing an application no longer destroys a controller the user is using.
+
+**Kestrel now holds its own session.** `platform/shizuku/` reaches shell privilege behind one
+capability boundary, reporting the four facts separately as `ARCHITECTURE.md` §14 requires;
+`platform/input/virtual/` creates the controller `ADR-INPUT-001` selected; `platform/session/`
+keeps it visible and stoppable. **Rebuilt behind the platform layer rather than promoted from
+`tools/phase0/`**, as `PROJECT_STRUCTURE.md` §27 requires — what carried over is the evidence, not
+the code. The harness stays what it always was: the instrument that produced that evidence, kept so
+the evidence can be reproduced.
+
+The Shizuku dependency now appears in `:app`, confined to `platform/shizuku/`. The note in the
+harness build that said it must never appear there predated the product needing it and has been
+corrected: `:core` is still forbidden it, and no Composable may touch it.
+
+**A touch pad, because a created controller cannot answer the question.** The first device test of
+the analog transformation reported a jump past the dead zone — but the harness cycles fixed values,
+full deflection then rest, so nothing in that test could show what a *slow* push does. The preview
+now has a stick driven by a finger, with the dead zone drawn where it actually is and raw and
+transformed positions shown together. Whether the jump is real is **still unknown**, and this is
+what will settle it.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: nothing in this entry has been run on a device. Every claim about the new watchdog is
+a design intention until it is.
+
 ### Phase 1 — Analog Transformation and Profile Matching, in `core/`
 
 **Analog transformation** — the shaping `CLAUDE.md` §5 requires to live outside every backend, pure

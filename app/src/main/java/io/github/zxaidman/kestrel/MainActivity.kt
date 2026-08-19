@@ -6,6 +6,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewScreen
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewState
+import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 
 /**
  * Entry point.
@@ -35,8 +37,24 @@ class MainActivity : ComponentActivity() {
 
     private val preview = InputPreviewState()
 
+    // The notification is the only always-available way to end a session, so asking for it is
+    // asking for the stop control rather than for the ability to interrupt anyone.
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        // Bind early where possible, so the session controls are usable without a separate step.
+        ShizukuCapability.bind(this) { }
+
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {

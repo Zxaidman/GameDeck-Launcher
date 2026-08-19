@@ -19,8 +19,8 @@ android {
         // Android 10 / API 29 is fixed by ADR-004. Do not raise without superseding that record.
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "0.0.3-dev"
+        versionCode = 4
+        versionName = "0.0.4-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,6 +40,7 @@ android {
 
     buildFeatures {
         compose = true
+        aidl = true
     }
 }
 
@@ -51,6 +52,17 @@ kotlin {
 
 dependencies {
     implementation(project(":core"))
+
+    // Shizuku — the privilege ADR-INPUT-001's backend needs.
+    //
+    // Why here: the accepted backend requires shell privilege, and no public API grants it to an
+    // ordinary application. It is confined to platform/shizuku/ behind one capability boundary
+    // (PROJECT_STRUCTURE.md §558), and ADR-003 keeps it optional at runtime — with Shizuku absent
+    // the application still runs and reports what is unavailable.
+    // Licence: Apache-2.0. Within the API 29 baseline.
+    // It must never reach :core or any Composable directly (CLAUDE.md §4).
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

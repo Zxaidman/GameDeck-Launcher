@@ -71,7 +71,10 @@ dependencies {
     // Risk: an external component that must be installed and running; every call here is guarded
     // so the harness degrades to observation-only when it is absent.
     //
-    // This dependency must never appear in :app or :core — see ADR-003 and PROJECT_STRUCTURE.md §21.
+    // It must never reach :core. It now also appears in :app, confined to platform/shizuku/ behind
+    // one capability boundary, because ADR-INPUT-001's accepted backend requires shell privilege —
+    // see PROJECT_STRUCTURE.md §558. That is the platform layer doing its job, not a relaxation of
+    // §21: no Composable and no domain type may touch it.
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 }

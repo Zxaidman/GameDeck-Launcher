@@ -3,13 +3,17 @@ package io.github.zxaidman.kestrel.diagnostics
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -21,6 +25,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +43,10 @@ import io.github.zxaidman.kestrel.core.profile.ProfileScope
 import io.github.zxaidman.kestrel.core.profile.ProfileSummary
 import io.github.zxaidman.kestrel.core.profile.TargetDescriptor
 import io.github.zxaidman.kestrel.core.profile.matchProfile
+import io.github.zxaidman.kestrel.platform.session.ControllerSessionService
+import io.github.zxaidman.kestrel.platform.session.SessionState
+import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
+import kotlin.math.min
 
 /**
  * A diagnostic surface, not a product screen.
@@ -128,12 +140,47 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Section("What this is") {
+        val context = LocalContext.current
+        val shizuku = ShizukuCapability.state()
+
+        Section("Controller session") {
             Mono(
-                "A diagnostic screen. It reads a controller the phone already has and shows what " +
-                    "the domain layer makes of it.\n\n" +
-                    "Kestrel has no input backend yet. Start a session in the Phase 0 harness, " +
-                    "then come back here."
+                "Shizuku running:    ${if (shizuku.serviceRunning) "yes" else "no"}\n" +
+                    "Permission granted: ${if (shizuku.permissionGranted) "yes" else "no"}\n" +
+                    "Privilege:          ${shizuku.privilege}\n" +
+                    "Version:            ${shizuku.version ?: "unknown"}\n" +
+                    "\n${shizuku.advice}"
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = { ShizukuCapability.bind(context) {} }, enabled = shizuku.serviceRunning) {
+                    Text("Connect")
+                }
+                Button(onClick = { ShizukuCapability.requestPermission() }, enabled = shizuku.serviceRunning) {
+                    Text("Grant")
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = { ControllerSessionService.start(context) }) { Text("Start controller") }
+                Button(onClick = { ControllerSessionService.stop(context) }) { Text("Stop") }
+            }
+            Mono(
+                "\nSession open: ${if (SessionState.open.value) "yes" else "no"}\n" +
+                    SessionState.detail.value.ifBlank { "(nothing yet)" }
+            )
+        }
+
+        Section("Touch pad — a stick you can push slowly") {
+            TouchStick(profile)
+            Mono(
+                "\nDrag from the centre outwards, slowly. Past the dead zone the output should " +
+                    "start from nothing and grow. A created controller cycles fixed values, so it " +
+                    "cannot show this — only a finger can."
             )
         }
 
@@ -226,6 +273,57 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
                     "choosing silently."
             )
         }
+    }
+}
+
+/**
+ * A stick driven by a finger, so the shaping can be judged rather than only computed.
+ *
+ * This exists because of a real ambiguity: a created controller cycles fixed values — full
+ * deflection, then rest — so watching it can never show whether the transition past the dead zone
+ * is smooth. Only a continuous input can, and until now there was none to hand.
+ */
+@Composable
+private fun TouchStick(profile: AnalogProfile) {
+    var raw by remember { mutableStateOf(Offset.Zero) }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { raw = Offset.Zero },
+                    onDragCancel = { raw = Offset.Zero },
+                ) { change, _ ->
+                    val radius = min(size.width, size.height) / 2f
+                    val dx = (change.position.x - size.width / 2f) / radius
+                    val dy = (change.position.y - size.height / 2f) / radius
+                    raw = Offset(dx.coerceIn(-1f, 1f), dy.coerceIn(-1f, 1f))
+                }
+            }
+    ) {
+        val radius = min(size.width, size.height) / 2f * 0.9f
+        val centre = Offset(size.width / 2f, size.height / 2f)
+        val out = applyStick(raw.x.toDouble(), raw.y.toDouble(), profile)
+
+        drawCircle(Color.Gray.copy(alpha = 0.25f), radius = radius, center = centre)
+        // The dead zone drawn where it actually is, so the number on the slider has a picture.
+        drawCircle(
+            Color.Red.copy(alpha = 0.30f),
+            radius = (radius * profile.deadzone).toFloat(),
+            center = centre,
+        )
+        drawCircle(
+            Color.Gray,
+            radius = 14f,
+            center = centre + Offset(raw.x * radius, raw.y * radius),
+        )
+        drawCircle(
+            Color.Green,
+            radius = 20f,
+            center = centre + Offset((out.x * radius).toFloat(), (out.y * radius).toFloat()),
+        )
     }
 }
 
