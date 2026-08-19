@@ -43,9 +43,17 @@ public class ControllerOverlay(
 
     private val windows = context.getSystemService(WindowManager::class.java)
     private var stick: StickView? = null
+    private var rightStick: StickView? = null
     private var buttons: ButtonsView? = null
+    private var dpad: PadView? = null
+    private var leftShoulders: PadView? = null
+    private var rightShoulders: PadView? = null
+    private var menu: PadView? = null
     private var toggle: ToggleView? = null
     private var controlsVisible = false
+
+    private val everyView: List<View?>
+        get() = listOf(stick, rightStick, buttons, dpad, leftShoulders, rightShoulders, menu)
 
     /** Roughly a thumb's reach, in pixels, from the shorter side of the screen. */
     private val unit: Int
@@ -103,24 +111,27 @@ public class ControllerOverlay(
      */
     public fun resize(scale: Float) {
         this.scale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
-        val size = clusterSize()
+        if (!controlsVisible) return
+        // Simplest correct approach: lay them out again from the new size. Nothing is removed, so
+        // no control being held is dropped.
+        val big = clusterSize()
+        val small = (clusterSize() * 0.62f).toInt()
+        val strip = (clusterSize() * 0.55f).toInt()
         val margin = marginSize()
-        stick?.let { view ->
-            runCatching {
-                windows?.updateViewLayout(
-                    view,
-                    params(size, size, Gravity.BOTTOM or Gravity.START, margin, margin),
-                )
-            }
+        val above = margin + big + margin / 2
+
+        fun move(view: View?, w: Int, h: Int, gravity: Int, x: Int, y: Int) {
+            view ?: return
+            runCatching { windows?.updateViewLayout(view, params(w, h, gravity, x, y)) }
         }
-        buttons?.let { view ->
-            runCatching {
-                windows?.updateViewLayout(
-                    view,
-                    params(size, size, Gravity.BOTTOM or Gravity.END, margin, margin),
-                )
-            }
-        }
+
+        move(stick, big, big, Gravity.BOTTOM or Gravity.START, margin, margin)
+        move(buttons, big, big, Gravity.BOTTOM or Gravity.END, margin, margin)
+        move(dpad, small, small, Gravity.BOTTOM or Gravity.START, margin, above)
+        move(rightStick, small, small, Gravity.BOTTOM or Gravity.END, margin, above)
+        move(leftShoulders, strip, strip / 2, Gravity.TOP or Gravity.START, margin, margin)
+        move(rightShoulders, strip, strip / 2, Gravity.TOP or Gravity.END, margin, margin)
+        move(menu, strip, strip / 3, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, margin)
     }
 
     private fun clusterSize(): Int = (unit * 0.46f * scale).toInt()
@@ -131,48 +142,82 @@ public class ControllerOverlay(
         if (controlsVisible) hideControls() else showControls()
     }
 
+    /**
+     * Every control a standard pad has, so what a target does with each can be tested.
+     *
+     * Laid out as a controller is: sticks and d-pad on the left half, face buttons on the right,
+     * shoulders along the top edge where index fingers reach, menu buttons in the middle. Each
+     * cluster is a separate window, so none of them covers anything it does not need to.
+     */
     private fun showControls() {
         if (controlsVisible) return
-        val stickSize = clusterSize()
-        val buttonSize = clusterSize()
+        val big = clusterSize()
+        val small = (clusterSize() * 0.62f).toInt()
+        val strip = (clusterSize() * 0.55f).toInt()
         val margin = marginSize()
+        val above = margin + big + margin / 2
 
-        val stickView = StickView(context, engine, profile)
+        val added = mutableListOf<View>()
+        fun place(view: View, w: Int, h: Int, gravity: Int, x: Int, y: Int): Boolean =
+            runCatching {
+                windows?.addView(view, params(w, h, gravity, x, y))
+                added += view
+                true
+            }.getOrElse { false }
+
+        val stickView = StickView(context, engine, profile, right = false)
+        val rightStickView = StickView(context, engine, profile, right = true)
         val buttonsView = ButtonsView(context, engine)
+        val dpadView = PadView(context, PadView.dpad(engine))
+        val leftShoulderView = PadView(context, PadView.leftShoulders(engine, profile))
+        val rightShoulderView = PadView(context, PadView.rightShoulders(engine, profile))
+        val menuView = PadView(context, PadView.menu(engine))
 
-        runCatching {
-            windows?.addView(
-                stickView,
-                params(stickSize, stickSize, Gravity.BOTTOM or Gravity.START, margin, margin),
-            )
-            windows?.addView(
-                buttonsView,
-                params(buttonSize, buttonSize, Gravity.BOTTOM or Gravity.END, margin, margin),
-            )
-        }.onFailure {
-            runCatching { windows?.removeView(stickView) }
-            runCatching { windows?.removeView(buttonsView) }
+        val ok = place(stickView, big, big, Gravity.BOTTOM or Gravity.START, margin, margin) &&
+            place(buttonsView, big, big, Gravity.BOTTOM or Gravity.END, margin, margin) &&
+            place(dpadView, small, small, Gravity.BOTTOM or Gravity.START, margin, above) &&
+            place(rightStickView, small, small, Gravity.BOTTOM or Gravity.END, margin, above) &&
+            place(leftShoulderView, strip, strip / 2, Gravity.TOP or Gravity.START, margin, margin) &&
+            place(rightShoulderView, strip, strip / 2, Gravity.TOP or Gravity.END, margin, margin) &&
+            place(menuView, strip, strip / 3, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, margin)
+
+        if (!ok) {
+            added.forEach { runCatching { windows?.removeView(it) } }
             return
         }
 
         stick = stickView
+        rightStick = rightStickView
         buttons = buttonsView
+        dpad = dpadView
+        leftShoulders = leftShoulderView
+        rightShoulders = rightShoulderView
+        menu = menuView
         controlsVisible = true
     }
 
     private fun hideControls() {
-        stick?.let { view ->
-            // Never leave a control held when it disappears. A stick removed at full deflection
-            // keeps the platform emitting directional keys with nothing left to release it.
-            engine.stick(0.0, 0.0, profile)
-            runCatching { windows?.removeView(view) }
-        }
-        buttons?.let { view ->
-            view.releaseAll()
-            runCatching { windows?.removeView(view) }
-        }
+        // Everything is released before anything is removed. A control that disappears mid-press
+        // leaves nothing behind able to release it, and a stick removed at full deflection keeps
+        // the platform emitting directional keys indefinitely.
+        engine.stick(0.0, 0.0, profile)
+        engine.hat(0, 0)
+        engine.trigger(0.0, profile, right = false)
+        engine.trigger(0.0, profile, right = true)
+        buttons?.releaseAll()
+        dpad?.releaseAll()
+        leftShoulders?.releaseAll()
+        rightShoulders?.releaseAll()
+        menu?.releaseAll()
+
+        everyView.filterNotNull().forEach { runCatching { windows?.removeView(it) } }
         stick = null
+        rightStick = null
         buttons = null
+        dpad = null
+        leftShoulders = null
+        rightShoulders = null
+        menu = null
         controlsVisible = false
     }
 
@@ -251,6 +296,7 @@ private class StickView(
     context: Context,
     private val engine: InputEngine,
     var profile: AnalogProfile,
+    private val right: Boolean = false,
 ) : View(context) {
 
     private val ring = Paint().apply { color = Color.argb(60, 255, 255, 255); isAntiAlias = true }
@@ -259,30 +305,168 @@ private class StickView(
     private var x = 0f
     private var y = 0f
 
+    private fun send(dx: Double, dy: Double) {
+        if (right) engine.rightStick(dx, dy, profile) else engine.stick(dx, dy, profile)
+    }
+
+    private val outerRadius: Float get() = min(width, height) / 2f * 0.95f
+    private val knobRadius: Float get() = min(width, height) / 2f * 0.32f
+
+    /**
+     * How far the knob's **centre** may travel.
+     *
+     * The first version moved the centre the full radius, so at full deflection half the knob hung
+     * outside the window and was clipped — visible as a thumb sliced flat against the edge. A knob
+     * that is drawn cannot be allowed further out than its own radius from the edge.
+     */
+    private val travel: Float get() = outerRadius - knobRadius
+
     override fun onDraw(canvas: Canvas) {
-        val r = min(width, height) / 2f
-        canvas.drawCircle(width / 2f, height / 2f, r * 0.95f, ring)
-        canvas.drawCircle(width / 2f + x * r, height / 2f + y * r, r * 0.32f, knob)
+        canvas.drawCircle(width / 2f, height / 2f, outerRadius, ring)
+        canvas.drawCircle(
+            width / 2f + x * travel,
+            height / 2f + y * travel,
+            knobRadius,
+            knob,
+        )
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val r = min(width, height) / 2f
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                x = ((event.x - width / 2f) / r).coerceIn(-1f, 1f)
-                y = ((event.y - height / 2f) / r).coerceIn(-1f, 1f)
-                engine.stick(x.toDouble(), y.toDouble(), profile)
+                val dx = (event.x - width / 2f) / travel
+                val dy = (event.y - height / 2f) / travel
+
+                // Clamped as a circle, not per axis. Clamping each axis to ±1 separately lets a
+                // diagonal reach 1.41 from centre, which is both outside the ring the user can see
+                // and a deflection a real stick cannot produce.
+                val magnitude = hypot(dx, dy)
+                if (magnitude > 1f) {
+                    x = dx / magnitude
+                    y = dy / magnitude
+                } else {
+                    x = dx
+                    y = dy
+                }
+                send(x.toDouble(), y.toDouble())
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 x = 0f
                 y = 0f
-                engine.stick(0.0, 0.0, profile)
+                send(0.0, 0.0)
             }
         }
         invalidate()
         return true
+    }
+}
+
+/**
+ * A cluster of controls that are not sticks — d-pad, shoulders, triggers, menu buttons.
+ *
+ * One class rather than four, because the difference between them is where they sit and what they
+ * send, not how they behave. Each control says what to do when it is pressed and released, so a
+ * trigger sending an analog value and a button sending a key code are the same thing here.
+ */
+private class PadView(context: Context, private val controls: List<Control>) : View(context) {
+
+    class Control(
+        val label: String,
+        /** Position within the window, from -1 to 1 on each axis. */
+        val dx: Float,
+        val dy: Float,
+        val onDown: () -> Unit,
+        val onUp: () -> Unit,
+    )
+
+    private val face = Paint().apply { color = Color.argb(90, 255, 255, 255); isAntiAlias = true }
+    private val label = Paint().apply {
+        color = Color.argb(220, 255, 255, 255)
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    private val held = mutableMapOf<Int, Control>()
+
+    private val radius: Float
+        get() = min(width, height) / (if (controls.size > 3) 4.2f else 3.2f)
+
+    override fun onDraw(canvas: Canvas) {
+        label.textSize = radius * 0.8f
+        controls.forEach { c ->
+            val cx = width / 2f + c.dx * (width / 2f - radius)
+            val cy = height / 2f + c.dy * (height / 2f - radius)
+            canvas.drawCircle(cx, cy, radius, face)
+            canvas.drawText(c.label, cx, cy + radius / 3f, label)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val i = event.actionIndex
+                controlAt(event.getX(i), event.getY(i))?.let { c ->
+                    held[event.getPointerId(i)] = c
+                    c.onDown()
+                }
+            }
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                held.remove(event.getPointerId(event.actionIndex))?.onUp()
+            }
+        }
+        invalidate()
+        return true
+    }
+
+    fun releaseAll() {
+        held.values.forEach { it.onUp() }
+        held.clear()
+    }
+
+    private fun controlAt(px: Float, py: Float): Control? = controls.firstOrNull { c ->
+        val cx = width / 2f + c.dx * (width / 2f - radius)
+        val cy = height / 2f + c.dy * (height / 2f - radius)
+        hypot(px - cx, py - cy) <= radius * 1.2f
+    }
+
+    companion object {
+
+        /**
+         * The d-pad, sent as hat axes rather than as four separate keys.
+         *
+         * A real pad reports a hat, and Phase 0 measured the platform synthesising `DPAD_*` keys
+         * from it — so sending the hat produces both, while sending keys produces only the keys.
+         */
+        fun dpad(engine: InputEngine): List<Control> = listOf(
+            Control("↑", 0f, -1f, { engine.hat(0, -1) }, { engine.hat(0, 0) }),
+            Control("↓", 0f, 1f, { engine.hat(0, 1) }, { engine.hat(0, 0) }),
+            Control("←", -1f, 0f, { engine.hat(-1, 0) }, { engine.hat(0, 0) }),
+            Control("→", 1f, 0f, { engine.hat(1, 0) }, { engine.hat(0, 0) }),
+        )
+
+        fun leftShoulders(engine: InputEngine, profile: AnalogProfile): List<Control> = listOf(
+            Control("L1", -1f, 0f, { engine.button(310, true) }, { engine.button(310, false) }),
+            // L2 is analog on a real pad, so it is sent as a trigger at full travel rather than as
+            // a button. A target that reads the axis sees it; one that reads the button also sees
+            // the key the platform derives.
+            Control("L2", 1f, 0f, { engine.trigger(1.0, profile, right = false) }, { engine.trigger(0.0, profile, right = false) }),
+        )
+
+        fun rightShoulders(engine: InputEngine, profile: AnalogProfile): List<Control> = listOf(
+            Control("R2", -1f, 0f, { engine.trigger(1.0, profile, right = true) }, { engine.trigger(0.0, profile, right = true) }),
+            Control("R1", 1f, 0f, { engine.button(311, true) }, { engine.button(311, false) }),
+        )
+
+        fun menu(engine: InputEngine): List<Control> = listOf(
+            Control("SEL", -1f, 0f, { engine.button(314, true) }, { engine.button(314, false) }),
+            Control("L3", -0.33f, 0f, { engine.button(317, true) }, { engine.button(317, false) }),
+            Control("R3", 0.33f, 0f, { engine.button(318, true) }, { engine.button(318, false) }),
+            Control("STA", 1f, 0f, { engine.button(315, true) }, { engine.button(315, false) }),
+        )
     }
 }
 

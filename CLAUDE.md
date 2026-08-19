@@ -81,6 +81,7 @@ commented. See `CHANGELOG.md` for what is verified and what is not.
 | `docs/CONFIGURATION_SCHEMA.md` | JSON configuration model, schema versioning, validation |
 | `docs/COMPATIBILITY.md` | Device/application compatibility matrix |
 | `docs/DEGRADED_STATE.md` | What the user sees and can do when the preferred backend is unavailable |
+| `docs/CONTROLLER_FAMILIES.md` | Xbox/PlayStation/Nintendo presentation, and where a family belongs |
 | `docs/adr/` | Architecture Decision Records — the *why* behind each choice |
 | `CHANGELOG.md` | Records decisions and artifacts actually established (not aspirations) |
 

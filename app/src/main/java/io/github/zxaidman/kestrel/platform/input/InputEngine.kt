@@ -29,6 +29,9 @@ public class InputEngine(private val shell: IPrivilegedShell) {
     @Volatile private var pendingX: Double = 0.0
     @Volatile private var pendingY: Double = 0.0
     @Volatile private var dirty: Boolean = false
+    @Volatile private var pendingRightX: Double = 0.0
+    @Volatile private var pendingRightY: Double = 0.0
+    @Volatile private var rightDirty: Boolean = false
     @Volatile private var running: Boolean = false
 
     @Volatile public var delivered: Long = 0L
@@ -56,6 +59,10 @@ public class InputEngine(private val shell: IPrivilegedShell) {
                     dirty = false
                     writeStick(pendingX, pendingY)
                 }
+                if (rightDirty) {
+                    rightDirty = false
+                    writeRightStick(pendingRightX, pendingRightY)
+                }
                 // About sixty times a second. Faster gains nothing a screen can show; slower is
                 // visible as lag on a fast flick.
                 Thread.sleep(16)
@@ -69,6 +76,7 @@ public class InputEngine(private val shell: IPrivilegedShell) {
         // Never leave a control held. A stick abandoned at full deflection keeps the platform
         // emitting directional keys indefinitely — measured at over 360 repeats in Phase 0.
         writeStick(0.0, 0.0)
+        writeRightStick(0.0, 0.0)
         runCatching { shell.closeDeviceStream() }
     }
 
@@ -80,15 +88,44 @@ public class InputEngine(private val shell: IPrivilegedShell) {
         dirty = true
     }
 
+    /**
+     * The right stick.
+     *
+     * Coalesced separately from the left, because the two are independent controls and a player
+     * aiming while moving would otherwise have one overwrite the other.
+     */
+    public fun rightStick(rawX: Double, rawY: Double, profile: AnalogProfile) {
+        val shaped = applyStick(rawX, rawY, profile)
+        pendingRightX = shaped.x
+        pendingRightY = shaped.y
+        rightDirty = true
+    }
+
     /** A button, written immediately: a press is a moment, not a position to be coalesced. */
     public fun button(code: Int, pressed: Boolean) {
         write(report(listOf(EV_KEY, code, if (pressed) 1 else 0)))
+    }
+
+    /** The d-pad, as the hat axes a controller reports rather than as four buttons. */
+    public fun hat(x: Int, y: Int) {
+        write(report(listOf(EV_ABS, ABS_HAT0X, x, EV_ABS, ABS_HAT0Y, y)))
     }
 
     /** A trigger, shaped like any other analog control. */
     public fun trigger(raw: Double, profile: AnalogProfile, right: Boolean) {
         val value = (applyTrigger(raw, profile) * TRIGGER_MAX).toInt()
         write(report(listOf(EV_ABS, if (right) ABS_GAS else ABS_BRAKE, value)))
+    }
+
+    private fun writeRightStick(x: Double, y: Double) {
+        write(
+            report(
+                listOf(
+                    EV_ABS, ABS_Z, (x * STICK_MAX).toInt(),
+                    EV_ABS, ABS_RZ, (y * STICK_MAX).toInt(),
+                )
+            )
+        )
     }
 
     private fun writeStick(x: Double, y: Double) {
@@ -135,6 +172,10 @@ public class InputEngine(private val shell: IPrivilegedShell) {
         const val ABS_Y = 1
         const val ABS_BRAKE = 10
         const val ABS_GAS = 9
+        const val ABS_Z = 2
+        const val ABS_RZ = 5
+        const val ABS_HAT0X = 16
+        const val ABS_HAT0Y = 17
 
         // The ranges the descriptor declares. The platform normalises these back to -1…+1 on the
         // way out, which Phase 0 measured rather than assumed.

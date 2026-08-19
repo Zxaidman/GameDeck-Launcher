@@ -405,6 +405,60 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — A Whole Pad, and a Stick That Fits Its Own Window
+
+**The thumb was clipped, and there were two geometry faults behind it.** The knob's centre was moved
+the full radius of the window, so at full deflection half of it sat outside and was sliced flat
+against the edge — visible in the screenshot. A drawn knob cannot travel further out than its own
+radius from the edge, and now it does not. The second fault was in the same three lines: each axis
+was clamped to ±1 **separately**, so a diagonal reached 1.41 from centre — outside the ring the user
+can see, and a deflection no real stick can produce. Clamped as a circle now.
+
+**Every control a standard pad has is on the overlay**, so what a target does with each can be
+tested rather than assumed: both sticks, the d-pad, L1/R1, L2/R2, Select, Start, L3/R3. Each cluster
+is its own small window, laid out as a controller is — sticks and d-pad left, faces right, shoulders
+along the top edge, menu buttons centred.
+
+Two decisions inside that are worth stating:
+
+- **The d-pad sends hat axes, not four keys.** A real pad reports a hat, and Phase 0 measured the
+  platform synthesising `DPAD_*` keys from one — so sending the hat produces both, while sending
+  keys produces only the keys.
+- **L2 and R2 send analog trigger values, not buttons**, for the same reason: a target reading the
+  axis sees it, and one reading the button still sees the key the platform derives.
+
+The right stick is coalesced separately from the left, because a player aiming while moving would
+otherwise have one overwrite the other.
+
+### Documentation — Controller Families
+
+`docs/CONTROLLER_FAMILIES.md` records what Kestrel presents and what the alternatives cost.
+
+Kestrel presents an **Xbox-style layout deliberately**: the descriptor's `BTN_SOUTH/EAST/WEST/NORTH`
+map to `BUTTON_A/B/X/Y`, which is both the Xbox convention and the platform's default arrangement,
+which is why targets accept it without configuration.
+
+The three families differ in three separate places that are easy to confuse: the **physical
+arrangement** is nearly identical and the input protocol does not change at all; the **labels**
+differ and are the target's business to draw; the **identity** differs and is the only lever Kestrel
+holds. Declaring another vendor's identifiers would make more targets show familiar labels and would
+also claim to be a device this is not — one with rumble, a touchpad, motion sensors — so the current
+decision is Kestrel's own identity, and changing it is an ADR rather than an edit.
+
+**A family belongs in the layout and skin layer, not the descriptor.** Kestrel knows which control
+it sent, so its own interface can say A, draw ✕ or draw B while the descriptor stays unchanged. One
+device, many appearances; a layout stays valid across families per `ADR-007`; no target needs
+re-binding when a user changes labels.
+
+One open question recorded rather than decided: Nintendo's A and B sit in swapped positions, so a
+Nintendo skin must choose between **positional** (the bottom button always sends `BUTTON_A`) and
+**nominal** (the button labelled A sends `BUTTON_A` wherever it sits). Those are different products.
+`ADR-007`'s principle points at positional, but it deserves its own record when a Nintendo skin is
+actually built.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: the full control set has not been run on a device.
+
 ### Phase 1 — Control Size Is a Hand's Judgement
 
 The first size was chosen by arithmetic — a fraction of the short side that seemed thumb-sized — and
