@@ -405,6 +405,33 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — The Configuration Schema, in `core/`
+
+Validation, identifiers and the document header, in plain Kotlin with no parser and no dependency.
+
+- **`ConfigNode`** is the seam between reading and judging. Reading bytes is I/O and belongs to
+  `data/`; deciding whether what was read is valid is domain logic. A parser produces this tree and
+  every rule in `docs/CONFIGURATION_SCHEMA.md` is expressed against it, so `core/` needs no JSON
+  library — and unknown fields survive, because validation reads the tree rather than consuming it.
+- **`ConfigurationError`** — one sealed hierarchy for everything that can be wrong, each error
+  naming the field it concerns. Being told a file is invalid leaves a user nowhere; being told
+  `elements[3].opacity` is 1.4 and must be between 0 and 1 gives them something to do.
+- **`ConfigurationId`** — namespaced, lowercase, dot-separated. Mixed case is refused so that an
+  identifier cannot mean one thing on one filesystem and another elsewhere. `builtin.` is
+  recognised by namespace rather than by a flag inside the file, and **`requireEditable` is the one
+  place immutability is enforced** — in the domain, not by a disabled button.
+- **`DocumentHeader`** — checks **version first**, because a document from a future schema is not
+  malformed, this build is simply older, and telling the user to fix a good file is worse than
+  telling them to update; then **type**, so reading a skin as a layout says exactly that instead of
+  failing later on a field that was never going to be there.
+- **`ControlKind`** joins the schema to `ADR-007`: an element stores what it *is*, and what it
+  requires is derived. Storing the requirement would freeze today's capability model into every
+  exported file. `digital-trigger` is a separate kind on purpose — a user may choose one, and it
+  works where an analog trigger cannot, but the product never makes that substitution for them.
+
+23 new tests, 44 in the module, no failures. `docs/CONFIGURATION_SCHEMA.md` gains the `control`
+capability rule, the validation ordering rules, and what "preserved" means for unknown fields.
+
 ### Phase 1 — The Capability Model, in `core/`
 
 First product code. Pure Kotlin in `core/input/`, no Android types, unit-tested — which means it is

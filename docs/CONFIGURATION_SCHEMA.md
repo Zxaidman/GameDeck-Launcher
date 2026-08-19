@@ -112,6 +112,21 @@ May define:
 - behavior
 - anchors
 
+### `control` and capability
+
+`control` names what the element **is** — `button`, `dpad`, `stick`, `analog-trigger`,
+`digital-trigger`, `decoration`. What a backend must provide for it to work is **derived from that
+kind**, never stored in the document.
+
+That is deliberate. Storing the requirement would freeze today's understanding of capability into
+every file ever exported, and a document written now would mean the wrong thing after the capability
+model gains a distinction. Storing the kind means a layout keeps meaning what its author meant.
+
+`ADR-007` decides what happens when the active backend cannot provide it: the element is **shown and
+disabled**, never removed, never substituted. `digital-trigger` exists as a separate kind for the
+same reason — a user may choose a digital trigger, and it then works where an analog one cannot, but
+the product never performs that substitution on their behalf.
+
 Coordinates should use a device-independent or normalized representation rather than one phone's raw pixels as the canonical source.
 
 ## Skin
@@ -206,9 +221,25 @@ Every import must validate:
 
 Invalid data must produce a typed error and must not crash the application.
 
+The typed errors are `ConfigurationError` in `core/configuration/`, and each names the field it
+concerns. A user handed someone else's layout and told only that it is invalid has no way forward;
+told that `elements[3].opacity` is 1.4 and must be between 0 and 1, they can fix it or report it
+usefully.
+
+Two ordering rules, because they change what the other checks mean:
+
+- **Schema version is checked first.** A document from a future version is not malformed — this
+  build is simply older — and it must be reported as such rather than as an invalid file.
+- **Document type is checked before any type-specific field.** Reading a skin as a layout should
+  say so, not fail later on a missing field that was never going to be there.
+
 ## Unknown fields
 
 Unknown non-executable fields should ideally be preserved where safe to improve forward compatibility.
+
+Implemented: validation reads from the parsed document rather than consuming it, and every header
+carries the fields it did not recognise. A document written by a newer build at the same schema
+version keeps those fields when this build re-exports it, instead of quietly losing them.
 
 ## Export/import
 
