@@ -405,6 +405,60 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — An Overlay That Can Actually Be Played
+
+Five faults reported from the reference device, four of them from a single mistake: a control was
+decided once, when a finger landed, and never reconsidered.
+
+**Touches now split across the overlay's windows.** `FLAG_SPLIT_TOUCH` was missing, and without it
+the first window to see a finger owns the whole gesture — so holding the stick stopped every other
+control responding **and stopped the phone underneath responding**. Separate small windows were
+never sufficient on their own; this flag is what makes them independent. The symptom looked like
+"no multi-touch" and the cause was a single missing flag, not the drawing.
+
+**Every finger is read on every event.** Sliding from one face button into its neighbour used to
+keep the first held and never press the second. The set of controls under the fingers is recomputed
+on each move and the difference applied, so a thumb rolling across two buttons presses both.
+
+**The d-pad is one cross that reports eight directions**, not four circles that report one. Four
+circles could only ever report the one a finger landed in, so rolling from up into the corner gave
+up, then nothing, then right — never up-and-right. A diagonal is now a place on the pad rather than
+two presses to be timed. First finger down owns it until it lifts; a second touch no longer
+overrides the direction being held.
+
+**L2 and R2 ramp instead of switching.** They sent 0 or 1 with nothing between, which is not what
+those controls are on a pad. Holding raises the value over about a fifth of a second, releasing
+drains it slightly faster, and the button fills from the bottom as it goes — so the level is visible
+on the control rather than only inside the game.
+
+**Every shape carries a dark outline and every label is drawn twice**, dark stroke then light fill.
+Pale shapes with pale labels are legible over a dark game and invisible over a white one, and no
+amount of translucency fixes that: a control has to be defined by its edge, not its fill.
+
+Sticks also claim a single pointer now, for the same reason the d-pad does.
+
+### Documentation — Skin Assets Assessed
+
+`docs/SKIN_ASSETS.md` records what the 233-file artwork pack in `docs/phase0/results/inbox/Skins/`
+actually contains — every file inspected, not sampled — and what it implies.
+
+The pack is **button prompts, not pad artwork**: one control drawn in isolation per file, 256×256
+RGBA, five sets covering Xbox, PlayStation, Switch, and keyboard/mouse in two tones. What it does
+not contain matters as much: no pressed state, no stick-press art, no diagonal d-pad, and no body or
+background.
+
+Two conventions follow from it. The filenames are sequence numbers carrying no meaning, so **the
+control-to-file mapping belongs in a per-family manifest** rather than in filenames — which is also
+where the drawn extent belongs, since square files hold non-square subjects. And **PNG stays
+primary**, per the owner's decision; the whole pack is 1.4 MB, which is not worth trading a
+lossless format for.
+
+One item is recorded as blocking: the pack arrived without a stated licence or origin, and it draws
+shapes associated with three hardware vendors. That is two separate questions — redistribution terms
+and trademark — and neither is answered by the other. Until the first is, the artwork stays in the
+inbox, which is a drop zone rather than a distribution path. Building the skin layer against it is
+not blocked; shipping it in `data/` is.
+
 ### Phase 1 — A Whole Pad, and a Stick That Fits Its Own Window
 
 **The thumb was clipped, and there were two geometry faults behind it.** The knob's centre was moved
