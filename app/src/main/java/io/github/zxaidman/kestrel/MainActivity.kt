@@ -19,9 +19,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import androidx.core.content.FileProvider
+import io.github.zxaidman.kestrel.diagnostics.DiagnosticReport
+import io.github.zxaidman.kestrel.diagnostics.ExportState
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewScreen
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewState
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
+import java.io.File
 
 /**
  * Entry point.
@@ -41,6 +46,59 @@ class MainActivity : ComponentActivity() {
     // asking for the stop control rather than for the ability to interrupt anyone.
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private var pendingExport: String? = null
+
+    /** Lets the user choose where the report lands, rather than hiding it somewhere they cannot reach. */
+    private val saveLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val content = pendingExport
+        pendingExport = null
+        ExportState.message.value = when {
+            uri == null -> "Save cancelled."
+            content == null -> "Nothing to save."
+            else -> try {
+                contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                "Saved. Open your file manager at the folder you chose."
+            } catch (e: Exception) {
+                "Save failed: ${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+    }
+
+    private fun saveReport() {
+        pendingExport = DiagnosticReport.build(this, preview)
+        ExportState.message.value = "Choose a folder…"
+        runCatching { saveLauncher.launch("kestrel-${System.currentTimeMillis()}.json") }
+            .onFailure { ExportState.message.value = "Could not open the file picker." }
+    }
+
+    /** Shares the report as an actual file, not as pasted text that has to be copied back out. */
+    private fun shareReport() {
+        try {
+            val directory = File(cacheDir, "reports").apply { mkdirs() }
+            directory.listFiles()?.forEach { it.delete() }
+            val file = File(directory, "kestrel-${System.currentTimeMillis()}.json")
+            file.writeText(DiagnosticReport.build(this, preview))
+
+            val uri = FileProvider.getUriForFile(this, "$packageName.reports", file)
+            startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_SUBJECT, file.name)
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    },
+                    "Share report",
+                )
+            )
+            ExportState.message.value = "Sharing ${file.name}"
+        } catch (e: Exception) {
+            ExportState.message.value = "Share failed: ${e.javaClass.simpleName}"
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,7 +127,11 @@ class MainActivity : ComponentActivity() {
                             text = androidx.compose.ui.res.stringResource(id = R.string.app_name),
                             style = MaterialTheme.typography.headlineSmall,
                         )
-                        InputPreviewScreen(preview)
+                        InputPreviewScreen(
+                            state = preview,
+                            onSave = ::saveReport,
+                            onShare = ::shareReport,
+                        )
                     }
                 }
             }

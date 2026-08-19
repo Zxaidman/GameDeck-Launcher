@@ -98,10 +98,18 @@ public object VirtualControllerBackend {
      * force-stopped or uninstalled never gets the chance.
      */
     private fun armWatchdog(shell: IPrivilegedShell, ownerPackage: String) {
+        // `pidof` matches a process by name and cannot match the command that runs it. `pgrep -f`
+        // was the first attempt and was wrong in the worst way: **its own command line contains the
+        // package name it is searching for**, so it always found itself, the owner always looked
+        // alive, and the watchdog never fired. Force-stop and uninstall both did nothing as a
+        // result. The bracketed pattern below is the fallback for the same reason — the literal
+        // text `kestre[l]` in a command line does not match the regex `kestre[l]`.
+        val selfProofPattern = ownerPackage.dropLast(1) + "[" + ownerPackage.last() + "]"
         val script = listOf(
             "while :; do",
             "sleep 3",
-            "if ! pgrep -f '$ownerPackage' > /dev/null 2>&1; then break; fi",
+            "if ! pidof '$ownerPackage' > /dev/null 2>&1 && " +
+                "! pgrep -f '$selfProofPattern' > /dev/null 2>&1; then break; fi",
             "if ! pm path '$ownerPackage' > /dev/null 2>&1; then break; fi",
             "done",
             "pkill -9 -f '$HOLDER'",
@@ -114,13 +122,37 @@ public object VirtualControllerBackend {
     }
 
     /** Closes the session and reports the state afterwards rather than claiming success. */
-    public fun close(shell: IPrivilegedShell): String {
+    /**
+     * Closes the session, escalating until nothing holds the device, and reports what it found.
+     *
+     * A single pattern kill is not enough to *claim* the device is gone: it is a command that may
+     * silently match nothing. So the holders are read first, killed by pattern, then any that
+     * remain are killed by process id, and the state is read again. The returned text is the state
+     * after the attempt, never a claim that the attempt worked.
+     */
+    public fun close(shell: IPrivilegedShell): String = buildString {
         val before = holders(shell)
+        appendLine("before: ${before.ifBlank { "(none)" }}")
+
         exec(shell, "pkill -9 -f '$GUARD_PATTERN'; pkill -9 -f '$HOLDER'; pkill -9 -f '$TAIL_PATTERN'")
+        Thread.sleep(400)
+
+        var remaining = holders(shell)
+        if (remaining.isNotBlank()) {
+            // By id, in case the pattern is not matching what is actually running. Whatever holds
+            // the device is what has to go, whatever it happens to be called.
+            appendLine("pattern kill left ${remaining.trim()} — killing by id")
+            exec(shell, "for p in ${remaining.trim()}; do kill -9 \$p 2>/dev/null; done; echo ok")
+            Thread.sleep(400)
+            remaining = holders(shell)
+        }
+
         exec(shell, "rm -f $STREAM")
-        Thread.sleep(500)
-        val after = holders(shell)
-        return "before: ${before.ifBlank { "(none)" }}\nafter:  ${after.ifBlank { "(none)" }}"
+        appendLine("after:  ${remaining.ifBlank { "(none)" }}")
+        if (remaining.isNotBlank()) {
+            appendLine("STILL HELD. Copy this line and report it — a controller that cannot be")
+            appendLine("closed is the most serious failure this project has.")
+        }
     }
 
     /** Which processes hold the device open. The only honest answer to "is one open". */

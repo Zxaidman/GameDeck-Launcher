@@ -20,6 +20,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import io.github.zxaidman.kestrel.core.profile.matchProfile
 import io.github.zxaidman.kestrel.platform.session.ControllerSessionService
 import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
+import kotlinx.coroutines.delay
 import kotlin.math.min
 
 /**
@@ -63,6 +65,12 @@ import kotlin.math.min
  * one created by the Phase 0 harness — and shows what the domain layer makes of it. Kestrel has no
  * input backend yet, and nothing here implies otherwise.
  */
+
+/** What the last save or share did, so neither succeeds or fails silently. */
+public object ExportState {
+    public val message: androidx.compose.runtime.MutableState<String> =
+        androidx.compose.runtime.mutableStateOf("")
+}
 
 /** Live values read from whatever controller is connected. */
 public class InputPreviewState {
@@ -96,6 +104,14 @@ public class InputPreviewState {
         }
     }
 
+    /** Records a touch-driven stick position, so its source is distinguishable from a device. */
+    public fun noteTouchStick(x: Double, y: Double) {
+        rawX = x
+        rawY = y
+        sourceDevice = "touch pad (this screen)"
+        eventCount += 1
+    }
+
     private fun describe(deviceId: Int): String =
         InputDevice.getDevice(deviceId)?.let { "${it.name} (id ${it.id})" } ?: "id $deviceId"
 }
@@ -116,7 +132,12 @@ private fun connectedControllers(): List<InputDevice> =
         .filter { it.motionRanges.isNotEmpty() }
 
 @Composable
-public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Modifier) {
+public fun InputPreviewScreen(
+    state: InputPreviewState,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var deadzone by remember { mutableStateOf(0.10f) }
     var curve by remember { mutableStateOf(1.0f) }
     var sensitivity by remember { mutableStateOf(1.0f) }
@@ -129,7 +150,23 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
         invertY = invertY,
     )
 
-    val controllers = connectedControllers()
+    // Everything below reads the platform and Shizuku, neither of which is snapshot state, so
+    // nothing recomposed and the screen only updated when it was recreated from scratch — which is
+    // why the first device test needed the application clearing from recents to see any change.
+    // A ticker is the smallest honest fix: the values are polled, and what is shown is current.
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            tick += 1
+        }
+    }
+
+    val controllers = remember(tick) { connectedControllers() }
+    val shizuku = remember(tick) { ShizukuCapability.state() }
+    val sessionOpen = SessionState.open.value
+    val sessionDetail = SessionState.detail.value
+
     val capability = if (controllers.isEmpty()) {
         CapabilityState.CONFIGURE_ONLY
     } else {
@@ -141,7 +178,17 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val context = LocalContext.current
-        val shizuku = ShizukuCapability.state()
+
+        Section("Report") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onSave) { Text("Save…") }
+                Button(onClick = onShare) { Text("Share") }
+            }
+            Mono(ExportState.message.value.ifBlank { "Exports the device, privilege and session state." })
+        }
 
         Section("Controller session") {
             Mono(
@@ -169,14 +216,25 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
                 Button(onClick = { ControllerSessionService.start(context) }) { Text("Start controller") }
                 Button(onClick = { ControllerSessionService.stop(context) }) { Text("Stop") }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Never disabled, and it rebinds before it acts. A controller can outlive the
+                // process that created it, so recovery has to work from a cold start with nothing
+                // remembered — that is exactly the situation a stuck controller produces.
+                Button(onClick = { ControllerSessionService.stop(context) }) {
+                    Text("Force remove any controller")
+                }
+            }
             Mono(
-                "\nSession open: ${if (SessionState.open.value) "yes" else "no"}\n" +
-                    SessionState.detail.value.ifBlank { "(nothing yet)" }
+                "\nSession open: ${if (sessionOpen) "yes" else "no"}\n" +
+                    sessionDetail.ifBlank { "(nothing yet)" }
             )
         }
 
         Section("Touch pad — a stick you can push slowly") {
-            TouchStick(profile)
+            TouchStick(profile, state)
             Mono(
                 "\nDrag from the centre outwards, slowly. Past the dead zone the output should " +
                     "start from nothing and grow. A created controller cycles fixed values, so it " +
@@ -194,7 +252,13 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
             )
             Mono(
                 "\nControllers seen: ${controllers.size}\n" +
-                    controllers.joinToString("\n") { "  ${it.name}  axes=${it.motionRanges.size}" }
+                    controllers.joinToString("\n") {
+                        // A range is reported per source, so a device with three sources lists the
+                        // same axis three times. The distinct count is the one that means what a
+                        // reader expects; both are shown rather than one being quietly chosen.
+                        val distinct = it.motionRanges.map { range -> range.axis }.distinct().size
+                        "  ${it.name}  axes=$distinct (ranges=${it.motionRanges.size})"
+                    }
                         .ifEmpty { "  (none)" }
             )
         }
@@ -203,7 +267,9 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
             Mono(
                 "From:   ${state.sourceDevice}\n" +
                     "Events: ${state.eventCount}\n" +
-                    "Button: ${state.lastButton}"
+                    "Button: ${state.lastButton}\n" +
+                    "\nThe stick and trigger readouts below come from a connected controller. The " +
+                    "touch pad above has its own, so the two can be compared."
             )
         }
 
@@ -284,8 +350,18 @@ public fun InputPreviewScreen(state: InputPreviewState, modifier: Modifier = Mod
  * is smooth. Only a continuous input can, and until now there was none to hand.
  */
 @Composable
-private fun TouchStick(profile: AnalogProfile) {
+private fun TouchStick(profile: AnalogProfile, state: InputPreviewState) {
     var raw by remember { mutableStateOf(Offset.Zero) }
+
+    // The pad kept its position to itself in the first version, so the readouts below stayed at
+    // zero while the dot moved — the pad worked and appeared not to. Its values now go to the same
+    // place a controller's do, and the source says which is which.
+    val out = applyStick(raw.x.toDouble(), raw.y.toDouble(), profile)
+    Mono(
+        "raw   x %+.3f  y %+.3f\n".format(raw.x, raw.y) +
+            "out   x %+.3f  y %+.3f\n".format(out.x, out.y) +
+            "magnitude %.3f".format(out.magnitude)
+    )
 
     Canvas(
         modifier = Modifier
@@ -300,12 +376,13 @@ private fun TouchStick(profile: AnalogProfile) {
                     val dx = (change.position.x - size.width / 2f) / radius
                     val dy = (change.position.y - size.height / 2f) / radius
                     raw = Offset(dx.coerceIn(-1f, 1f), dy.coerceIn(-1f, 1f))
+                    state.noteTouchStick(raw.x.toDouble(), raw.y.toDouble())
                 }
             }
     ) {
         val radius = min(size.width, size.height) / 2f * 0.9f
         val centre = Offset(size.width / 2f, size.height / 2f)
-        val out = applyStick(raw.x.toDouble(), raw.y.toDouble(), profile)
+        val drawn = applyStick(raw.x.toDouble(), raw.y.toDouble(), profile)
 
         drawCircle(Color.Gray.copy(alpha = 0.25f), radius = radius, center = centre)
         // The dead zone drawn where it actually is, so the number on the slider has a picture.
@@ -322,7 +399,7 @@ private fun TouchStick(profile: AnalogProfile) {
         drawCircle(
             Color.Green,
             radius = 20f,
-            center = centre + Offset((out.x * radius).toFloat(), (out.y * radius).toFloat()),
+            center = centre + Offset((drawn.x * radius).toFloat(), (drawn.y * radius).toFloat()),
         )
     }
 }

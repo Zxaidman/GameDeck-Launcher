@@ -405,6 +405,51 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Six Faults From One Device Run
+
+Every item here came from the first run of the merged application on the reference device. Two were
+serious, and one of those is the reason the other four were hard to see.
+
+**The watchdog matched itself, so it never fired.** It checked whether the owner was alive with
+`pgrep -f <package>` — and **`pgrep`'s own command line contains the package name it is searching
+for**, so it always found itself, the owner always looked alive, and the guard never ran. Force
+stop did nothing. Uninstalling did nothing. Only a reboot ended the controller — the exact failure
+`docs/phase0/results/tier5-orphan-report.md` was written about, reintroduced by a different route.
+Now `pidof`, which matches a process by name and cannot match the command running it, with a
+bracketed pattern as the fallback for the same reason.
+
+**Stop gave up silently when the binder was gone.** `ShizukuCapability.shell() ?: return` — so after
+the application's process restarted, stop did nothing and *looked like it had worked*. Swiping the
+application away is enough to lose that binder, and swiping it away was exactly what the operator
+had to keep doing because of the next fault. Stop now reconnects before acting.
+
+**Nothing on the screen ever refreshed.** The privilege state and the device list were read as plain
+function calls in a composable — not snapshot state — so nothing recomposed and the screen only
+changed when it was recreated from scratch. That is why every check needed the application clearing
+from recents first, which in turn broke stop. Polled once a second now.
+
+**Close escalates and reports what it found.** A pattern kill is a command that may match nothing;
+it is not evidence. Holders are read, killed by pattern, any survivors killed by process id, and the
+state is read again. If anything still holds the device the text says so in as many words, because a
+controller that cannot be closed is the most serious failure this project has.
+
+**The touch pad kept its position to itself**, so the readouts stayed at zero while the dot moved —
+it worked and appeared not to. Its values now go where a controller's do, with the source named so
+the two can be told apart.
+
+**`axes=30`, explained.** A motion range is reported per source, so a device carrying three sources
+lists the same ten axes three times. Both numbers are now shown — `axes=10 (ranges=30)` — rather
+than one being quietly chosen. Nothing is wrong with the device.
+
+**Report export**, saving to a folder of the user's choosing or sharing as a file, carrying the
+build fingerprint, the four privilege facts, the session state and every input device with its
+descriptor. Recorded observations have decided every question in this project so far; descriptions
+of what someone saw have not.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: none of these fixes has been run on a device. The watchdog fault in particular was
+found by reading rather than by testing, and reading is how it got in.
+
 ### Phase 1 — One Application, and a Watchdog Watching the Right Thing
 
 **The watchdog was watching the wrong signal.** On the reference device a session died twice in the

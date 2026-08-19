@@ -40,6 +40,18 @@
                     visible and stoppable while it exists." />
         </service>
 
+        <!-- Lets Share hand over the report as an actual file. Not exported: nothing can pull a
+             file out of Kestrel without Kestrel offering it. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Required by the Shizuku library so it can hand the binder to this process. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

@@ -52,24 +52,42 @@ public class ControllerSessionService : Service() {
     }
 
     private fun startSession() {
-        Thread {
-            val shell = ShizukuCapability.shell()
-            if (shell == null) {
-                SessionState.detail.value = "No privileged shell. " + ShizukuCapability.state().advice
-                SessionState.open.value = false
-                return@Thread
-            }
+        withShell("start") { shell ->
             SessionState.detail.value = VirtualControllerBackend.open(shell, packageName)
             SessionState.open.value = VirtualControllerBackend.holders(shell).isNotBlank()
-        }.start()
+        }
     }
 
+    /**
+     * Closes the session, binding first if the connection is gone.
+     *
+     * The first version gave up silently when no shell was bound, and the consequence was the worst
+     * kind: **stop appeared to work and the controller stayed**. A process restart is enough to
+     * lose the binder — and restarting is exactly what happens when a user swipes the application
+     * away — so stop must be able to reconnect rather than assume it is already connected.
+     */
     private fun stopSession() {
-        val shell = ShizukuCapability.shell() ?: return
-        Thread {
+        withShell("stop") { shell ->
             SessionState.detail.value = VirtualControllerBackend.close(shell)
-            SessionState.open.value = false
-        }.start()
+            SessionState.open.value = VirtualControllerBackend.holders(shell).isNotBlank()
+        }
+    }
+
+    private fun withShell(what: String, work: (shell: io.github.zxaidman.kestrel.platform.shizuku.IPrivilegedShell) -> Unit) {
+        val existing = ShizukuCapability.shell()
+        if (existing != null) {
+            Thread { work(existing) }.start()
+            return
+        }
+        SessionState.detail.value = "Reconnecting to Shizuku to $what…"
+        ShizukuCapability.bind(this) { shell ->
+            if (shell == null) {
+                SessionState.detail.value =
+                    "Could not $what: no privileged shell. ${ShizukuCapability.state().advice}"
+            } else {
+                Thread { work(shell) }.start()
+            }
+        }
     }
 
     private fun notification(): Notification {
