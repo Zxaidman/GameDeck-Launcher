@@ -441,7 +441,7 @@ and unit-tested.
   working profile. `candidateProfiles` returns everything applicable in the same order, because
   telling a user which profile will be used is worth little if they cannot see the alternatives.
 
-30 new tests, 91 in the module, no failures.
+31 new tests, 92 in the module, no failures.
 
 ### Phase 1 — A Screen You Can Install
 
@@ -457,7 +457,7 @@ The reason it exists: the transformation is arithmetic and the tests prove the a
 a curve *feels* right is a question only a thumb can answer, and until now nothing in `core/` could
 be put in front of one.
 
-Verified: `./gradlew build` succeeds with lint clean, `:core:test` 91 tests passing.
+Verified: `./gradlew build` succeeds with lint clean, `:core:test` 92 tests passing.
 Not verified: the screen has not been run on a device.
 
 ### Phase 1 — Layout Geometry, in `core/`
