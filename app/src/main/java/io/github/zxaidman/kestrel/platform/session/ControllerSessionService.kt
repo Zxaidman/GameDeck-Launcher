@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.IBinder
 import androidx.compose.runtime.mutableStateOf
 import io.github.zxaidman.kestrel.MainActivity
-import android.view.WindowManager
 import io.github.zxaidman.kestrel.platform.input.InputEngine
 import io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay
 import io.github.zxaidman.kestrel.platform.input.virtual.VirtualControllerBackend
@@ -130,25 +129,33 @@ public class ControllerSessionService : Service() {
             return
         }
         val view = ControllerOverlay(this, engine, SessionState.profile)
-        val added = runCatching {
-            getSystemService(WindowManager::class.java)
-                ?.addView(view, ControllerOverlay.layoutParams())
-        }
-        if (added.isFailure) {
-            SessionState.detail.value =
-                "Could not show the controls: ${added.exceptionOrNull()?.javaClass?.simpleName}"
+        if (!view.show()) {
+            SessionState.detail.value = "Could not put the controls on screen."
             return
         }
         overlay = view
         SessionState.overlayShown.value = true
+        SessionState.detail.value =
+            "Controls are on screen. The round K button at the top shows and hides them, and " +
+                "nothing outside the controls is covered."
     }
 
     private fun hideOverlay() {
-        overlay?.let { view ->
-            runCatching { getSystemService(WindowManager::class.java)?.removeView(view) }
-        }
+        overlay?.hide()
         overlay = null
         SessionState.overlayShown.value = false
+    }
+
+    /**
+     * Removes the controls if anything goes wrong, including the process being torn down.
+     *
+     * A window put up by a service outlives the screen that asked for it. Controls left on a phone
+     * with nothing able to remove them cost a reboot once already, so every path out of this
+     * service takes them down.
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+        hideOverlay()
     }
 
     private fun stopSession() {
@@ -216,6 +223,19 @@ public class ControllerSessionService : Service() {
                         2,
                         Intent(this, ControllerSessionService::class.java)
                             .setAction(ACTION_SHOW_OVERLAY),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    ),
+                ).build()
+            )
+            .addAction(
+                Notification.Action.Builder(
+                    null,
+                    "Hide",
+                    PendingIntent.getService(
+                        this,
+                        3,
+                        Intent(this, ControllerSessionService::class.java)
+                            .setAction(ACTION_HIDE_OVERLAY),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     ),
                 ).build()

@@ -18,192 +18,291 @@ import kotlin.math.hypot
 import kotlin.math.min
 
 /**
- * The controls, drawn over whatever the user is playing, in a window that never takes focus.
+ * The controls, drawn over whatever the user is playing, in windows that never take focus.
  *
- * This exists because of a measurement rather than a preference. With the controls inside an
- * ordinary activity, touching them makes that activity the focused window — and the platform
- * delivers a controller's events to the **focused** window. So pressing a control moved focus to
- * Kestrel, and the input Kestrel produced then arrived back at Kestrel. The export
- * `docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json` caught it exactly: 2005
- * motion events, source `Kestrel Virtual Controller (id 14)`, received by Kestrel while the target
- * received nothing.
+ * Two rules shape everything here, and the second was learned the hard way.
  *
- * `FLAG_NOT_FOCUSABLE` is therefore not a detail of this class, it is the reason the class exists.
- * The window accepts touches and never becomes the focused window, so the target keeps focus and
- * the controller's events go where the player is looking.
+ * **A control must not take focus.** The platform delivers a controller's events to the focused
+ * window, so controls inside an ordinary activity send their input back to Kestrel — measured in
+ * `docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json`.
  *
- * Drawn with a plain `View` rather than Compose: a window put up by a service has no lifecycle
- * owner, and giving it one is more machinery than a stick and four buttons are worth.
+ * **A control must not cover anything it does not need.** The first version was one window the size
+ * of the screen whose touch handler returned "handled" for every touch, so it consumed every touch
+ * on the phone: the home screen, the recent list, settings, all of it. The device could not be
+ * operated by finger at all and only a reboot recovered it. That is not a bug to be patched by
+ * returning "not handled" more carefully — it is a reason not to put a window there. **Each control
+ * cluster now gets its own window, sized to itself.** Everywhere the controls are not, there is no
+ * window of ours, so nothing of ours can intercept anything.
  */
 public class ControllerOverlay(
-    context: Context,
+    private val context: Context,
     private val engine: InputEngine,
     private var profile: AnalogProfile,
-) : View(context) {
+) {
 
-    private val ring = Paint().apply { color = Color.argb(60, 255, 255, 255); isAntiAlias = true }
-    private val knob = Paint().apply { color = Color.argb(140, 255, 255, 255); isAntiAlias = true }
-    private val face = Paint().apply { color = Color.argb(90, 255, 255, 255); isAntiAlias = true }
-    private val label = Paint().apply {
-        color = Color.argb(200, 255, 255, 255)
+    private val windows = context.getSystemService(WindowManager::class.java)
+    private var stick: StickView? = null
+    private var buttons: ButtonsView? = null
+    private var toggle: ToggleView? = null
+    private var controlsVisible = false
+
+    /** Roughly a thumb's reach, in pixels, from the shorter side of the screen. */
+    private val unit: Int
+        get() {
+            val metrics = context.resources.displayMetrics
+            return min(metrics.widthPixels, metrics.heightPixels)
+        }
+
+    /**
+     * Shows the toggle, and nothing else.
+     *
+     * The toggle comes up first and alone on purpose: it is small, it is always reachable, and it
+     * is the way out. A user who cannot make the controls go away has lost their phone until they
+     * reboot it, which happened once and must not happen again.
+     */
+    public fun show(): Boolean {
+        if (toggle != null) return true
+        val view = ToggleView(context) { toggleControls() }
+        val size = (unit * 0.11f).toInt()
+        return runCatching {
+            windows?.addView(
+                view,
+                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, (unit * 0.02f).toInt()),
+            )
+            toggle = view
+            true
+        }.getOrElse { false }
+    }
+
+    public fun hide() {
+        hideControls()
+        toggle?.let { runCatching { windows?.removeView(it) } }
+        toggle = null
+    }
+
+    public val visible: Boolean
+        get() = toggle != null
+
+    public val controlsOn: Boolean
+        get() = controlsVisible
+
+    public fun update(profile: AnalogProfile) {
+        this.profile = profile
+        stick?.profile = profile
+    }
+
+    private fun toggleControls() {
+        if (controlsVisible) hideControls() else showControls()
+    }
+
+    private fun showControls() {
+        if (controlsVisible) return
+        val stickSize = (unit * 0.46f).toInt()
+        val buttonSize = (unit * 0.46f).toInt()
+        val margin = (unit * 0.04f).toInt()
+
+        val stickView = StickView(context, engine, profile)
+        val buttonsView = ButtonsView(context, engine)
+
+        runCatching {
+            windows?.addView(
+                stickView,
+                params(stickSize, stickSize, Gravity.BOTTOM or Gravity.START, margin, margin),
+            )
+            windows?.addView(
+                buttonsView,
+                params(buttonSize, buttonSize, Gravity.BOTTOM or Gravity.END, margin, margin),
+            )
+        }.onFailure {
+            runCatching { windows?.removeView(stickView) }
+            runCatching { windows?.removeView(buttonsView) }
+            return
+        }
+
+        stick = stickView
+        buttons = buttonsView
+        controlsVisible = true
+    }
+
+    private fun hideControls() {
+        stick?.let { view ->
+            // Never leave a control held when it disappears. A stick removed at full deflection
+            // keeps the platform emitting directional keys with nothing left to release it.
+            engine.stick(0.0, 0.0, profile)
+            runCatching { windows?.removeView(view) }
+        }
+        buttons?.let { view ->
+            view.releaseAll()
+            runCatching { windows?.removeView(view) }
+        }
+        stick = null
+        buttons = null
+        controlsVisible = false
+    }
+
+    private fun params(
+        width: Int,
+        height: Int,
+        gravity: Int,
+        marginX: Int,
+        marginY: Int,
+    ): WindowManager.LayoutParams = WindowManager.LayoutParams(
+        width,
+        height,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        },
+        // NOT_FOCUSABLE is why any of this works: without it the overlay becomes the focused window
+        // on touch and the controller's own events come back to Kestrel. NOT_TOUCH_MODAL lets
+        // everything outside these small windows reach whatever is underneath.
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        PixelFormat.TRANSLUCENT,
+    ).apply {
+        this.gravity = gravity
+        x = marginX
+        y = marginY
+    }
+
+    public companion object {
+        /** Whether the user has allowed drawing over other applications. */
+        public fun permitted(context: Context): Boolean = Settings.canDrawOverlays(context)
+    }
+}
+
+/** The always-present way to make the controls appear and disappear. */
+private class ToggleView(context: Context, private val onTap: () -> Unit) : View(context) {
+
+    private val body = Paint().apply { color = Color.argb(130, 20, 20, 20); isAntiAlias = true }
+    private val mark = Paint().apply {
+        color = Color.argb(220, 255, 255, 255)
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
 
-    /** Which pointer is on the stick, so a thumb on a button never moves it. */
-    private var stickPointer = -1
-    private var stickX = 0f
-    private var stickY = 0f
-
-    private val pressed = mutableMapOf<Int, Int>()
-
-    private var stickCentreX = 0f
-    private var stickCentreY = 0f
-    private var stickRadius = 0f
-    private val buttons = mutableListOf<FaceButton>()
-
-    private data class FaceButton(
-        val name: String,
-        val keyCode: Int,
-        var cx: Float = 0f,
-        var cy: Float = 0f,
-        var r: Float = 0f,
-    )
-
-    init {
-        buttons += FaceButton("A", 304)
-        buttons += FaceButton("B", 305)
-        buttons += FaceButton("X", 307)
-        buttons += FaceButton("Y", 308)
-    }
-
-    public fun update(profile: AnalogProfile) {
-        this.profile = profile
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        val unit = min(w, h).toFloat()
-        label.textSize = unit * 0.06f
-
-        // Anchored to the corners a thumb reaches, in units of the short side — the same rule
-        // `core/layout/` uses, so what is drawn here matches what a layout would describe.
-        stickRadius = unit * 0.20f
-        stickCentreX = unit * 0.28f
-        stickCentreY = h - unit * 0.28f
-
-        val faceR = unit * 0.09f
-        val cx = w - unit * 0.28f
-        val cy = h - unit * 0.28f
-        val spread = unit * 0.14f
-        buttons[0].apply { this.cx = cx; this.cy = cy + spread; r = faceR }  // A, low
-        buttons[1].apply { this.cx = cx + spread; this.cy = cy; r = faceR }  // B, right
-        buttons[2].apply { this.cx = cx - spread; this.cy = cy; r = faceR }  // X, left
-        buttons[3].apply { this.cx = cx; this.cy = cy - spread; r = faceR }  // Y, high
-    }
-
     override fun onDraw(canvas: Canvas) {
-        canvas.drawCircle(stickCentreX, stickCentreY, stickRadius, ring)
-        canvas.drawCircle(
-            stickCentreX + stickX * stickRadius,
-            stickCentreY + stickY * stickRadius,
-            stickRadius * 0.35f,
-            knob,
-        )
-        buttons.forEach { button ->
-            canvas.drawCircle(button.cx, button.cy, button.r, face)
-            canvas.drawText(button.name, button.cx, button.cy + label.textSize / 3, label)
-        }
+        val r = min(width, height) / 2f
+        mark.textSize = r
+        canvas.drawCircle(width / 2f, height / 2f, r * 0.9f, body)
+        canvas.drawText("K", width / 2f, height / 2f + r / 3f, mark)
     }
 
-    /**
-     * Multi-touch by pointer id, because holding a direction while pressing a button is the
-     * ordinary case rather than an advanced one. Tracking only the first pointer would make the
-     * stick jump to a button the moment one was pressed.
-     */
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_UP) onTap()
+        return true
+    }
+}
+
+/** The stick, in a window the size of the stick. */
+private class StickView(
+    context: Context,
+    private val engine: InputEngine,
+    var profile: AnalogProfile,
+) : View(context) {
+
+    private val ring = Paint().apply { color = Color.argb(60, 255, 255, 255); isAntiAlias = true }
+    private val knob = Paint().apply { color = Color.argb(150, 255, 255, 255); isAntiAlias = true }
+
+    private var x = 0f
+    private var y = 0f
+
+    override fun onDraw(canvas: Canvas) {
+        val r = min(width, height) / 2f
+        canvas.drawCircle(width / 2f, height / 2f, r * 0.95f, ring)
+        canvas.drawCircle(width / 2f + x * r, height / 2f + y * r, r * 0.32f, knob)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val r = min(width, height) / 2f
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                val index = event.actionIndex
-                claim(event.getPointerId(index), event.getX(index), event.getY(index))
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                x = ((event.x - width / 2f) / r).coerceIn(-1f, 1f)
+                y = ((event.y - height / 2f) / r).coerceIn(-1f, 1f)
+                engine.stick(x.toDouble(), y.toDouble(), profile)
             }
 
-            MotionEvent.ACTION_MOVE -> {
-                for (index in 0 until event.pointerCount) {
-                    if (event.getPointerId(index) == stickPointer) {
-                        moveStick(event.getX(index), event.getY(index))
-                    }
-                }
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
-                val id = event.getPointerId(event.actionIndex)
-                release(id)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                x = 0f
+                y = 0f
+                engine.stick(0.0, 0.0, profile)
             }
         }
         invalidate()
         return true
     }
+}
 
-    private fun claim(pointerId: Int, x: Float, y: Float) {
-        val button = buttons.firstOrNull { hypot(x - it.cx, y - it.cy) <= it.r * 1.25f }
-        if (button != null) {
-            pressed[pointerId] = button.keyCode
-            engine.button(button.keyCode, true)
-            return
-        }
-        if (hypot(x - stickCentreX, y - stickCentreY) <= stickRadius * 1.6f && stickPointer == -1) {
-            stickPointer = pointerId
-            moveStick(x, y)
+/** The face buttons, in a window the size of the buttons. */
+private class ButtonsView(context: Context, private val engine: InputEngine) : View(context) {
+
+    private val face = Paint().apply { color = Color.argb(90, 255, 255, 255); isAntiAlias = true }
+    private val label = Paint().apply {
+        color = Color.argb(220, 255, 255, 255)
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    private data class Face(val name: String, val code: Int, val dx: Float, val dy: Float)
+
+    private val faces = listOf(
+        Face("Y", 308, 0f, -1f),
+        Face("X", 307, -1f, 0f),
+        Face("B", 305, 1f, 0f),
+        Face("A", 304, 0f, 1f),
+    )
+
+    /** Which pointer is holding which button, so two can be held at once. */
+    private val held = mutableMapOf<Int, Int>()
+
+    override fun onDraw(canvas: Canvas) {
+        val r = min(width, height) / 2f
+        val radius = r * 0.30f
+        val spread = r * 0.55f
+        label.textSize = radius
+        faces.forEach { f ->
+            val cx = width / 2f + f.dx * spread
+            val cy = height / 2f + f.dy * spread
+            canvas.drawCircle(cx, cy, radius, face)
+            canvas.drawText(f.name, cx, cy + radius / 3f, label)
         }
     }
 
-    private fun moveStick(x: Float, y: Float) {
-        stickX = ((x - stickCentreX) / stickRadius).coerceIn(-1f, 1f)
-        stickY = ((y - stickCentreY) / stickRadius).coerceIn(-1f, 1f)
-        engine.stick(stickX.toDouble(), stickY.toDouble(), profile)
-    }
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val i = event.actionIndex
+                faceAt(event.getX(i), event.getY(i))?.let { f ->
+                    held[event.getPointerId(i)] = f.code
+                    engine.button(f.code, true)
+                }
+            }
 
-    private fun release(pointerId: Int) {
-        pressed.remove(pointerId)?.let { engine.button(it, false) }
-        if (pointerId == stickPointer) {
-            stickPointer = -1
-            stickX = 0f
-            stickY = 0f
-            // Centred on the device as well as on screen. A stick left deflected keeps the platform
-            // emitting directional keys without stopping.
-            engine.stick(0.0, 0.0, profile)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                held.remove(event.getPointerId(event.actionIndex))?.let { engine.button(it, false) }
+            }
         }
+        return true
     }
 
-    public companion object {
+    fun releaseAll() {
+        held.values.forEach { engine.button(it, false) }
+        held.clear()
+    }
 
-        /** Whether the user has allowed drawing over other applications. */
-        public fun permitted(context: Context): Boolean = Settings.canDrawOverlays(context)
-
-        /**
-         * The window flags that make this work, and why each is there.
-         *
-         * `NOT_FOCUSABLE` is the one that matters: without it the overlay becomes the focused
-         * window on touch and the controller's own events return to Kestrel instead of reaching
-         * the target. `NOT_TOUCH_MODAL` lets touches outside the controls pass through to whatever
-         * is underneath, so the parts of the screen the player is looking at stay usable.
-         */
-        public fun layoutParams(): WindowManager.LayoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START }
+    private fun faceAt(px: Float, py: Float): Face? {
+        val r = min(width, height) / 2f
+        val radius = r * 0.30f
+        val spread = r * 0.55f
+        return faces.firstOrNull { f ->
+            val cx = width / 2f + f.dx * spread
+            val cy = height / 2f + f.dy * spread
+            hypot(px - cx, py - cy) <= radius * 1.2f
+        }
     }
 }

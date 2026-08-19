@@ -405,6 +405,42 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — An Overlay That Covers Only Itself
+
+The first overlay locked the phone. It was one window the size of the screen whose touch handler
+reported every touch as handled, so it consumed **every touch on the device** — home screen, recent
+list, settings, notification shade, all of it. Nothing could be operated by finger and only a reboot
+recovered it.
+
+That is not a bug to be patched by reporting touches as unhandled more carefully. It is a reason not
+to put a window there at all. **Each control cluster now has its own window, sized to itself**: the
+stick bottom-left, the face buttons bottom-right. Everywhere the controls are not, there is no
+window of ours, so nothing of ours can intercept anything.
+
+Three safety rules go with it, each answering something that happened:
+
+- **A small toggle appears first and alone**, at the top of the screen, and shows and hides the
+  controls. It comes up before them on purpose: it is the way out, and a user who cannot make the
+  controls go away has lost their phone until they reboot it.
+- **The notification gains Hide**, so the controls can be removed without touching the screen at
+  all.
+- **Every path out of the session removes the controls**, including the service being destroyed. A
+  window put up by a service outlives the screen that asked for it.
+
+Hiding the controls also centres the stick and releases every held button, because a control that
+disappears mid-press leaves nothing behind able to release it.
+
+Two behaviours the operator saw are **not** faults and are recorded as such: the stick moving the
+home screen's selection is a controller doing what a controller does, and `BUTTON_B` closing an
+application is the platform's own mapping of B to Back, measured on a physical controller in Tier 1
+and inherited by any created device. Neither is caused by the overlay, and neither is Kestrel's to
+override — though a session will want to suppress Back reaching the launcher itself.
+
+Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
+Not verified: the reshaped overlay has not been run on a device. The failure it fixes was severe
+enough that the first test should be the recovery path — put the controls up, then take them down
+with the toggle — before anything else is tried.
+
 ### Phase 1 — Controls Cannot Live in an Ordinary Window
 
 The on-screen stick appeared to do nothing in an emulator. The export says otherwise, and the real

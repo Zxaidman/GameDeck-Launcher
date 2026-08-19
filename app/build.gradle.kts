@@ -19,8 +19,8 @@ android {
         // Android 10 / API 29 is fixed by ADR-004. Do not raise without superseding that record.
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 7
-        versionName = "0.0.7-dev"
+        versionCode = 8
+        versionName = "0.0.8-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

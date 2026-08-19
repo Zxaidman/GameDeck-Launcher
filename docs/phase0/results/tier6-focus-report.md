@@ -78,6 +78,25 @@ and the rest of the screen stays usable.
   user must grant, after Shizuku, and `docs/DEGRADED_STATE.md` should treat its absence as a state
   to report rather than an error to raise.
 
+## 4a. The first attempt at an overlay locked the phone
+
+Worth recording because the lesson is not about overlays.
+
+The overlay was made one window the size of the screen, and its touch handler reported every touch
+as handled. It therefore consumed every touch on the device — home screen, recent list, settings,
+the notification shade — and the phone could not be operated by finger at all. Only a reboot
+recovered it.
+
+The instinct is to fix the handler: report unclaimed touches as unhandled and let them through. That
+is the wrong fix, because it leaves a full-screen window belonging to us in the path of every touch
+on the phone, and any mistake in it has the same consequence. **A window should cover what it needs
+and nothing else.** Each control cluster now has a window its own size, and the rest of the screen
+has no window of ours in it.
+
+The recovery path is now part of the design rather than an afterthought: a small toggle appears
+before the controls do, the notification can hide them, and every path out of the session removes
+them. A user who cannot dismiss what is on their screen has lost their phone.
+
 ## 5. Limits
 
 One device, one firmware. The focus rule is platform behaviour rather than a device property, so it
