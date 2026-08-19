@@ -8,6 +8,7 @@ import android.graphics.CornerPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.os.Build
 import android.provider.Settings
 import android.view.Gravity
@@ -113,6 +114,46 @@ public class ControllerOverlay(
     }
 
     /**
+     * Where every cluster sits and how big its window is.
+     *
+     * One description, used by both the first layout and every resize, because the two drifting
+     * apart is how a resize ends up putting a control somewhere the first layout never did.
+     */
+    private fun plan(): List<Pair<Int, WindowManager.LayoutParams>> {
+        val big = clusterSize()
+        val small = (big * 0.72f).toInt()
+        val strip = big
+        val stripHeight = (big * 0.42f).toInt()
+        val menuHeight = (big * 0.34f).toInt()
+        val margin = marginSize()
+        val above = margin + big + margin / 2
+
+        return listOf(
+            STICK to params(big, big, Gravity.BOTTOM or Gravity.START, margin, margin),
+            FACES to params(big, big, Gravity.BOTTOM or Gravity.END, margin, margin),
+            DPAD to params(small, small, Gravity.BOTTOM or Gravity.START, margin, above),
+            RIGHT_STICK to params(small, small, Gravity.BOTTOM or Gravity.END, margin, above),
+            LEFT_SHOULDERS to
+                params(strip, stripHeight, Gravity.TOP or Gravity.START, margin, margin),
+            RIGHT_SHOULDERS to
+                params(strip, stripHeight, Gravity.TOP or Gravity.END, margin, margin),
+            MENU to
+                params(strip, menuHeight, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, margin),
+        )
+    }
+
+    private fun viewFor(slot: Int): View? = when (slot) {
+        STICK -> stick
+        FACES -> buttons
+        DPAD -> dpad
+        RIGHT_STICK -> rightStick
+        LEFT_SHOULDERS -> leftShoulders
+        RIGHT_SHOULDERS -> rightShoulders
+        MENU -> menu
+        else -> null
+    }
+
+    /**
      * Resizes the controls without taking them away and putting them back.
      *
      * Removing and re-adding the windows would drop any control being held at that moment, so a
@@ -122,26 +163,10 @@ public class ControllerOverlay(
     public fun resize(scale: Float) {
         this.scale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
         if (!controlsVisible) return
-        // Simplest correct approach: lay them out again from the new size. Nothing is removed, so
-        // no control being held is dropped.
-        val big = clusterSize()
-        val small = (clusterSize() * 0.62f).toInt()
-        val strip = (clusterSize() * 0.55f).toInt()
-        val margin = marginSize()
-        val above = margin + big + margin / 2
-
-        fun move(view: View?, w: Int, h: Int, gravity: Int, x: Int, y: Int) {
-            view ?: return
-            runCatching { windows?.updateViewLayout(view, params(w, h, gravity, x, y)) }
+        plan().forEach { (slot, layout) ->
+            val view = viewFor(slot) ?: return@forEach
+            runCatching { windows?.updateViewLayout(view, layout) }
         }
-
-        move(stick, big, big, Gravity.BOTTOM or Gravity.START, margin, margin)
-        move(buttons, big, big, Gravity.BOTTOM or Gravity.END, margin, margin)
-        move(dpad, small, small, Gravity.BOTTOM or Gravity.START, margin, above)
-        move(rightStick, small, small, Gravity.BOTTOM or Gravity.END, margin, above)
-        move(leftShoulders, strip, strip / 2, Gravity.TOP or Gravity.START, margin, margin)
-        move(rightShoulders, strip, strip / 2, Gravity.TOP or Gravity.END, margin, margin)
-        move(menu, strip, strip / 3, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, margin)
     }
 
     private fun clusterSize(): Int = (unit * 0.46f * scale).toInt()
@@ -161,35 +186,32 @@ public class ControllerOverlay(
      */
     private fun showControls() {
         if (controlsVisible) return
-        val big = clusterSize()
-        val small = (clusterSize() * 0.62f).toInt()
-        val strip = (clusterSize() * 0.55f).toInt()
-        val margin = marginSize()
-        val above = margin + big + margin / 2
-
-        val added = mutableListOf<View>()
-        fun place(view: View, w: Int, h: Int, gravity: Int, x: Int, y: Int): Boolean =
-            runCatching {
-                windows?.addView(view, params(w, h, gravity, x, y))
-                added += view
-                true
-            }.getOrElse { false }
 
         val stickView = StickView(context, engine, profile, right = false)
         val rightStickView = StickView(context, engine, profile, right = true)
-        val buttonsView = PadView(context, PadView.face(engine))
+        val buttonsView = PadView(context, PadView.face(engine), plate = true)
         val dpadView = DpadView(context, engine)
         val leftShoulderView = PadView(context, PadView.leftShoulders(engine, profile))
         val rightShoulderView = PadView(context, PadView.rightShoulders(engine, profile))
         val menuView = PadView(context, PadView.menu(engine))
 
-        val ok = place(stickView, big, big, Gravity.BOTTOM or Gravity.START, margin, margin) &&
-            place(buttonsView, big, big, Gravity.BOTTOM or Gravity.END, margin, margin) &&
-            place(dpadView, small, small, Gravity.BOTTOM or Gravity.START, margin, above) &&
-            place(rightStickView, small, small, Gravity.BOTTOM or Gravity.END, margin, above) &&
-            place(leftShoulderView, strip, strip / 2, Gravity.TOP or Gravity.START, margin, margin) &&
-            place(rightShoulderView, strip, strip / 2, Gravity.TOP or Gravity.END, margin, margin) &&
-            place(menuView, strip, strip / 3, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, margin)
+        val added = mutableListOf<View>()
+        val ok = plan().all { (slot, layout) ->
+            val view = when (slot) {
+                STICK -> stickView
+                FACES -> buttonsView
+                DPAD -> dpadView
+                RIGHT_STICK -> rightStickView
+                LEFT_SHOULDERS -> leftShoulderView
+                RIGHT_SHOULDERS -> rightShoulderView
+                else -> menuView
+            }
+            runCatching {
+                windows?.addView(view, layout)
+                added += view
+                true
+            }.getOrElse { false }
+        }
 
         if (!ok) {
             added.forEach { runCatching { windows?.removeView(it) } }
@@ -251,7 +273,7 @@ public class ControllerOverlay(
         // on touch and the controller's own events come back to Kestrel. NOT_TOUCH_MODAL lets
         // everything outside these small windows reach whatever is underneath. SPLIT_TOUCH is what
         // makes them independent: without it the first window to see a finger owns the gesture, so
-        // holding the stick froze every other control and the phone underneath with it.
+        // holding the stick froze every other control and froze the phone underneath with it.
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
@@ -263,6 +285,14 @@ public class ControllerOverlay(
     }
 
     public companion object {
+
+        private const val STICK = 0
+        private const val FACES = 1
+        private const val DPAD = 2
+        private const val RIGHT_STICK = 3
+        private const val LEFT_SHOULDERS = 4
+        private const val RIGHT_SHOULDERS = 5
+        private const val MENU = 6
 
         /**
          * How large the controls are, as a fraction of the size they were first drawn at.
@@ -282,23 +312,40 @@ public class ControllerOverlay(
 }
 
 /**
- * One palette for every control, and the reason it is dark-edged.
+ * One palette for every control, and why it is built the way it is.
  *
- * The controls were pale shapes with pale labels, which is legible over a dark game and invisible
- * over a white screen — a menu, a browser, a settings page. Translucency alone cannot solve that:
- * anything light enough to sit over black disappears over white. **Every shape therefore carries a
- * dark outline and every label is drawn twice**, dark stroke first, light fill on top, so the
- * control is defined by its edge rather than by its fill and reads on any background.
+ * The first attempt at "visible on a white screen" was a heavy dark ring around a pale shape. It
+ * worked and it looked like a diagram. What commercial pads on this platform actually do — and what
+ * the project owner asked for — is the opposite arrangement: **a dark translucent plate carries the
+ * cluster, and the controls sit on it in a lighter grey**. The plate is what makes the whole cluster
+ * legible over a white page, so each individual control no longer needs a ring heavy enough to do
+ * that job alone.
+ *
+ * Labels are still drawn twice, dark stroke then light fill, because a label is small enough that
+ * it can fall on either tone within a single control.
  */
 private object Ink {
 
-    fun body(): Paint = Paint().apply {
-        color = Color.argb(105, 244, 247, 252)
+    /** The disc a cluster sits on. Dark enough to define the cluster against a white page. */
+    fun plate(): Paint = Paint().apply {
+        color = Color.argb(122, 20, 22, 27)
         isAntiAlias = true
     }
 
-    fun edge(): Paint = Paint().apply {
-        color = Color.argb(225, 10, 12, 17)
+    fun plateRim(): Paint = Paint().apply {
+        color = Color.argb(70, 236, 240, 248)
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
+    /** A control itself: lighter than its plate, darker than its label. */
+    fun body(): Paint = Paint().apply {
+        color = Color.argb(205, 92, 98, 108)
+        isAntiAlias = true
+    }
+
+    fun rim(): Paint = Paint().apply {
+        color = Color.argb(150, 12, 14, 18)
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
@@ -307,18 +354,18 @@ private object Ink {
 
     /** What a held control looks like. Distinct enough to be seen at a glance mid-play. */
     fun active(): Paint = Paint().apply {
-        color = Color.argb(185, 116, 196, 255)
+        color = Color.argb(230, 96, 186, 255)
         isAntiAlias = true
     }
 
     fun text(): Paint = Paint().apply {
-        color = Color.argb(240, 255, 255, 255)
+        color = Color.argb(245, 238, 242, 250)
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
 
     fun textEdge(): Paint = Paint().apply {
-        color = Color.argb(235, 8, 10, 14)
+        color = Color.argb(210, 8, 10, 14)
         textAlign = Paint.Align.CENTER
         style = Paint.Style.STROKE
         strokeJoin = Paint.Join.ROUND
@@ -329,7 +376,7 @@ private object Ink {
     fun label(canvas: Canvas, s: String, cx: Float, cy: Float, size: Float, fill: Paint, edge: Paint) {
         fill.textSize = size
         edge.textSize = size
-        edge.strokeWidth = max(2f, size * 0.18f)
+        edge.strokeWidth = max(2f, size * 0.17f)
         canvas.drawText(s, cx, cy, edge)
         canvas.drawText(s, cx, cy, fill)
     }
@@ -370,9 +417,10 @@ private class StickView(
     private val right: Boolean = false,
 ) : View(context) {
 
-    private val ring = Paint().apply { color = Color.argb(70, 244, 247, 252); isAntiAlias = true }
-    private val knob = Ink.body().apply { color = Color.argb(165, 244, 247, 252) }
-    private val edge = Ink.edge()
+    private val plate = Ink.plate()
+    private val plateRim = Ink.plateRim()
+    private val knob = Ink.body().apply { color = Color.argb(215, 132, 139, 150) }
+    private val rim = Ink.rim()
 
     private var x = 0f
     private var y = 0f
@@ -390,8 +438,10 @@ private class StickView(
         if (right) engine.rightStick(dx, dy, profile) else engine.stick(dx, dy, profile)
     }
 
-    private val outerRadius: Float get() = min(width, height) / 2f * 0.95f
-    private val knobRadius: Float get() = min(width, height) / 2f * 0.32f
+    /** Room left for the outline, which is stroked centred on the edge and would be half clipped. */
+    private val inset: Float get() = min(width, height) * 0.03f
+    private val outerRadius: Float get() = min(width, height) / 2f - inset
+    private val knobRadius: Float get() = outerRadius * 0.42f
 
     /**
      * How far the knob's **centre** may travel.
@@ -403,13 +453,15 @@ private class StickView(
     private val travel: Float get() = outerRadius - knobRadius
 
     override fun onDraw(canvas: Canvas) {
-        edge.strokeWidth = max(3f, outerRadius * 0.055f)
-        canvas.drawCircle(width / 2f, height / 2f, outerRadius, ring)
-        canvas.drawCircle(width / 2f, height / 2f, outerRadius, edge)
+        val r = outerRadius
+        plateRim.strokeWidth = max(2f, r * 0.030f)
+        rim.strokeWidth = max(2f, r * 0.045f)
+        canvas.drawCircle(width / 2f, height / 2f, r, plate)
+        canvas.drawCircle(width / 2f, height / 2f, r, plateRim)
         val kx = width / 2f + x * travel
         val ky = height / 2f + y * travel
         canvas.drawCircle(kx, ky, knobRadius, knob)
-        canvas.drawCircle(kx, ky, knobRadius, edge)
+        canvas.drawCircle(kx, ky, knobRadius, rim)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -467,7 +519,7 @@ private class StickView(
 }
 
 /**
- * The d-pad, drawn as one cross and read as a direction rather than as four separate buttons.
+ * The d-pad, drawn as one cross on a plate and read as a direction rather than as four buttons.
  *
  * Four circles was wrong in two ways at once. It looked like four buttons that happened to be
  * arranged in a diamond, which is not what a d-pad is; and it could only ever report the one circle
@@ -478,14 +530,17 @@ private class StickView(
  */
 private class DpadView(context: Context, private val engine: InputEngine) : View(context) {
 
+    private val plate = Ink.plate()
+    private val plateRim = Ink.plateRim()
     private val body = Ink.body()
-    private val edge = Ink.edge()
+    private val rim = Ink.rim()
     private val glow = Ink.active()
-    private val arrow = Paint().apply { color = Color.argb(215, 12, 14, 19); isAntiAlias = true }
-    private val hub = Paint().apply { color = Color.argb(60, 10, 12, 17); isAntiAlias = true }
+    private val arrow = Paint().apply { color = Color.argb(225, 16, 18, 23); isAntiAlias = true }
+    private val hub = Paint().apply { color = Color.argb(70, 10, 12, 17); isAntiAlias = true }
 
     private val cross = Path()
     private val arrows = listOf(Path(), Path(), Path(), Path())
+    private var plateRadius = 0f
     private var armLength = 0f
     private var armHalf = 0f
 
@@ -497,8 +552,9 @@ private class DpadView(context: Context, private val engine: InputEngine) : View
         super.onSizeChanged(w, h, oldw, oldh)
         val cx = w / 2f
         val cy = h / 2f
-        armLength = min(w, h) / 2f * 0.94f
-        armHalf = armLength * 0.34f
+        plateRadius = min(w, h) / 2f - min(w, h) * 0.03f
+        armLength = plateRadius * 0.88f
+        armHalf = armLength * 0.33f
         val l = armLength
         val a = armHalf
 
@@ -521,8 +577,9 @@ private class DpadView(context: Context, private val engine: InputEngine) : View
         // each arm separately would leave seams where the arms meet.
         val corner = CornerPathEffect(a * 0.5f)
         body.pathEffect = corner
-        edge.pathEffect = corner
-        edge.strokeWidth = max(3f, armLength * 0.055f)
+        rim.pathEffect = corner
+        rim.strokeWidth = max(2f, armLength * 0.05f)
+        plateRim.strokeWidth = max(2f, plateRadius * 0.030f)
 
         val reach = (l + a) / 2f
         val size = a * 0.52f
@@ -540,6 +597,8 @@ private class DpadView(context: Context, private val engine: InputEngine) : View
     }
 
     override fun onDraw(canvas: Canvas) {
+        canvas.drawCircle(width / 2f, height / 2f, plateRadius, plate)
+        canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateRim)
         canvas.drawPath(cross, body)
 
         if (hatX != 0 || hatY != 0) {
@@ -556,7 +615,7 @@ private class DpadView(context: Context, private val engine: InputEngine) : View
             canvas.restore()
         }
 
-        canvas.drawPath(cross, edge)
+        canvas.drawPath(cross, rim)
         canvas.drawCircle(width / 2f, height / 2f, armHalf * 0.45f, hub)
         arrows.forEach { canvas.drawPath(it, arrow) }
     }
@@ -641,20 +700,30 @@ private class DpadView(context: Context, private val engine: InputEngine) : View
  * send, not how they behave. Each control says what to do when it is pressed and released, so a
  * trigger sending an analog value and a button sending a key code are the same thing here.
  *
- * Two behaviours are shared by all of them and matter more than the drawing.
+ * Three behaviours are shared by all of them and matter more than the drawing.
+ *
+ * **Nothing overlaps and nothing is clipped.** The first version picked a radius from a fixed
+ * divisor and then placed each control a full half-window from centre, which put the outer edge of
+ * every control exactly on the window boundary — so half of each outline was cut off — and left the
+ * face buttons overlapping each other by a third of their width. The radius is now **solved for**:
+ * the largest one at which no two controls come within a gap of each other and every control, with
+ * its outline, still fits inside the window.
  *
  * **Every finger is read on every event, not only when it lands.** A press used to be decided once,
  * at touch-down, and never revisited — so sliding from one button into its neighbour kept the first
  * one held and never pressed the second. Now the set of controls under the fingers is recomputed on
- * every move and the difference is applied, which is what makes a thumb rolling across two face
- * buttons press both.
+ * every move and the difference is applied.
  *
  * **A trigger is a ramp, not a switch.** L2 and R2 sent 0 or 1 with nothing between, which is not
- * what those controls are on a pad. Holding one now raises its value over about a fifth of a second
- * and releasing drains it slightly faster, and the button fills as it goes so the level is visible
- * on the control itself rather than only inside the game.
+ * what those controls are on a pad. Holding one now raises its value over about half a second and
+ * releasing drains it in about a third, slow enough to feel; the button fills from the bottom and a
+ * ring closes around its edge, so the level is visible on the control itself.
  */
-private class PadView(context: Context, private val controls: List<Control>) : View(context) {
+private class PadView(
+    context: Context,
+    private val controls: List<Control>,
+    private val plate: Boolean = false,
+) : View(context) {
 
     class Control(
         val label: String,
@@ -668,16 +737,28 @@ private class PadView(context: Context, private val controls: List<Control>) : V
         val onLevel: (Double) -> Unit = {},
     )
 
+    private val plateFill = Ink.plate()
+    private val plateRim = Ink.plateRim()
     private val body = Ink.body()
     private val glow = Ink.active()
-    private val edge = Ink.edge()
+    private val ring = Ink.active().apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val rim = Ink.rim()
     private val text = Ink.text()
     private val textEdge = Ink.textEdge()
+    private val arc = RectF()
 
     /** Whether a finger is on each control, and how far an analog one has travelled. */
     private val engaged = BooleanArray(controls.size)
     private val level = FloatArray(controls.size)
     private var ramping = false
+
+    private var radius = 0f
+    private var spreadX = 0f
+    private var spreadY = 0f
+    private var plateRadius = 0f
 
     private val ramp = object : Runnable {
         override fun run() {
@@ -699,16 +780,55 @@ private class PadView(context: Context, private val controls: List<Control>) : V
         }
     }
 
-    private val radius: Float
-        get() = min(width, height) / (if (controls.size > 3) 4.2f else 3.2f)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val pad = min(w, h) * 0.04f
+        plateRadius = min(w, h) / 2f - min(w, h) * 0.03f
 
-    private fun centreX(c: Control): Float = width / 2f + c.dx * (width / 2f - radius)
+        // Solved rather than assumed: the largest radius that keeps every control inside the window
+        // and every pair of controls a visible gap apart. Twenty-four halvings settle it to well
+        // under a pixel, which is as exact as a drawn edge can be.
+        var low = 1f
+        var high = min(w, h) / 2f - pad
+        repeat(24) {
+            val mid = (low + high) / 2f
+            if (fits(mid, w, h, pad)) low = mid else high = mid
+        }
+        radius = low
+        spreadX = w / 2f - radius - pad
+        spreadY = h / 2f - radius - pad
+    }
 
-    private fun centreY(c: Control): Float = height / 2f + c.dy * (height / 2f - radius)
+    private fun fits(r: Float, w: Int, h: Int, pad: Float): Boolean {
+        val sx = w / 2f - r - pad
+        val sy = h / 2f - r - pad
+        if (sx < 0f || sy < 0f) return false
+        for (i in controls.indices) {
+            for (j in i + 1 until controls.size) {
+                val dx = (controls[i].dx - controls[j].dx) * sx
+                val dy = (controls[i].dy - controls[j].dy) * sy
+                if (hypot(dx, dy) < 2f * r + r * GAP) return false
+            }
+        }
+        return true
+    }
+
+    private fun centreX(c: Control): Float = width / 2f + c.dx * spreadX
+
+    private fun centreY(c: Control): Float = height / 2f + c.dy * spreadY
 
     override fun onDraw(canvas: Canvas) {
+        if (radius <= 0f) return
         val r = radius
-        edge.strokeWidth = max(3f, r * 0.10f)
+        rim.strokeWidth = max(2f, r * 0.09f)
+        plateRim.strokeWidth = max(2f, plateRadius * 0.030f)
+        ring.strokeWidth = max(3f, r * 0.14f)
+
+        if (plate) {
+            canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateFill)
+            canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateRim)
+        }
+
         controls.forEachIndexed { i, c ->
             val cx = centreX(c)
             val cy = centreY(c)
@@ -721,15 +841,22 @@ private class PadView(context: Context, private val controls: List<Control>) : V
                     canvas.clipRect(cx - r, cy + r - 2f * r * level[i], cx + r, cy + r)
                     canvas.drawCircle(cx, cy, r, glow)
                     canvas.restore()
+                    // And again as a ring closing clockwise, because a fill inside a small circle
+                    // under a thumb is exactly the part of the control the thumb is covering. Drawn
+                    // just inside the edge rather than around it: outside, the ring would reach past
+                    // the radius the window was solved for and be clipped at full travel.
+                    val ringRadius = r - ring.strokeWidth * 0.6f
+                    arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
+                    canvas.drawArc(arc, -90f, 360f * level[i], false, ring)
                 }
             } else if (engaged[i]) {
                 canvas.drawCircle(cx, cy, r, glow)
             }
-            canvas.drawCircle(cx, cy, r, edge)
+            canvas.drawCircle(cx, cy, r, rim)
             val size = r * when {
-                c.label.length > 2 -> 0.44f
-                c.label.length > 1 -> 0.60f
-                else -> 0.80f
+                c.label.length > 2 -> 0.66f
+                c.label.length > 1 -> 0.78f
+                else -> 0.86f
             }
             Ink.label(canvas, c.label, cx, cy + size / 3f, size, text, textEdge)
         }
@@ -796,9 +923,8 @@ private class PadView(context: Context, private val controls: List<Control>) : V
     }
 
     private fun indexAt(px: Float, py: Float): Int {
-        val r = radius
         controls.forEachIndexed { i, c ->
-            if (hypot(px - centreX(c), py - centreY(c)) <= r * REACH) return i
+            if (hypot(px - centreX(c), py - centreY(c)) <= radius * REACH) return i
         }
         return -1
     }
@@ -808,15 +934,18 @@ private class PadView(context: Context, private val controls: List<Control>) : V
         /**
          * How fast a trigger travels, per frame at about sixty a second.
          *
-         * Full press in roughly 0.2 s and full release in roughly 0.13 s. Release is quicker on
-         * purpose: a control that lingers after the thumb has gone feels broken, while one that
-         * takes a moment to reach full feels like a trigger.
+         * Full press in roughly half a second, full release in roughly a third. The first attempt
+         * used 0.2 s and 0.13 s, which is a ramp on paper and a switch in the hand — the reference
+         * device could not feel the difference and the fill was gone before it could be read.
          */
-        const val RISE = 0.08f
-        const val FALL = 0.13f
+        const val RISE = 0.030f
+        const val FALL = 0.055f
 
         /** A little past the drawn edge, because a thumb's centre is not where it looks. */
-        const val REACH = 1.2f
+        const val REACH = 1.15f
+
+        /** Clear space between two controls, as a fraction of their radius. */
+        const val GAP = 0.34f
 
         fun face(engine: InputEngine): List<Control> = listOf(
             Control("Y", 0f, -1f, onDown = { engine.button(308, true) }, onUp = { engine.button(308, false) }),

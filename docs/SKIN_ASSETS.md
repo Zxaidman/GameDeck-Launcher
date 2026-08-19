@@ -89,23 +89,54 @@ alternative rather than a conversion target — the whole pack is 1.4 MB, which 
 trading a lossless, universally-inspectable format for. Recorded so nobody "optimises" it later
 without a reason.
 
-### Provenance and licence — open, and blocking
+### Provenance and licence — known origin, terms still unconfirmed
 
-**This is the one item that must be answered before any of this artwork ships inside the
-application.** Kestrel is GPLv3 (`ADR-005`) and `THIRD_PARTY_LICENSES.md` records what everything
-included is under. The pack arrived without a licence file or a stated origin, and it draws control
-shapes strongly associated with three hardware vendors.
+Kestrel is GPLv3 (`ADR-005`) and `THIRD_PARTY_LICENSES.md` records what everything included is
+under, so anything that ships needs terms on the record.
 
-Two separate questions, and they have different answers:
+**Origin, as stated by the project owner:** a Reddit post titled *FREE Keyboard and controllers
+prompts pack*. That answers where it came from and does not by itself answer either of the two
+questions that matter:
 
-- **The licence of these files.** If they came from an asset pack, its terms decide whether they can
-  be redistributed under GPLv3 at all. Unknown provenance is not a licence.
+- **The licence of these files.** "Free" in a post title is not a licence. Whether these can be
+  redistributed inside a GPLv3 application depends on the terms the author actually attached, and
+  those need to be found and recorded before anything is copied into `data/`.
 - **The shapes themselves.** Drawing a recognisable ✕/○/□/△ or a Switch face layout is a trademark
-  question, not a copyright one, and it is not resolved by the files being freely licensed.
+  question, not a copyright one, and a permissive licence on the files does not resolve it.
 
-Until the first is answered the pack stays where it is — in `docs/phase0/results/inbox/`, which is a
-drop zone, not a distribution path. Nothing here blocks *building* the skin layer against it
-locally; it blocks shipping it in `data/`.
+The pack therefore stays in `docs/phase0/results/inbox/`, which is a drop zone rather than a
+distribution path.
+
+---
+
+## 2a. The decision: build a skin before adopting a pack
+
+**Decided by the project owner:** do not build the skin layer around this pack. Build Kestrel's own
+skin first, discover from that what a skin actually has to supply, and write the requirements down.
+Only then judge any pack against them.
+
+This is the right way round, and it is worth stating why rather than only that it was decided.
+
+A skin format derived from one pack encodes that pack's accidents — its 256 px squares, its one
+image per control, its missing pressed state — as if they were requirements. The format would then
+fit exactly one set of artwork and quietly fail every other. Deriving the format from what the
+**renderer** needs instead produces a specification a pack either meets or does not, which is also
+what makes the licence question answerable rather than urgent: nothing has been built around
+artwork that may turn out to be unusable.
+
+What building Kestrel's own skin is expected to settle, and what this document should be updated
+with once it has:
+
+- Which controls need art at all, and which are drawn well enough as primitives.
+- Which states each control needs beyond "at rest" — pressed, and for the pad, eight directions.
+- Whether a cluster needs a plate image or whether the plate is the renderer's job.
+- What a background is: one image, a colour, or a layout property.
+- The anchor and aspect a non-square control needs, and whether that is per-asset data or derived
+  from the alpha channel.
+- Resolution: what size is enough at `MAX_SCALE` on the largest supported display.
+
+Until that list has answers, the pack in the inbox is a **reference for what such artwork looks
+like** and a check on any format proposed — not the input to the format.
 
 ---
 
@@ -137,5 +168,7 @@ change, not a controller reconnecting.
 | Set contents as listed in §1 | **Measured** — every file rendered and inspected |
 | No pressed state, no L3/R3, no diagonal d-pad art | **Measured** — by absence across all 233 |
 | 256 px is adequate at the current control sizes | **Reasoned** from the drawn sizes on the reference device |
-| The licence and provenance of the pack | **Unknown** — blocking for `data/`, not for building against |
+| Provenance: a Reddit post, *FREE Keyboard and controllers prompts pack* | **Stated** by the project owner |
+| The licence terms attached to it | **Unconfirmed** — a post title is not a licence |
 | Trademark position on the drawn shapes | **Open** — separate question, not answered by a licence |
+| That the skin format is derived from Kestrel's own skin, not from this pack | **Decided** — §2a |

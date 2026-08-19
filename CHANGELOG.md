@@ -405,6 +405,56 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Overlay Geometry Solved Rather Than Assumed
+
+Device feedback on the previous build: multi-touch, sliding presses, the cross, the diagonals and
+visibility all worked; two things did not, and both were arithmetic.
+
+**The face buttons overlapped each other and were clipped by their own window.** The radius came
+from a fixed divisor and each control was then placed a full half-window from centre, which put the
+outer edge of every control exactly on the window boundary — so half of each outline was cut away —
+while leaving adjacent buttons overlapping by about a third of their width. The radius is now
+**solved for** by bisection: the largest value at which no two controls come within a gap of each
+other and every control, outline included, still fits inside its window. Every cluster uses the same
+solution, so the shoulders and the menu strip stopped being unreadable dots at the same time — the
+trigger buttons roughly doubled in radius.
+
+**The trigger ramp was a ramp on paper and a switch in the hand.** 0.2 s to full could not be felt
+on the reference device and the fill was gone before it could be read. Full press is now about half
+a second and release about a third, and the level is drawn twice — as a fill rising inside the
+button and as a ring closing around its inner edge, because the inside of a small circle is exactly
+the part a thumb is covering.
+
+**The controls sit on plates now.** The first answer to "invisible on a white screen" was a heavy
+dark ring around a pale shape; it worked and it looked like a diagram. The arrangement the project
+owner asked for, and the one commercial pads on this platform use, is the other way round: a dark
+translucent plate carries the cluster and the controls sit on it in a lighter grey. The plate makes
+the whole cluster legible over a white page, so no individual control needs a ring heavy enough to
+do that alone.
+
+Window placement is now described once and used by both the first layout and every resize, rather
+than written out twice — two copies of a layout drifting apart is how a resize puts a control
+somewhere the first layout never did.
+
+### Phase 1 — Measured: The Platform Synthesises Diagonal D-pad Keys
+
+Three targets were asked what the eight-way pad produces, and the answers differ in a way worth
+recording, because two of them look like a failure and are not.
+
+A gamepad testing tool reported **`268`, `269`, `270`, `271`** for up-left, down-left, up-right and
+down-right, alongside `96`, `97`, `99`, `100` for the face buttons. Those are the platform's
+dedicated diagonal d-pad key codes, and their appearance is direct evidence that **both hat axes are
+being delivered and the platform is deriving true diagonals from them**.
+
+PPSSPP lists the control as `Pad1.Hat.-/+X` and `-/+Y`, and Eden as axes `-/+15` and `16`; both
+capture only the nearer of the two axes when a diagonal is pressed. That is what a **binding** screen
+does — it asks which single control to bind and picks the dominant one — and it is not evidence
+about what those targets read during play. Whether they act on both axes while playing is
+**untested** and needs a title, not a binding screen.
+
+Recorded because the distinction is easy to get backwards: a binding screen showing one axis is not
+a pad sending one axis.
+
 ### Phase 1 — An Overlay That Can Actually Be Played
 
 Five faults reported from the reference device, four of them from a single mistake: a control was
@@ -453,11 +503,16 @@ where the drawn extent belongs, since square files hold non-square subjects. And
 primary**, per the owner's decision; the whole pack is 1.4 MB, which is not worth trading a
 lossless format for.
 
-One item is recorded as blocking: the pack arrived without a stated licence or origin, and it draws
-shapes associated with three hardware vendors. That is two separate questions — redistribution terms
-and trademark — and neither is answered by the other. Until the first is, the artwork stays in the
-inbox, which is a drop zone rather than a distribution path. Building the skin layer against it is
-not blocked; shipping it in `data/` is.
+The pack's origin is a Reddit post, *FREE Keyboard and controllers prompts pack*. "Free" in a post
+title is not a licence, and the licence question is separate again from the trademark question the
+drawn shapes raise; neither answers the other, so the artwork stays in the inbox.
+
+**Decided: build Kestrel's own skin first, then judge packs against what it needed.** A skin format
+derived from one pack encodes that pack's accidents — 256 px squares, one image per control, no
+pressed state — as if they were requirements, and then fits exactly one set of artwork. Deriving the
+format from what the renderer needs produces a specification a pack either meets or does not. It
+also makes the licence question answerable rather than urgent, because nothing has been built around
+artwork that may turn out to be unusable.
 
 ### Phase 1 — A Whole Pad, and a Stick That Fits Its Own Window
 
