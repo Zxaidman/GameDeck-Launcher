@@ -435,11 +435,17 @@ harness build that said it must never appear there predated the product needing 
 corrected: `:core` is still forbidden it, and no Composable may touch it.
 
 **A touch pad, because a created controller cannot answer the question.** The first device test of
-the analog transformation reported a jump past the dead zone — but the harness cycles fixed values,
-full deflection then rest, so nothing in that test could show what a *slow* push does. The preview
-now has a stick driven by a finger, with the dead zone drawn where it actually is and raw and
-transformed positions shown together. Whether the jump is real is **still unknown**, and this is
-what will settle it.
+the analog transformation reported a jump past the dead zone. The two exports taken during that
+session — `docs/phase0/results/tier5-session-20260819-…json` and `tier5-session-long-…json` — show
+why that reading cannot be trusted either way: every motion event in them is a fixed value,
+`X=1.000`, `Y=-1.000`, or all axes at rest. The harness cycles full deflection and rest with
+nothing in between, so **there was no slow push in that test for a jump to appear in**.
+
+The preview now has a stick driven by a finger, with the dead zone drawn where it actually is and
+the raw and transformed positions shown together. Whether the jump is real is **still unknown**,
+and this is what will settle it. The transformation's own tests assert the property directly, so if
+a finger disagrees with them the fault is somewhere between them and the screen — which is worth
+knowing and is exactly why this is being checked rather than assumed.
 
 Verified: `./gradlew build` succeeds with lint clean, 92 tests passing.
 Not verified: nothing in this entry has been run on a device. Every claim about the new watchdog is
