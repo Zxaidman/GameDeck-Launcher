@@ -405,6 +405,45 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### ADR-INPUT-001 Accepted — Scoped to the Reference Device
+
+Decided by the project owner on the Phase 0 evidence. The record has been pending since the project
+began; it is now Accepted, and **the scope is part of the decision rather than a caveat attached to
+it**, so the conclusion cannot be quoted without its boundary.
+
+**Decision.** The preferred production input backend is a kernel virtual input device, created
+through the platform's own helper with Shizuku-provided shell privilege, and held for the length of
+a session by a lease that a privileged watchdog enforces.
+
+**Scope.** Xiaomi Redmi Note 13 5G, Android 15, HyperOS 3.0.3, unrooted, Shizuku at shell (uid
+2000). Valid there. Everywhere else it is the project's working assumption, and an assumption is
+not a result — `docs/COMPATIBILITY.md` keeps other devices at Untested until each has its own
+evidence. Further OEMs and firmware will be tested as hardware becomes available.
+
+**Explicitly not decided, and not implied:** latency, which has never been measured by any test;
+behaviour while actually playing; wireless streaming, since the streaming test used a cable; any
+other OEM or Android version; and **every fallback path** — nothing has been tested for a user
+without Shizuku, which is the largest remaining gap in the project and the natural subject of the
+next input record.
+
+**Binding on any implementation**, because both were measured rather than reasoned:
+
+- **Persistence must be governed, not prevented.** A session is held by a lease so that force-stop,
+  cleared data and uninstall end it without the application running any code. A backend that holds
+  a device without one can strand a controller on a user's phone until they reboot.
+- **Identity keys on the device descriptor, never the numeric id**, which changes on every
+  registration.
+
+The record also names what would reopen it: a second device failing to reproduce the mechanism, a
+platform change restricting shell access to the virtual-input facility, unacceptable measured
+latency, or a fallback that needs a different primary design to stay coherent.
+
+Propagated to `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `PROJECT_STRUCTURE.md`,
+`CONTRIBUTING.md`, `docs/INPUT_BACKENDS.md` and `docs/phase0/README.md`, each of which previously
+described the selection as pending. ADR-002 is untouched and the backend abstraction stays: it is
+what makes this decision revisable, and accepting a preferred backend is not a reason to collapse
+it.
+
 ### Phase 0 — A Streaming Host Sees a Real Controller
 
 The last outstanding acceptance criterion is met. See `docs/phase0/results/tier6-streaming-report.md`.

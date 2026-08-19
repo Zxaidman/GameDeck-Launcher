@@ -1362,7 +1362,7 @@ A reserved prefix may be used instead when a decision is gated on an experiment 
 single domain, so that the record can be created before its number is known:
 
 ```text
-ADR-INPUT-001.md   production input strategy, gated on Phase 0
+ADR-INPUT-001.md   production input strategy, accepted on Phase 0 evidence
 ```
 
 Introduce a new prefix only when a domain genuinely needs one, and say so in the record itself.

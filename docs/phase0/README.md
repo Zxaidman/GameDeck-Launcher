@@ -284,8 +284,10 @@ Then summarise into a short report per `docs/PHASE-0.md` §27, and only afterwar
 `docs/COMPATIBILITY.md`. Remember §4a there: an evidence grade describes a mechanism, and never by
 itself sets a support status.
 
-`ADR-INPUT-001` stays **Pending** until a tier passes the acceptance criteria in `docs/PHASE-0.md`
-§29 with repeatable evidence. One successful press is not a pass.
+`ADR-INPUT-001` was **Accepted** once the tiers passed the acceptance criteria in `docs/PHASE-0.md`
+§29 with repeatable evidence, and is scoped to the device that produced it. The same bar applies to
+everything it does not cover: a second device, a latency figure, and a fallback path each need their
+own evidence before anything is claimed about them.
 
 ---
 

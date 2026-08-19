@@ -1087,7 +1087,7 @@ ADR-002-input-backend-abstraction.md  Accepted
 ADR-003-shizuku-optional.md           Accepted
 ADR-004-android-10-baseline.md        Accepted
 ADR-005-gplv3.md                      Accepted
-ADR-INPUT-001.md                      Pending Phase 0
+ADR-INPUT-001.md                      Accepted — scoped to the reference device
 ```
 
 The directory `docs/adr/` is the source of truth for which records exist. Verify against it before

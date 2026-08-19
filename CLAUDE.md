@@ -13,7 +13,14 @@ Guidance for Claude Code and other AI coding agents working in this repository.
 environment. It aims to turn an ordinary phone into a handheld gaming device: one place to
 launch emulators/streaming clients, configure a virtual gamepad, pick a layout and skin, and play.
 
-**Current state: build foundation only. Phase 0 is not complete, and no product behaviour exists.**
+**Current state: build foundation, plus a completed input feasibility experiment. No product
+behaviour exists yet.**
+
+Phase 0 passed on the reference device — a Xiaomi Redmi Note 13 5G on HyperOS 3.0.3, Android 15 —
+and `ADR-INPUT-001` is Accepted, scoped to that device. The evidence is in `docs/phase0/results/`.
+Nothing has been tested on any other hardware, latency has never been measured, and no fallback for
+a user without Shizuku has been tested at all. Treat the mechanism as proven where it was measured
+and as an assumption everywhere else.
 
 What exists:
 
@@ -121,7 +128,7 @@ When a document conflicts with its owner, fix the copy and say so — do not sil
 | ADR-003 | Shizuku is optional, never mandatory | Accepted |
 | ADR-004 | Android 10 / API 29 baseline; phones only (no tablets/foldables) | Accepted |
 | ADR-005 | GPLv3 for original project code | Accepted |
-| ADR-INPUT-001 | Production input backend selection | **Pending Phase 0** |
+| ADR-INPUT-001 | Virtual input device with shell privilege, held by a lease, as the preferred backend | **Accepted — scoped to the reference device** |
 
 Significant new decisions require a new ADR in `docs/adr/`. Naming (`CONTRIBUTING.md` §57):
 sequential `ADR-NNN-topic.md`, numbers never reused or renumbered; a reserved prefix
@@ -230,9 +237,21 @@ See `SECURITY.md`.
 `Phase 0 (input feasibility)` → `1 Core app` → `2 Controller engine` → `3 Layout editor` →
 `4 Gaming session` → `5 Shizuku` → `6 Skins` → `7 Community system`.
 
-**Phase 0 is not complete.** Do not build large downstream features on an unverified Phase-0
-assumption, and do not mark `ADR-INPUT-001` accepted without reproducible device evidence. Phase-0
-prototypes may live temporarily under `tools/phase0/` and must be clearly labeled experimental.
+**Phase 0 passed on one device, and `ADR-INPUT-001` is Accepted with that scope written into it.**
+What that licenses is building Phase 1 on the named mechanism. What it does not license is treating
+any other device, any latency figure, or any fallback path as settled — those need their own
+evidence, and `docs/COMPATIBILITY.md` records them as Untested until they have it.
+
+Phase-0 prototypes stay under `tools/phase0/` and remain experimental. The harness is a measuring
+instrument, not the backend: an implementation must be rebuilt behind `platform/input/`
+(`PROJECT_STRUCTURE.md` §27) rather than promoted from there.
+
+Two results from Phase 0 are binding on any implementation, because they were measured rather than
+reasoned. **Persistence must be governed, not prevented** — a session is held by a lease that a
+privileged watchdog enforces, so force-stop and uninstall end it without the application running any
+code; a backend that holds a device without one can strand a controller until the user reboots. And
+**identity keys on the device descriptor, never the numeric id**, which changes on every
+registration.
 
 ---
 

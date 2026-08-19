@@ -1,7 +1,7 @@
 # Kestrel — Input Backends
 
 **Document:** `docs/INPUT_BACKENDS.md`  
-**Status:** Active — backend selection pending Phase 0  
+**Status:** Active — preferred backend selected by ADR-INPUT-001, fallback still undecided  
 
 ## Purpose
 
@@ -13,7 +13,18 @@ The primary product goal is **gamepad-style input**. Touch/gesture simulation is
 
 ### 1. Virtual/Gamepad backend
 
-Preferred long-term result. The goal is for target applications to observe controller-like input/device semantics. This backend is not considered production-ready until Phase 0 proves it on real devices.
+**Selected as the preferred backend by `ADR-INPUT-001`, scoped to the reference device.**
+
+Phase 0 proved it there: a kernel virtual input device created through the platform's own helper
+with Shizuku-provided shell privilege, enumerated by the platform as a controller in player slot 1,
+accepted and auto-mapped by five emulators, reported through the web Gamepad API by a browser, and
+forwarded by a streaming client to a host that showed it as a game controller.
+
+Held for a session by a lease that a privileged watchdog enforces — see `ADR-INPUT-001` for why that
+is part of the backend rather than a detail of it.
+
+Proven on one device and one firmware. Everywhere else it is an assumption, and
+`docs/COMPATIBILITY.md` is where that distinction is kept.
 
 ### 2. Shizuku backend
 
@@ -150,4 +161,6 @@ Do not call an implementation a “true virtual gamepad” unless testing proves
 
 ## Architecture gate
 
-The production input strategy must be recorded in `docs/adr/ADR-INPUT-001.md` after Phase 0.
+The production input strategy is recorded in `docs/adr/ADR-INPUT-001.md`, Accepted and scoped to the
+device it was measured on. The **fallback** for a user without Shizuku is not decided, has not been
+tested, and is the open question that record leaves behind.

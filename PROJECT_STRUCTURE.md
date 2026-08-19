@@ -1062,7 +1062,7 @@ temporary
 
 where appropriate.
 
-When Phase 0 completes, the accepted production input approach should be moved behind the proper `platform/input/` abstraction and documented in `ADR-INPUT-001.md`.
+Phase 0 is complete and `ADR-INPUT-001` records the accepted approach, scoped to the device it was measured on. Moving it behind the proper `platform/input/` abstraction is Phase 1 work: the harness is a measuring instrument and must be rebuilt behind that abstraction rather than promoted out of `tools/phase0/`.
 
 ---
 

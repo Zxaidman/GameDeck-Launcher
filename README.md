@@ -1373,7 +1373,10 @@ The full set, and what each file is authoritative for:
 # Building From Source
 
 The repository now contains a Gradle build. It produces a launchable placeholder application only —
-Phase 0 is not complete, so there is no controller, input backend, overlay, or gaming session yet.
+Phase 0 is complete on the reference device and `ADR-INPUT-001` is Accepted with that scope, but no
+product code has been written yet: there is no controller, input backend, overlay, or gaming session
+in the application. What exists is the experiment that proved the approach, under `tools/phase0/`,
+with its evidence in `docs/phase0/results/`.
 
 ```bash
 git clone https://github.com/Zxaidman/Kestrel.git
