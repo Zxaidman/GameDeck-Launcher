@@ -405,6 +405,61 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — Analog Transformation and Profile Matching, in `core/`
+
+**Analog transformation** — the shaping `CLAUDE.md` §5 requires to live outside every backend, pure
+and unit-tested.
+
+- **The dead zone rescales rather than filters.** Simply ignoring everything below the threshold
+  leaves a jump: at 0.099 the stick is at rest and at 0.101 it is already a tenth of the way over,
+  so a slow push snaps into motion. Rescaling means the first movement past the dead zone is the
+  smallest possible movement, and there is a test for exactly that.
+- **The dead zone is radial for a stick**, not per-axis. Per-axis produces a cross-shaped dead area:
+  a diagonal push clearly past the threshold is swallowed on both axes, and pushing along one axis
+  lets the other through unfiltered so aim drifts.
+- **Direction is preserved exactly; only distance from centre is reshaped.** Anything else changes
+  where the player is aiming rather than how fast they get there.
+- An `outerLimit` lets a worn stick that no longer reaches its corners still report full deflection.
+- Order is fixed so no caller can vary it: dead zone, curve, sensitivity, clamp, invert. Output
+  never leaves the unit circle whatever the sensitivity, asserted across the whole input square.
+- Inversion is ignored for triggers rather than producing one that rests fully pressed.
+- A test pins the values Phase 0 measured — a half trigger at `0.502`, a half stick at `-0.500` —
+  passing through unchanged when no shaping is asked for.
+
+**Profile matching** — which profile applies when a target is launched, and **why**.
+
+- Precedence: a user's **pin** beats an exact target match, which beats a family match, which beats
+  the default. A pin outranks everything because it is the user overruling the product on purpose,
+  and nothing automatic may quietly replace a deliberate choice.
+- **Every answer carries its reason**, so the launcher can say why rather than choosing silently —
+  `docs/DEGRADED_STATE.md` §6.
+- **Ties break by identifier, alphabetically**: arbitrary, and chosen because it is. Breaking ties
+  by "most recently edited" would mean opening the editor changes which layout appears next launch,
+  and a launcher that behaves differently depending on invisible history cannot be trusted or
+  debugged. Tests assert the answer is independent of the order profiles arrive in.
+- Disabled profiles are skipped rather than chosen and then ignored, so one can never shadow a
+  working profile. `candidateProfiles` returns everything applicable in the same order, because
+  telling a user which profile will be used is worth little if they cannot see the alternatives.
+
+30 new tests, 91 in the module, no failures.
+
+### Phase 1 — A Screen You Can Install
+
+`app/` gains a **diagnostic screen** over `core/`, in its own package until `feature/` exists —
+allowed by `CLAUDE.md` §4 while the package boundary is real.
+
+It reads whatever controller the phone already has, including one created by the Phase 0 harness,
+and shows raw against transformed values live, with dead zone, curve, sensitivity and invert as
+sliders. **It creates no input**: Kestrel still has no input backend, and the screen says so rather
+than implying otherwise.
+
+The reason it exists: the transformation is arithmetic and the tests prove the arithmetic. Whether
+a curve *feels* right is a question only a thumb can answer, and until now nothing in `core/` could
+be put in front of one.
+
+Verified: `./gradlew build` succeeds with lint clean, `:core:test` 91 tests passing.
+Not verified: the screen has not been run on a device.
+
 ### Phase 1 — Layout Geometry, in `core/`
 
 The arithmetic a layout editor and an overlay both depend on, pure and testable.
