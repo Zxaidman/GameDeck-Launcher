@@ -36,7 +36,18 @@ Experimental system-level event delivery where a valid Android mechanism exists.
 
 ### 4. Touch/gesture fallback
 
-Simulates touchscreen interaction. It can provide broader compatibility but is not classified as a true virtual gamepad.
+**Direction fixed by `ADR-006`, implementation deferred, nothing tested.**
+
+An accessibility service dispatches gestures onto the target's own on-screen controls, with
+Kestrel's overlay drawn on top so the user can see where those controls are. Where Shizuku is
+available even once, `WRITE_SECURE_SETTINGS` can enable that service without the user navigating the
+accessibility menu; the permission persists across reboots, so one privileged moment sets up a
+fallback that afterwards needs no privilege at all.
+
+It presses a picture of a button. There is no device identity, no analog stick and no analog
+trigger, and only targets that draw their own on-screen controls can work at all. Level 1 in
+`docs/COMPATIBILITY.md` §10, Grade D in `docs/PHASE-0.md` §28, and never to be presented as a
+controller.
 
 ## Core abstraction
 
@@ -162,5 +173,8 @@ Do not call an implementation a “true virtual gamepad” unless testing proves
 ## Architecture gate
 
 The production input strategy is recorded in `docs/adr/ADR-INPUT-001.md`, Accepted and scoped to the
-device it was measured on. The **fallback** for a user without Shizuku is not decided, has not been
-tested, and is the open question that record leaves behind.
+device it was measured on. The **fallback** direction is `ADR-006` — decided, deferred, and entirely
+untested.
+
+How the difference between backends reaches the user is `docs/DEGRADED_STATE.md`, and how a layout
+behaves when a control it declares is unavailable is `ADR-007`.

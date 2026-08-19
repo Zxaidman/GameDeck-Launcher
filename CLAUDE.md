@@ -80,6 +80,7 @@ commented. See `CHANGELOG.md` for what is verified and what is not.
 | `docs/INPUT_BACKENDS.md` | Input abstraction and backend categories |
 | `docs/CONFIGURATION_SCHEMA.md` | JSON configuration model, schema versioning, validation |
 | `docs/COMPATIBILITY.md` | Device/application compatibility matrix |
+| `docs/DEGRADED_STATE.md` | What the user sees and can do when the preferred backend is unavailable |
 | `docs/adr/` | Architecture Decision Records — the *why* behind each choice |
 | `CHANGELOG.md` | Records decisions and artifacts actually established (not aspirations) |
 
@@ -128,6 +129,8 @@ When a document conflicts with its owner, fix the copy and say so — do not sil
 | ADR-003 | Shizuku is optional, never mandatory | Accepted |
 | ADR-004 | Android 10 / API 29 baseline; phones only (no tablets/foldables) | Accepted |
 | ADR-005 | GPLv3 for original project code | Accepted |
+| ADR-006 | Touch fallback via an accessibility service and an overlay | Accepted as direction — untested |
+| ADR-007 | One layout across capability tiers; unavailable controls are disabled, never removed or substituted | Accepted |
 | ADR-INPUT-001 | Virtual input device with shell privilege, held by a lease, as the preferred backend | **Accepted — scoped to the reference device** |
 
 Significant new decisions require a new ADR in `docs/adr/`. Naming (`CONTRIBUTING.md` §57):
