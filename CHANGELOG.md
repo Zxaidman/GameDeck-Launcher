@@ -405,6 +405,29 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — The Capability Model, in `core/`
+
+First product code. Pure Kotlin in `core/input/`, no Android types, unit-tested — which means it is
+verifiable in a container with no SDK, unlike everything Phase 0 produced.
+
+- `InputCapability` — what a backend can do, in controller terms: buttons, d-pad, analog stick,
+  analog trigger, simultaneous input, device identity, vibration. Two named sets go with it: what
+  the preferred backend **measured** on the reference device, and what the touch fallback is
+  **expected** to provide, labelled as an expectation because nothing about it has been tested.
+- `CapabilityState` — Full, Ready, Reduced, Configure only, per `docs/DEGRADED_STATE.md`. Carries
+  the two questions every screen asks: can a session start, and does the user need to be told
+  something.
+- `ControlAvailability` — `ADR-007` expressed once, where it can be tested. A control is available
+  or disabled; **removal and substitution are not representable**, which is the decision rather
+  than an omission. `disabledControls` and `missingCapabilities` compute what to say before a
+  session starts, so nothing is discovered by pressing something inert.
+
+12 tests, all passing, each encoding a decision rather than a mechanism, so changing the behaviour
+means confronting the decision.
+
+Verified: `./gradlew :core:test` — 21 tests across the module, no failures. `./gradlew build`
+succeeds with lint clean, with the SDK installed.
+
 ### ADR-INPUT-001 Accepted — Scoped to the Reference Device
 
 Decided by the project owner on the Phase 0 evidence. The record has been pending since the project
