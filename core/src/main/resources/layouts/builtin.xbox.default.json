@@ -9,136 +9,150 @@
       "id": "stick.left",
       "kind": "stick",
       "binds": "left-stick",
+      "group": "left-stick",
       "anchor": "bottom-left",
-      "offsetX": 0.189,
-      "offsetY": 0.189,
-      "width": 0.28
+      "offsetX": 0.22,
+      "offsetY": 0.22,
+      "width": 0.33
     },
     {
       "id": "stick.left.press",
       "kind": "button",
       "binds": "left-stick-press",
+      "group": "left-stick",
       "anchor": "bottom-left",
-      "offsetX": 0.4,
-      "offsetY": 0.189,
-      "width": 0.102
+      "offsetX": 0.48,
+      "offsetY": 0.22,
+      "width": 0.12
     },
     {
       "id": "dpad",
       "kind": "dpad",
       "binds": "dpad",
       "anchor": "bottom-left",
-      "offsetX": 0.147,
-      "offsetY": 0.465,
-      "width": 0.202
+      "offsetX": 0.17,
+      "offsetY": 0.55,
+      "width": 0.24
     },
     {
       "id": "face.y",
       "kind": "button",
       "binds": "y",
+      "group": "face",
       "anchor": "bottom-right",
-      "offsetX": 0.189,
-      "offsetY": 0.274,
-      "width": 0.104
+      "offsetX": 0.22,
+      "offsetY": 0.33,
+      "width": 0.12
     },
     {
       "id": "face.x",
       "kind": "button",
       "binds": "x",
+      "group": "face",
       "anchor": "bottom-right",
-      "offsetX": 0.274,
-      "offsetY": 0.189,
-      "width": 0.104
+      "offsetX": 0.33,
+      "offsetY": 0.22,
+      "width": 0.12
     },
     {
       "id": "face.b",
       "kind": "button",
       "binds": "b",
+      "group": "face",
       "anchor": "bottom-right",
-      "offsetX": 0.104,
-      "offsetY": 0.189,
-      "width": 0.104
+      "offsetX": 0.12,
+      "offsetY": 0.22,
+      "width": 0.12
     },
     {
       "id": "face.a",
       "kind": "button",
       "binds": "a",
+      "group": "face",
       "anchor": "bottom-right",
-      "offsetX": 0.189,
-      "offsetY": 0.104,
-      "width": 0.104
+      "offsetX": 0.22,
+      "offsetY": 0.12,
+      "width": 0.12
     },
     {
       "id": "stick.right",
       "kind": "stick",
       "binds": "right-stick",
+      "group": "right-stick",
       "anchor": "bottom-right",
-      "offsetX": 0.189,
-      "offsetY": 0.507,
-      "width": 0.28
+      "offsetX": 0.22,
+      "offsetY": 0.6,
+      "width": 0.33
     },
     {
       "id": "stick.right.press",
       "kind": "button",
       "binds": "right-stick-press",
+      "group": "right-stick",
       "anchor": "bottom-right",
-      "offsetX": 0.4,
-      "offsetY": 0.507,
-      "width": 0.102
+      "offsetX": 0.48,
+      "offsetY": 0.6,
+      "width": 0.12
     },
     {
       "id": "shoulder.l1",
       "kind": "button",
       "binds": "left-bumper",
+      "group": "left-top",
       "anchor": "top-left",
-      "offsetX": 0.086,
-      "offsetY": 0.086,
-      "width": 0.078
+      "offsetX": 0.1,
+      "offsetY": 0.1,
+      "width": 0.09
     },
     {
       "id": "shoulder.l2",
       "kind": "analog-trigger",
       "binds": "left-trigger",
+      "group": "left-top",
       "anchor": "top-left",
-      "offsetX": 0.292,
-      "offsetY": 0.086,
-      "width": 0.078
+      "offsetX": 0.35,
+      "offsetY": 0.1,
+      "width": 0.09
     },
     {
       "id": "menu.select",
       "kind": "button",
       "binds": "select",
+      "group": "left-top",
       "anchor": "top-left",
-      "offsetX": 0.086,
-      "offsetY": 0.179,
-      "width": 0.078
+      "offsetX": 0.1,
+      "offsetY": 0.21,
+      "width": 0.09
     },
     {
       "id": "shoulder.r1",
       "kind": "button",
       "binds": "right-bumper",
+      "group": "right-top",
       "anchor": "top-right",
-      "offsetX": 0.086,
-      "offsetY": 0.086,
-      "width": 0.078
+      "offsetX": 0.1,
+      "offsetY": 0.1,
+      "width": 0.09
     },
     {
       "id": "shoulder.r2",
       "kind": "analog-trigger",
       "binds": "right-trigger",
+      "group": "right-top",
       "anchor": "top-right",
-      "offsetX": 0.292,
-      "offsetY": 0.086,
-      "width": 0.078
+      "offsetX": 0.35,
+      "offsetY": 0.1,
+      "width": 0.09
     },
     {
       "id": "menu.start",
       "kind": "button",
       "binds": "start",
+      "group": "right-top",
       "anchor": "top-right",
-      "offsetX": 0.086,
-      "offsetY": 0.179,
-      "width": 0.078
+      "offsetX": 0.1,
+      "offsetY": 0.21,
+      "width": 0.09
     }
   ]
 }

@@ -29,83 +29,57 @@ public data class Cluster(
  * is a pixel the user cannot touch anything through.
  *
  * One window for everything would give perfect sliding and cover the screen. One window per control
- * would cover almost nothing and make sliding impossible. **Controls close enough to slide between
- * share a window; controls far enough apart that nobody would try get their own.** The grouping is
- * derived from the layout rather than declared in it, so a user who drags two buttons together in
- * the editor gets sliding between them without knowing the concept exists.
+ * would cover almost nothing and make sliding impossible. **The layout says which controls share
+ * one**, through each element's `group`.
+ *
+ * It was briefly inferred from how close controls were drawn, and that failed on the very layout it
+ * was written for: the gap that had to mean "together" and the gap that had to mean "apart" were
+ * fifteen pixels apart, so the answer flipped with rounding and with the size setting. A gesture
+ * that works at one size and not another is worse than one that never worked.
  */
 public object Clustering {
 
     /**
-     * How close two controls must be to share a window, as a fraction of the surface's short side.
+     * Puts each control in the window its layout says it belongs to.
      *
-     * Roughly a finger's width. Below it, a thumb rolling off one control lands on the other and
-     * the two clearly belong together; above it, the gap is somewhere a thumb goes deliberately.
+     * A control with no group gets a window of its own. That is the safe default rather than a
+     * limitation: a window holds nothing but the controls in it, and everything else it covers is
+     * dead to whatever is underneath, so the smallest window that works is the right one.
+     *
+     * Clusters come out in the order their first control was declared, and controls keep their
+     * order inside one, so what is drawn on top stays predictable.
      */
-    public const val DEFAULT_GAP: Double = 0.03
-
-    /**
-     * Groups placed controls, then returns each group with the rectangle enclosing it.
-     *
-     * Grouping is transitive: if A is near B and B is near C, all three share a window even when A
-     * and C are far apart. That is the correct reading — a row of buttons is one row — and it is
-     * why this is a connected-components problem rather than a pairwise one.
-     *
-     * Order is preserved: clusters come out in the order their first element appeared, and elements
-     * within a cluster keep their original order, so what is drawn on top stays predictable.
-     */
-    public fun group(
-        placed: List<Pair<String, PixelRect>>,
-        gapPixels: Double,
-    ): List<Cluster> {
+    public fun group(placed: List<Pair<String, PixelRect>>, groups: Map<String, String?>): List<Cluster> {
         if (placed.isEmpty()) return emptyList()
 
-        val parent = IntArray(placed.size) { it }
-
-        fun find(a: Int): Int {
-            var root = a
-            while (parent[root] != root) root = parent[root]
-            var walk = a
-            while (parent[walk] != root) {
-                val next = parent[walk]
-                parent[walk] = root
-                walk = next
-            }
-            return root
+        val byKey = LinkedHashMap<String, MutableList<Pair<String, PixelRect>>>()
+        placed.forEach { entry ->
+            // An ungrouped control is keyed by its own id, which cannot collide with a group name
+            // it does not have — and if it did, the two would belong together anyway.
+            val key = groups[entry.first] ?: "\u0000${entry.first}"
+            byKey.getOrPut(key) { mutableListOf() } += entry
         }
 
-        fun union(a: Int, b: Int) {
-            val rootA = find(a)
-            val rootB = find(b)
-            // The lower index wins, which is what keeps the output in declaration order.
-            if (rootA < rootB) parent[rootB] = rootA else parent[rootA] = rootB
-        }
-
-        for (i in placed.indices) {
-            for (j in i + 1 until placed.size) {
-                if (gapBetween(placed[i].second, placed[j].second) <= gapPixels) union(i, j)
-            }
-        }
-
-        val byRoot = LinkedHashMap<Int, MutableList<Int>>()
-        placed.indices.forEach { i -> byRoot.getOrPut(find(i)) { mutableListOf() } += i }
-
-        return byRoot.values.map { members ->
+        return byKey.values.map { members ->
             Cluster(
-                elementIds = members.map { placed[it].first },
-                bounds = enclosing(members.map { placed[it].second }),
+                elementIds = members.map { it.first },
+                bounds = enclosing(members.map { it.second }),
             )
         }
     }
+
+    /** The same, taken straight from a layout, which is how the overlay calls it. */
+    public fun group(layout: ControllerLayout, placed: List<Pair<String, PixelRect>>): List<Cluster> =
+        group(placed, layout.elements.associate { it.id to it.group })
 
     /**
      * The clear space between two controls, treating each as the circle it is drawn as.
      *
      * Bounding boxes would be wrong here in a way that matters: four round face buttons in a
-     * diamond have overlapping boxes and touch nowhere, so every layout would collapse into one
-     * window. The inscribed circle is what a thumb actually meets.
+     * diamond have overlapping boxes and touch nowhere. The inscribed circle is what a thumb meets.
      *
-     * Negative when they overlap, which callers may treat as "definitely together".
+     * Negative when they overlap. Not used for grouping — that is declared — but it is how a layout
+     * is checked for controls sitting on top of each other.
      */
     public fun gapBetween(a: PixelRect, b: PixelRect): Double {
         val apart = hypot(a.centerX - b.centerX, a.centerY - b.centerY)

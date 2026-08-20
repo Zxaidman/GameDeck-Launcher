@@ -13,6 +13,63 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### Phase 2 — The Pad Is A File You Can Edit
+
+Four faults from the first data-driven build, and one of them was the point of the exercise.
+
+**The layout was scaled twice.** Its numbers were measured from the pad on the reference device at
+65%, and then the size setting multiplied them again — so every control came out at 42% of what the
+same setting used to give. The document now describes the pad at **full size**, the default setting
+brings it back to what a hand settled on, and `BuiltInLayoutsTest` checks every control against
+every size on the slider in both orientations rather than at one size in one orientation. The
+maximum is now the largest arrangement that actually fits: a setting that can produce an overlapping
+pad is a setting that will produce one.
+
+**Which controls share a window is declared, not inferred.** It had been derived from how close two
+controls were drawn, and that failed on the very layout it was written for — the gap that had to
+mean *together* and the gap that had to mean *apart* were fifteen pixels apart, so the answer
+flipped with rounding and with the size setting. **A gesture that works at one size and not another
+is worse than one that never worked.** Each element now carries a `group`, and a test asserts the
+grouping is identical at every size and both orientations. Select and Start are back in their
+shoulder rows, where they were when people played with them.
+
+**Resizing moves the windows instead of replacing them.** A slider produces a change every frame,
+and removing and re-adding eight windows that often left visible trails and lagged behind the thumb.
+Since grouping is declared, a size change cannot alter it — so the same windows are re-measured and
+the controls inside told where they now are. Anything held stays held.
+
+**Turning the phone rebuilds the pad.** Every position is a fraction of a surface and rotating
+replaces the surface, so the controls had been staying where the old screen put them until the user
+hid and showed them again. The session service hears the configuration change and refreshes.
+
+**And the point of all of it: `Copy layout to my folder`.** It duplicates the shipped layout into
+`Kestrel/layouts/` as a user copy, points the settings at it, and redraws. From then on the file in
+the user's own folder is what the pad is — edit it in a text editor, press **Reload layout**, and the
+controls move. That is also the built-in → duplicate → user copy step `docs/CONFIGURATION_SCHEMA.md`
+requires, made visible rather than described: the shipped layout is never edited because it cannot
+be.
+
+Numbers written to any document are rounded to two decimals, and the sliders snap to the same. A
+drag produces `0.34827995`, and `settings.json` is a file the user is invited to open; the precision
+discarded is far below what a thumb can set or an eye can see.
+
+### Setup Is A Page
+
+Requested by the project owner, and it earns the screen. On a fresh install every step is missing
+and the diagnostics screen behind it cannot do anything, so a card would have been a small box above
+something useless. **Skip for now** still hands over the whole application, because a wizard that
+will not let you past it traps anyone whose phone answers a question differently from expected — and
+it returns next launch, because what it was hiding is still true.
+
+The folder picker now opens at **`Kestrel` itself** rather than the top of storage. Where that folder
+already exists the whole interaction is one tap on *Use this folder*.
+
+**Kestrel still cannot create that folder itself, and this is a limit rather than an oversight.**
+Making a directory at the top of shared storage needs `MANAGE_EXTERNAL_STORAGE` — access to every
+file on the phone. Declaring a permission of that class is exactly what got Kestrel blocked by Play
+Protect when the accessibility service was declared, measured in `ADR-006`. The picker costs one tap
+once; the permission would cost every user their install.
+
 ### Project Definition
 
 - Established the Kestrel product vision.

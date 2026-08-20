@@ -45,10 +45,21 @@ public data class KestrelSettings(
 
         public const val DEFAULT_LAYOUT_ID: String = "builtin.xbox.default"
 
-        /** Settled by a hand on the reference device rather than by arithmetic. */
-        public const val DEFAULT_CONTROL_SCALE: Double = 0.65
-        public const val MIN_CONTROL_SCALE: Double = 0.35
-        public const val MAX_CONTROL_SCALE: Double = 1.30
+        /**
+         * How large the controls are drawn, as a fraction of the layout's own sizes.
+         *
+         * **The maximum is the largest arrangement that still fits.** The shipped layout is
+         * authored so that every control is inside the screen and clear of its neighbours at 100%,
+         * in both orientations, and `BuiltInLayoutsTest` checks that at every scale on this range
+         * rather than trusting it. A setting that can produce an overlapping pad is a setting that
+         * will produce one.
+         *
+         * The default reproduces the arrangement settled by a hand on the reference device. It is
+         * not 100% because a size everybody uses should have somewhere to grow.
+         */
+        public const val DEFAULT_CONTROL_SCALE: Double = 0.85
+        public const val MIN_CONTROL_SCALE: Double = 0.40
+        public const val MAX_CONTROL_SCALE: Double = 1.00
     }
 }
 

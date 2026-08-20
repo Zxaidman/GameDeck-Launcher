@@ -185,6 +185,19 @@ public class ControllerSessionService : Service() {
      * with nothing able to remove them cost a reboot once already, so every path out of this
      * service takes them down.
      */
+    /**
+     * Puts the controls back where the new screen wants them.
+     *
+     * Every position in a layout is a fraction of a surface, and turning the phone replaces the
+     * surface — so without this the controls stay where the old one put them. A service receives
+     * this without declaring anything; the overlay's own windows do not, because they belong to the
+     * window manager rather than to a configuration-aware component.
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        overlay?.refresh()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         hideOverlay()

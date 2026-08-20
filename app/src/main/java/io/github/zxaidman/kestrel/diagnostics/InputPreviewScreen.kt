@@ -362,10 +362,25 @@ public fun InputPreviewScreen(
                 }
                 Button(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Built-in -> duplicate -> user copy -> edit, which is the workflow the schema
+                // requires. The built-in cannot be edited because it is inside the application; the
+                // copy is a file in the user's own folder, and the pad follows it from then on.
+                Button(onClick = { ExportState.message.value = copyLayoutForEditing(context) }) {
+                    Text("Copy layout to my folder")
+                }
+                Button(onClick = { ExportState.message.value = reloadLayout(context) }) {
+                    Text("Reload layout")
+                }
+            }
             Mono("\ncontrol size  %.0f%%".format(SessionState.controlScale.value * 100))
             Slider(
                 value = SessionState.controlScale.value,
-                onValueChange = {
+                onValueChange = { raw ->
+                    val it = snap(raw)
                     SessionState.controlScale.value = it
                     // Applied to the windows already on screen rather than by putting them up
                     // again, so a control being held is not dropped mid-press.
@@ -459,21 +474,21 @@ public fun InputPreviewScreen(
             Labelled("Dead zone", deadzone)
             Slider(
                 value = deadzone,
-                onValueChange = { v -> shape { it.copy(deadzone = v.toDouble()) } },
+                onValueChange = { v -> shape { it.copy(deadzone = snap(v).toDouble()) } },
                 onValueChangeFinished = { AppSettings.persist(context) },
                 valueRange = 0f..0.5f,
             )
             Labelled("Curve", curve)
             Slider(
                 value = curve,
-                onValueChange = { v -> shape { it.copy(curve = v.toDouble()) } },
+                onValueChange = { v -> shape { it.copy(curve = snap(v).toDouble()) } },
                 onValueChangeFinished = { AppSettings.persist(context) },
                 valueRange = 0.4f..3f,
             )
             Labelled("Sensitivity", sensitivity)
             Slider(
                 value = sensitivity,
-                onValueChange = { v -> shape { it.copy(sensitivity = v.toDouble()) } },
+                onValueChange = { v -> shape { it.copy(sensitivity = snap(v).toDouble()) } },
                 onValueChangeFinished = { AppSettings.persist(context) },
                 valueRange = 0.5f..2.5f,
             )
@@ -720,5 +735,65 @@ private fun StorageSection(context: android.content.Context) {
             )
         }
         if (AppSettings.message.value.isNotBlank()) Mono("\n" + AppSettings.message.value)
+    }
+}
+
+/**
+ * Two decimals, so a slider writes a number a person can read in the file it lands in.
+ *
+ * A drag produces values like `0.34827995`, and `settings.json` is a document the user is invited
+ * to open and edit. The precision being discarded is far below what a thumb can set or an eye can
+ * see, and what is gained is a file that reads like something a person wrote.
+ */
+private fun snap(value: Float): Float = Math.round(value * 100f) / 100f
+
+/**
+ * Copies the layout Kestrel is using into the user's folder, and starts using the copy.
+ *
+ * This is the moment the pad stops being something inside the application. From here the file in
+ * `Kestrel/layouts/` is what the overlay draws — edit it in any text editor, press **Reload
+ * layout**, and the controls move. It is also the built-in -> duplicate -> user copy step that
+ * `docs/CONFIGURATION_SCHEMA.md` requires, made visible: the shipped layout is never edited,
+ * because it cannot be.
+ */
+private fun copyLayoutForEditing(context: android.content.Context): String {
+    val store = io.github.zxaidman.kestrel.platform.storage.KestrelStorage.current(context)
+    val repository = io.github.zxaidman.kestrel.core.layout.LayoutRepository(store)
+    val current = AppSettings.current.value.layoutId
+
+    val source = when (val loaded = repository.load(current)) {
+        is io.github.zxaidman.kestrel.core.common.Outcome.Failure ->
+            return "Could not read '$current': ${loaded.error.message}"
+        is io.github.zxaidman.kestrel.core.common.Outcome.Success -> loaded.value
+    }
+    if (!source.header.id.isBuiltIn) {
+        return "'${source.header.name}' is already your own copy, in ${store.description}."
+    }
+
+    return when (val copy = repository.duplicate(source, "xbox", source.header.name + " (my copy)")) {
+        is io.github.zxaidman.kestrel.core.common.Outcome.Failure ->
+            "Could not write the copy: ${copy.error.message}"
+        is io.github.zxaidman.kestrel.core.common.Outcome.Success -> {
+            AppSettings.update { it.copy(layoutId = copy.value.header.id.value) }
+            AppSettings.persist(context)
+            reloadLayout(context)
+            "Copied to layouts/${copy.value.header.id.value}.json in ${store.description}. " +
+                "Edit it, then press Reload layout."
+        }
+    }
+}
+
+/** Reads the layout again and hands it to the controls, without restarting the session. */
+private fun reloadLayout(context: android.content.Context): String {
+    val store = io.github.zxaidman.kestrel.platform.storage.KestrelStorage.current(context)
+    val repository = io.github.zxaidman.kestrel.core.layout.LayoutRepository(store)
+    val id = AppSettings.current.value.layoutId
+    return when (val loaded = repository.load(id)) {
+        is io.github.zxaidman.kestrel.core.common.Outcome.Failure ->
+            "'$id' could not be read, so the controls were left as they are: ${loaded.error.message}"
+        is io.github.zxaidman.kestrel.core.common.Outcome.Success -> {
+            SessionState.overlay?.apply(loaded.value)
+            "Controls redrawn from '${loaded.value.header.name}'."
+        }
     }
 }

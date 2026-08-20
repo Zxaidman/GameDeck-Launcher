@@ -3,6 +3,9 @@ package io.github.zxaidman.kestrel.diagnostics
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,17 +54,20 @@ private class Step(
 )
 
 /**
- * The card that appears until Kestrel has what it needs.
+ * The page that stands in front of Kestrel until it has what it needs.
  *
  * It exists because there is no single moment when setup happens. A fresh install has nothing; a
  * user who clears data is back to nothing with the application already installed; a permission
- * revoked from system settings takes one thing away and leaves the rest. Asking for everything at
- * first launch handles only the first of those, which is why it is asked **every time the state is
- * incomplete** rather than once.
+ * revoked from system settings takes one thing away and leaves the rest. Asking at first launch
+ * handles only the first of those, which is why it is asked **every time the state is incomplete**
+ * rather than once.
  *
- * Nothing here blocks. Every step is skippable and the rest of the screen stays usable, because a
- * setup wizard that will not let you past it is a wizard that traps anyone whose phone answers a
- * question differently from how it was expected to.
+ * **A page rather than a card**, at the project owner's request, and it earns the whole screen: on
+ * a fresh install every one of these is missing and a card would have been a small box above a
+ * diagnostics screen that cannot do anything yet. What it must not become is a wall — **Skip for
+ * now** is always there, and it hands over the full application rather than a limited one, because
+ * a wizard that will not let you past it traps anyone whose phone answers a question differently
+ * from how it was expected to.
  */
 @Composable
 public fun SetupScreen(
@@ -129,51 +135,64 @@ public fun SetupScreen(
         ),
     )
 
-    val outstanding = steps.filter { !it.done }
-    if (Setup.skipped || outstanding.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("Set up Kestrel", style = MaterialTheme.typography.headlineSmall)
+        Text(text = summary(steps), style = MaterialTheme.typography.bodyMedium)
 
-    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("Set up Kestrel", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = summary(steps),
-                style = MaterialTheme.typography.bodySmall,
-            )
-
-            steps.forEach { step ->
+        steps.forEach { step ->
+            Card(modifier = Modifier.fillMaxWidth()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = (if (step.done) "✓  " else "•  ") + step.title +
                                 if (step.required) "" else "  (optional)",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.titleMedium,
                         )
-                        if (!step.done) {
-                            Text(step.why, style = MaterialTheme.typography.bodySmall)
-                        }
+                        Text(
+                            text = step.why,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
                     }
                     if (!step.done) {
                         Button(onClick = step.perform) { Text(step.action) }
+                    } else {
+                        Text("Done", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Skipping is a real answer and is treated as one. It comes back next time the
-                // application opens, because what it is hiding is still true.
-                TextButton(onClick = { Setup.skipped = true }) { Text("Skip for now") }
-            }
         }
+
+        // Skipping is a real answer and is treated as one. It hands over the whole application, and
+        // it comes back next time Kestrel opens, because what it is hiding is still true.
+        TextButton(
+            onClick = { Setup.skipped = true },
+            modifier = Modifier.padding(top = 4.dp),
+        ) { Text(if (steps.any { !it.done }) "Skip for now" else "Continue") }
     }
+}
+
+/**
+ * Whether the setup page should stand in front of everything.
+ *
+ * Asked by the caller rather than decided here, so that the page is a page: something shown
+ * *instead of* the application rather than something that draws nothing when it has nothing to say.
+ */
+public fun setupOutstanding(context: Context): Boolean {
+    if (Setup.skipped) return false
+    return !notificationsAllowed(context) ||
+        !ControllerOverlay.permitted(context) ||
+        !KestrelStorage.usingChosenFolder(context) ||
+        !ShizukuCapability.state().usable
 }
 
 private fun summary(steps: List<Step>): String {

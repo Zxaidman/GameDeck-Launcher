@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -172,17 +174,41 @@ class MainActivity : ComponentActivity() {
                             text = androidx.compose.ui.res.stringResource(id = R.string.app_name),
                             style = MaterialTheme.typography.headlineSmall,
                         )
-                        io.github.zxaidman.kestrel.diagnostics.SetupScreen(
-                            context = this@MainActivity,
-                            onNotifications = ::askForNotifications,
-                            onOverlay = ::askForOverlay,
-                            onFolder = ::chooseFolder,
-                        )
-                        InputPreviewScreen(
-                            state = preview,
-                            onSave = ::saveReport,
-                            onShare = ::shareReport,
-                        )
+                        // Every one of these is a fact about the phone that can change from
+                        // outside Kestrel while this screen is open — a permission granted in
+                        // system settings, Shizuku started. So the page leaves of its own accord
+                        // rather than waiting for something else to cause a recomposition.
+                        var tick by androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf(0)
+                        }
+                        androidx.compose.runtime.LaunchedEffect(Unit) {
+                            while (true) {
+                                kotlinx.coroutines.delay(1000)
+                                tick += 1
+                            }
+                        }
+                        @Suppress("UNUSED_EXPRESSION") tick
+
+                        // Setup is a page, not a banner: on a fresh install everything below it
+                        // is unusable anyway, and a screen that cannot do its job is a worse thing
+                        // to show than the list of reasons why.
+                        if (io.github.zxaidman.kestrel.diagnostics.setupOutstanding(
+                                this@MainActivity
+                            )
+                        ) {
+                            io.github.zxaidman.kestrel.diagnostics.SetupScreen(
+                                context = this@MainActivity,
+                                onNotifications = ::askForNotifications,
+                                onOverlay = ::askForOverlay,
+                                onFolder = ::chooseFolder,
+                            )
+                        } else {
+                            InputPreviewScreen(
+                                state = preview,
+                                onSave = ::saveReport,
+                                onShare = ::shareReport,
+                            )
+                        }
                     }
                 }
             }

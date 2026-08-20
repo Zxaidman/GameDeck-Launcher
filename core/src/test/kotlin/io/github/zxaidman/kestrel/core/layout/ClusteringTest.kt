@@ -10,71 +10,49 @@ class ClusteringTest {
     private fun rect(cx: Double, cy: Double, size: Double) =
         PixelRect(centerX = cx, centerY = cy, width = size, height = size)
 
-    private fun group(vararg placed: Pair<String, PixelRect>, gap: Double = 30.0) =
-        Clustering.group(placed.toList(), gap)
+    private fun group(vararg placed: Triple<String, String?, PixelRect>) = Clustering.group(
+        placed.map { it.first to it.third },
+        placed.associate { it.first to it.second },
+    )
 
     @Test
-    fun `controls a thumb could roll between share a window`() {
+    fun `controls in the same group share a window`() {
         val clusters = group(
-            "a" to rect(0.0, 0.0, 100.0),
-            "b" to rect(120.0, 0.0, 100.0),
+            Triple("a", "face", rect(0.0, 0.0, 100.0)),
+            Triple("b", "face", rect(400.0, 0.0, 100.0)),
         )
         assertEquals(1, clusters.size)
         assertEquals(listOf("a", "b"), clusters.single().elementIds)
     }
 
     @Test
-    fun `controls far enough apart get their own windows`() {
+    fun `distance does not decide anything`() {
+        // The whole point of declaring it: two controls drawn touching are still separate windows
+        // if the layout says so, and two drawn far apart still share one if it says that.
+        val touching = group(
+            Triple("a", null, rect(0.0, 0.0, 100.0)),
+            Triple("b", null, rect(60.0, 0.0, 100.0)),
+        )
+        assertEquals(2, touching.size)
+    }
+
+    @Test
+    fun `a control with no group gets a window of its own`() {
         val clusters = group(
-            "a" to rect(0.0, 0.0, 100.0),
-            "b" to rect(400.0, 0.0, 100.0),
+            Triple("a", "face", rect(0.0, 0.0, 100.0)),
+            Triple("lonely", null, rect(50.0, 0.0, 100.0)),
+            Triple("b", "face", rect(100.0, 0.0, 100.0)),
         )
         assertEquals(2, clusters.size)
-    }
-
-    @Test
-    fun `grouping is transitive, because a row of buttons is one row`() {
-        // A and C are 240 apart with a gap of 140, far beyond the threshold. They still belong
-        // together, because B bridges them and a thumb can travel the whole row.
-        val clusters = group(
-            "a" to rect(0.0, 0.0, 100.0),
-            "b" to rect(120.0, 0.0, 100.0),
-            "c" to rect(240.0, 0.0, 100.0),
-        )
-        assertEquals(1, clusters.size)
-        assertEquals(listOf("a", "b", "c"), clusters.single().elementIds)
-    }
-
-    @Test
-    fun `overlapping controls are always together`() {
-        val clusters = group(
-            "a" to rect(0.0, 0.0, 100.0),
-            "b" to rect(20.0, 0.0, 100.0),
-            gap = 0.0,
-        )
-        assertEquals(1, clusters.size)
-    }
-
-    @Test
-    fun `a diamond of round buttons is one cluster, not four`() {
-        // The case that makes bounding boxes the wrong measure: these boxes all overlap and the
-        // circles all touch nowhere. Measured as circles they are close, which is correct.
-        val spread = 92.0
-        val clusters = group(
-            "y" to rect(0.0, -spread, 112.0),
-            "x" to rect(-spread, 0.0, 112.0),
-            "b" to rect(spread, 0.0, 112.0),
-            "a" to rect(0.0, spread, 112.0),
-        )
-        assertEquals(1, clusters.size)
-        assertEquals(4, clusters.single().elementIds.size)
+        assertEquals(listOf("a", "b"), clusters[0].elementIds)
+        assertEquals(listOf("lonely"), clusters[1].elementIds)
     }
 
     @Test
     fun `the enclosing rectangle covers every control in the cluster`() {
         val clusters = group(
-            "a" to rect(0.0, 0.0, 100.0),
-            "b" to rect(120.0, 20.0, 100.0),
+            Triple("a", "g", rect(0.0, 0.0, 100.0)),
+            Triple("b", "g", rect(120.0, 20.0, 100.0)),
         )
         val bounds = clusters.single().bounds
         assertEquals(-50.0, bounds.left)
@@ -85,75 +63,91 @@ class ClusteringTest {
 
     @Test
     fun `nothing placed produces nothing, rather than an empty rectangle somewhere`() {
-        assertTrue(Clustering.group(emptyList(), 30.0).isEmpty())
-    }
-
-    @Test
-    fun `one control is one cluster whose bounds are its own`() {
-        val clusters = group("only" to rect(10.0, 20.0, 50.0))
-        assertEquals(1, clusters.size)
-        assertEquals(rect(10.0, 20.0, 50.0).left, clusters.single().bounds.left)
+        assertTrue(Clustering.group(emptyList(), emptyMap()).isEmpty())
     }
 
     @Test
     fun `clusters come out in the order their first control was declared`() {
         val clusters = group(
-            "far" to rect(1000.0, 0.0, 50.0),
-            "near.a" to rect(0.0, 0.0, 50.0),
-            "near.b" to rect(60.0, 0.0, 50.0),
+            Triple("far", null, rect(1000.0, 0.0, 50.0)),
+            Triple("near.a", "pair", rect(0.0, 0.0, 50.0)),
+            Triple("near.b", "pair", rect(60.0, 0.0, 50.0)),
         )
         assertEquals(listOf("far"), clusters[0].elementIds)
         assertEquals(listOf("near.a", "near.b"), clusters[1].elementIds)
     }
 
-    // --- the property that made this necessary --------------------------------------------------
+    @Test
+    fun `an id that happens to match a group name does not merge them`() {
+        val clusters = group(
+            Triple("face", null, rect(0.0, 0.0, 50.0)),
+            Triple("other", "face", rect(60.0, 0.0, 50.0)),
+        )
+        assertEquals(2, clusters.size)
+    }
+
+    // --- the shipped layout ---------------------------------------------------------------------
+
+    private fun shipped(scale: Double, surface: LayoutSurface): List<Cluster> {
+        val layout = (BuiltInLayouts.load(BuiltInLayouts.XBOX_DEFAULT) as Outcome.Success).value
+        val placed = layout.elements.map { it.id to it.placement.scaledBy(scale).resolve(surface) }
+        return Clustering.group(layout, placed)
+    }
 
     @Test
     fun `the shipped layout groups the way the tested overlay behaved`() {
-        // The arrangement people have actually played with: a stick shares its window with its own
-        // press so a thumb can hold one and move the other, and the face buttons share theirs so a
-        // thumb can roll between them. The pad and the sticks stay apart.
-        val layout = (BuiltInLayouts.load(BuiltInLayouts.XBOX_DEFAULT) as Outcome.Success).value
-        val surface = LayoutSurface(2400.0, 1080.0)
-        val placed = layout.elements.map { it.id to it.placement.resolve(surface) }
-        val clusters = Clustering.group(placed, Clustering.DEFAULT_GAP * surface.shortSide)
-
+        // A stick shares its window with its own press, so a thumb can hold one and move the other.
+        // The face buttons share theirs, so a thumb can roll between them. Each shoulder row keeps
+        // its menu button, which is where they were when people played with them.
+        val clusters = shipped(1.0, LayoutSurface(2400.0, 1080.0))
         fun clusterOf(id: String) = clusters.single { id in it.elementIds }.elementIds.toSet()
 
         assertEquals(setOf("stick.left", "stick.left.press"), clusterOf("stick.left"))
         assertEquals(setOf("stick.right", "stick.right.press"), clusterOf("stick.right"))
         assertEquals(setOf("face.a", "face.b", "face.x", "face.y"), clusterOf("face.a"))
+        assertEquals(setOf("shoulder.l1", "shoulder.l2", "menu.select"), clusterOf("shoulder.l1"))
+        assertEquals(setOf("shoulder.r1", "shoulder.r2", "menu.start"), clusterOf("shoulder.r1"))
         assertEquals(setOf("dpad"), clusterOf("dpad"))
     }
 
     @Test
-    fun `no cluster of the shipped layout covers a quarter of the screen`() {
-        // Every pixel of a window that is not a control is a pixel nothing can be touched through,
-        // so a cluster growing to cover the screen is the failure this design exists to avoid.
-        val layout = (BuiltInLayouts.load(BuiltInLayouts.XBOX_DEFAULT) as Outcome.Success).value
-        val surface = LayoutSurface(2400.0, 1080.0)
-        val placed = layout.elements.map { it.id to it.placement.resolve(surface) }
-        val screen = surface.widthPx * surface.heightPx
+    fun `grouping does not change with the size or the orientation`() {
+        // The fault this prevents: holding L3 and moving the stick working at one size and not the
+        // next. What a gesture does must not depend on how big the controls are.
+        val shapes = listOf(LayoutSurface(2400.0, 1080.0), LayoutSurface(1080.0, 2400.0))
+            .flatMap { surface -> listOf(0.40, 0.60, 0.85, 1.00).map { surface to it } }
+            .map { (surface, scale) -> shipped(scale, surface).map { it.elementIds }.toSet() }
+        assertEquals(1, shapes.toSet().size, "the grouping changed: $shapes")
+    }
 
-        Clustering.group(placed, Clustering.DEFAULT_GAP * surface.shortSide).forEach { cluster ->
-            val area = cluster.bounds.width * cluster.bounds.height
-            assertTrue(
-                area < screen * 0.25,
-                "${cluster.elementIds} covers ${(area / screen * 100).toInt()}% of the screen",
-            )
+    @Test
+    fun `no window of the shipped layout covers a quarter of the screen`() {
+        // Every pixel of a window that is not a control is a pixel nothing can be touched through,
+        // so a window growing to cover the screen is the failure this design exists to avoid.
+        val surface = LayoutSurface(2400.0, 1080.0)
+        val screen = surface.widthPx * surface.heightPx
+        listOf(0.40, 0.85, 1.00).forEach { scale ->
+            shipped(scale, surface).forEach { cluster ->
+                val area = cluster.bounds.width * cluster.bounds.height
+                assertTrue(
+                    area < screen * 0.25,
+                    "${cluster.elementIds} covers ${(area / screen * 100).toInt()}% at $scale",
+                )
+            }
         }
     }
 
     @Test
-    fun `the total window area is a small part of the screen`() {
-        val layout = (BuiltInLayouts.load(BuiltInLayouts.XBOX_DEFAULT) as Outcome.Success).value
+    fun `the windows together cover a small part of the screen`() {
         val surface = LayoutSurface(2400.0, 1080.0)
-        val placed = layout.elements.map { it.id to it.placement.resolve(surface) }
         val screen = surface.widthPx * surface.heightPx
-        val covered = Clustering.group(placed, Clustering.DEFAULT_GAP * surface.shortSide)
-            .sumOf { it.bounds.width * it.bounds.height }
-
-        assertTrue(covered < screen * 0.35, "windows cover ${(covered / screen * 100).toInt()}%")
+        listOf(0.40, 0.85, 1.00).forEach { scale ->
+            val covered = shipped(scale, surface).sumOf { it.bounds.width * it.bounds.height }
+            assertTrue(
+                covered < screen * 0.40,
+                "windows cover ${(covered / screen * 100).toInt()}% at $scale",
+            )
+        }
     }
 
     // --- scaling --------------------------------------------------------------------------------
@@ -171,18 +165,11 @@ class ClusteringTest {
 
     @Test
     fun `a scaled layout keeps every control the same distance from the edge in its own terms`() {
-        // The property that matters: a control's clearance from the edge, measured in its own
-        // widths, does not change with the setting.
         val surface = LayoutSurface(2400.0, 1080.0)
         val full = Placement(Anchor.BOTTOM_LEFT, 0.2, 0.2, 0.1, 0.1)
-        listOf(1.0, 0.65, 0.35).forEach { factor ->
+        listOf(1.0, 0.85, 0.40).forEach { factor ->
             val rect = full.scaledBy(factor).resolve(surface)
-            assertEquals(
-                1.5,
-                (rect.left - 0.0) / rect.width,
-                1e-9,
-                "clearance changed at scale $factor",
-            )
+            assertEquals(1.5, (rect.left - 0.0) / rect.width, 1e-9, "clearance changed at $factor")
         }
     }
 }

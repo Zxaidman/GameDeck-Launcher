@@ -49,6 +49,27 @@ public data class LayoutElement(
 
     /** What to draw on it, or `null` to use the control's own default. */
     public val label: String?,
+
+    /**
+     * Which controls this one shares a window with, or `null` to have one to itself.
+     *
+     * **This is what decides whether a thumb can slide from this control to another**, and it is
+     * declared rather than inferred. A finger belongs to the window that received its touch-down
+     * for the life of the gesture, so sliding between two controls only works if they share one —
+     * which is what makes rolling across face buttons press each in turn, and what lets a thumb
+     * hold `L3` and then move the stick.
+     *
+     * It was briefly derived from how close two controls were drawn. That failed on the shipped
+     * layout: the gap that had to mean "together" and the gap that had to mean "apart" were fifteen
+     * pixels apart, so the answer flipped with rounding and with the size setting — and a gesture
+     * that works at one size and not another is worse than one that never worked. Saying it outright
+     * costs one field and cannot drift.
+     *
+     * The cost is a window large enough to hold the whole group, and every pixel of it that is not
+     * a control is a pixel nothing underneath can be touched through. So a group should be controls
+     * a thumb would really travel between, not a tidy category.
+     */
+    public val group: String?,
     public val placement: Placement,
     public val unknownFields: Map<String, ConfigNode> = emptyMap(),
 )
@@ -103,8 +124,10 @@ public object ControllerLayoutReader {
 
     private val KNOWN_DOCUMENT_FIELDS =
         setOf("schemaVersion", "type", "id", "name", "orientation", "elements")
-    private val KNOWN_ELEMENT_FIELDS =
-        setOf("id", "kind", "binds", "label", "anchor", "offsetX", "offsetY", "width", "height", "rotation")
+    private val KNOWN_ELEMENT_FIELDS = setOf(
+        "id", "kind", "binds", "label", "group",
+        "anchor", "offsetX", "offsetY", "width", "height", "rotation",
+    )
 
     public fun read(node: ConfigNode): Outcome<ControllerLayout> {
         val header = when (val h = DocumentHeader.read(node, DocumentType.CONTROLLER_LAYOUT)) {
@@ -208,6 +231,20 @@ public object ControllerLayoutReader {
             )
         }
 
+        val group = when (val g = ConfigReader.optionalText(obj, "group", path)) {
+            is Outcome.Failure -> return g
+            is Outcome.Success -> g.value
+        }
+        if (group != null && (group.length > MAX_ELEMENT_ID_LENGTH || !ELEMENT_ID.matches(group))) {
+            return Outcome.Failure(
+                ConfigurationError.InvalidId(
+                    path.child("group"),
+                    group,
+                    "a group is named by the same rules as an id",
+                )
+            )
+        }
+
         val placement = when (val p = readPlacement(obj, path)) {
             is Outcome.Failure -> return p
             is Outcome.Success -> p.value
@@ -219,6 +256,7 @@ public object ControllerLayoutReader {
                 kind = kind,
                 binds = binds,
                 label = label,
+                group = group,
                 placement = placement,
                 unknownFields = obj.unknownFields(KNOWN_ELEMENT_FIELDS),
             )
@@ -354,25 +392,36 @@ public object ControllerLayoutWriter {
         return ConfigNode.Obj(fields)
     }
 
+    /**
+     * Two decimals, because this is a file people are invited to open and edit.
+     *
+     * A control dragged in the editor produces a position like `0.22437499999999998`, and a
+     * document full of those is one nobody wants to read or change by hand. Two decimals of a
+     * fraction of the short side is about a pixel on a 1080-wide screen — finer than anyone can
+     * place a control with a thumb, and far finer than anyone can see.
+     */
+    private fun round(value: Double): Double = Math.round(value * 100.0) / 100.0
+
     private fun element(element: LayoutElement): ConfigNode {
         val fields = LinkedHashMap<String, ConfigNode>()
         fields["id"] = ConfigNode.Text(element.id)
         fields["kind"] = ConfigNode.Text(element.kind.wireName)
         element.binds?.let { fields["binds"] = ConfigNode.Text(it.wireName) }
         element.label?.let { fields["label"] = ConfigNode.Text(it) }
+        element.group?.let { fields["group"] = ConfigNode.Text(it) }
 
         val placement = element.placement
         fields["anchor"] = ConfigNode.Text(placement.anchor.wireName)
-        fields["offsetX"] = ConfigNode.Num(placement.offsetX)
-        fields["offsetY"] = ConfigNode.Num(placement.offsetY)
-        fields["width"] = ConfigNode.Num(placement.width)
+        fields["offsetX"] = ConfigNode.Num(round(placement.offsetX))
+        fields["offsetY"] = ConfigNode.Num(round(placement.offsetY))
+        fields["width"] = ConfigNode.Num(round(placement.width))
         // Written only when it differs, because height defaults to width and a round control
         // stating its size twice is noise in a file people edit by hand.
         if (placement.height != placement.width) {
-            fields["height"] = ConfigNode.Num(placement.height)
+            fields["height"] = ConfigNode.Num(round(placement.height))
         }
         if (placement.rotationDegrees != 0.0) {
-            fields["rotation"] = ConfigNode.Num(placement.rotationDegrees)
+            fields["rotation"] = ConfigNode.Num(round(placement.rotationDegrees))
         }
         fields += element.unknownFields
         return ConfigNode.Obj(fields)

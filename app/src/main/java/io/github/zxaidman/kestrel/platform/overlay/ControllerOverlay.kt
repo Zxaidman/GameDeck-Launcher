@@ -128,17 +128,22 @@ public class ControllerOverlay(
     }
 
     /**
-     * Changes the size, or the layout, by putting the controls up again.
+     * Changes the size.
      *
-     * Rebuilt rather than re-measured. The previous version moved existing windows so a control
-     * being held was not dropped — but a layout change can alter which controls share a window at
-     * all, so there is not always a window to move. Everything is released first, which is what
-     * that approach was really protecting against: a control that disappears mid-press leaves
+     * **Moves the windows rather than replacing them, whenever it can.** Dragging a slider produces
+     * a change every frame, and removing and re-adding eight windows that often left visible trails
+     * and made the drag lag behind the thumb. Since the layout says which controls share a window,
+     * a size change cannot alter the grouping — so the same windows are simply re-measured, and the
+     * controls inside them told where they now are.
+     *
+     * A full rebuild is kept for the case where the grouping genuinely differs, which a layout
+     * change can cause. It releases everything first: a control that disappears mid-press leaves
      * nothing behind able to release it.
      */
     public fun resize(scale: Float) {
         this.scale = scale
-        rebuild()
+        if (!controlsVisible) return
+        if (!reposition()) rebuild()
     }
 
     public fun apply(layout: ControllerLayout) {
@@ -146,10 +151,79 @@ public class ControllerOverlay(
         rebuild()
     }
 
+    /**
+     * Recomputes for the screen as it is now.
+     *
+     * Called when the phone is turned. Every position is a fraction of a surface, and the surface
+     * changed — so without this the controls stay where the old screen put them, which is what
+     * showing and hiding them was working around.
+     */
+    public fun refresh() {
+        if (!controlsVisible) return
+        if (!reposition()) rebuild()
+    }
+
     private fun rebuild() {
         if (!controlsVisible) return
         hideControls()
         showControls()
+    }
+
+    /** Re-measures the existing windows, or reports that the grouping no longer matches them. */
+    private fun reposition(): Boolean {
+        val plan = plan() ?: return false
+        if (plan.size != clusters.size) return false
+        plan.forEachIndexed { index, piece ->
+            val view = clusters[index]
+            if (view.ids != piece.members.map { it.id }) return false
+        }
+        plan.forEachIndexed { index, piece ->
+            val view = clusters[index]
+            view.reposition(piece.members)
+            runCatching {
+                windows?.updateViewLayout(
+                    view,
+                    params(
+                        piece.bounds.width.toInt(),
+                        piece.bounds.height.toInt(),
+                        Gravity.TOP or Gravity.START,
+                        piece.bounds.left.toInt(),
+                        piece.bounds.top.toInt(),
+                    ),
+                )
+            }
+        }
+        return true
+    }
+
+    /** One window's worth of the layout, resolved for the screen and size as they are now. */
+    private class Piece(val bounds: PixelRect, val members: List<PlacedControl>)
+
+    private fun plan(): List<Piece>? {
+        val surface = surface()
+        val factor = scale.toDouble()
+        val placed = layout.elements.map { element ->
+            element.id to element.placement.scaledBy(factor).resolve(surface)
+        }
+        if (placed.isEmpty()) return null
+
+        val byId = layout.elements.associateBy { it.id }
+        val rects = placed.toMap()
+        return Clustering.group(layout, placed).mapNotNull { cluster ->
+            val bounds = padded(cluster)
+            val members = cluster.elementIds.mapNotNull { id ->
+                val element = byId[id] ?: return@mapNotNull null
+                val rect = rects[id] ?: return@mapNotNull null
+                // Local to the window, so a view never needs to know where on the screen it is.
+                PlacedControl(
+                    element = element,
+                    centerX = (rect.centerX - bounds.left).toFloat(),
+                    centerY = (rect.centerY - bounds.top).toFloat(),
+                    radius = (min(rect.width, rect.height) / 2).toFloat(),
+                )
+            }
+            if (members.isEmpty()) null else Piece(bounds, members)
+        }
     }
 
     private fun toggleControls() {
@@ -159,43 +233,29 @@ public class ControllerOverlay(
     /**
      * Turns the layout into windows.
      *
-     * Placements are scaled, resolved against this screen, grouped into clusters, and each cluster
-     * becomes one window holding the controls inside it. Every number comes from the document; the
-     * only thing decided here is which controls are close enough to share a window.
+     * Placements are scaled, resolved against this screen, grouped as the layout says, and each
+     * group becomes one window holding the controls inside it. Every number comes from the
+     * document; nothing about the arrangement is decided here.
      */
     private fun showControls() {
         if (controlsVisible) return
-        val surface = surface()
-        val factor = scale.toDouble()
+        val plan = plan() ?: return
 
-        val placed = layout.elements.map { element ->
-            element.id to element.placement.scaledBy(factor).resolve(surface)
-        }
-        if (placed.isEmpty()) return
-
-        val byId = layout.elements.associateBy { it.id }
-        val rects = placed.toMap()
-        val grouped = Clustering.group(placed, Clustering.DEFAULT_GAP * surface.shortSide)
-
-        val added = mutableListOf<View>()
-        val built = mutableListOf<ClusterView>()
-
-        val ok = grouped.all { cluster ->
-            val bounds = padded(cluster)
-            val view = clusterView(cluster, byId, rects, bounds) ?: return@all true
+        val added = mutableListOf<ClusterView>()
+        val ok = plan.all { piece ->
+            val view = ClusterView(context, engine, profile, piece.members)
             runCatching {
                 windows?.addView(
                     view,
                     params(
-                        bounds.width.toInt(),
-                        bounds.height.toInt(),
+                        piece.bounds.width.toInt(),
+                        piece.bounds.height.toInt(),
                         Gravity.TOP or Gravity.START,
-                        bounds.left.toInt(),
-                        bounds.top.toInt(),
+                        piece.bounds.left.toInt(),
+                        piece.bounds.top.toInt(),
                     ),
                 )
                 added += view
-                built += view
                 true
             }.getOrElse { false }
         }
@@ -205,7 +265,7 @@ public class ControllerOverlay(
             return
         }
 
-        clusters = built
+        clusters = added
         controlsVisible = true
     }
 
@@ -218,27 +278,6 @@ public class ControllerOverlay(
             width = cluster.bounds.width + pad * 2,
             height = cluster.bounds.height + pad * 2,
         )
-    }
-
-    private fun clusterView(
-        cluster: Cluster,
-        byId: Map<String, LayoutElement>,
-        rects: Map<String, PixelRect>,
-        bounds: PixelRect,
-    ): ClusterView? {
-        val members = cluster.elementIds.mapNotNull { id ->
-            val element = byId[id] ?: return@mapNotNull null
-            val rect = rects[id] ?: return@mapNotNull null
-            // Local to the window, so a view never needs to know where on the screen it is.
-            PlacedControl(
-                element = element,
-                centerX = (rect.centerX - bounds.left).toFloat(),
-                centerY = (rect.centerY - bounds.top).toFloat(),
-                radius = (min(rect.width, rect.height) / 2).toFloat(),
-            )
-        }
-        if (members.isEmpty()) return null
-        return ClusterView(context, engine, profile, members)
     }
 
     private fun hideControls() {
@@ -425,8 +464,25 @@ private class ClusterView(
     context: Context,
     private val engine: InputEngine,
     var profile: AnalogProfile,
-    private val controls: List<PlacedControl>,
+    private var controls: List<PlacedControl>,
 ) : View(context) {
+
+    /** What this window holds, so the overlay can tell whether a plan still fits these windows. */
+    val ids: List<String> get() = controls.map { it.id }
+
+    /**
+     * Takes the same controls at new positions.
+     *
+     * Live state is keyed by element id and left alone, so a control held while the size changes
+     * stays held — which is the whole reason the windows are moved rather than replaced.
+     */
+    fun reposition(members: List<PlacedControl>) {
+        controls = members
+        crossPaths.clear()
+        arrowPaths.clear()
+        members.filter { it.kind == ControlKind.DPAD }.forEach { buildCross(it) }
+        invalidate()
+    }
 
     private val plate = Ink.plate()
     private val plateRim = Ink.plateRim()

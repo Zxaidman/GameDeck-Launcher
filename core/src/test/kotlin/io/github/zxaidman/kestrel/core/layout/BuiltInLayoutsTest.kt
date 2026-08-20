@@ -3,6 +3,7 @@ package io.github.zxaidman.kestrel.core.layout
 import io.github.zxaidman.kestrel.core.common.Outcome
 import io.github.zxaidman.kestrel.core.configuration.ConfigurationId
 import io.github.zxaidman.kestrel.core.input.GamepadControl
+import io.github.zxaidman.kestrel.core.settings.KestrelSettings
 import kotlin.math.hypot
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -73,39 +74,45 @@ class BuiltInLayoutsTest {
         }
     }
 
+    /**
+     * Every combination a user can actually produce.
+     *
+     * The two failures this catches are the two that were shipped: a layout authored at one size
+     * and then scaled again, and a maximum setting that puts controls on top of each other. Both
+     * looked correct in the one orientation and at the one size they were checked at.
+     */
+    private fun everyScreen(): List<Pair<LayoutSurface, Double>> {
+        val surfaces = listOf(LayoutSurface(2400.0, 1080.0), LayoutSurface(1080.0, 2400.0))
+        val scales = listOf(
+            KestrelSettings.MIN_CONTROL_SCALE,
+            0.60,
+            KestrelSettings.DEFAULT_CONTROL_SCALE,
+            KestrelSettings.MAX_CONTROL_SCALE,
+        )
+        return surfaces.flatMap { surface -> scales.map { surface to it } }
+    }
+
     @Test
-    fun `every control fits on a landscape phone without leaving the screen`() {
-        // 2400x1080 is the reference device in landscape. A layout whose controls resolve outside
-        // the surface is one whose controls cannot be pressed.
-        val surface = LayoutSurface(2400.0, 1080.0)
-        xbox().elements.forEach { element ->
-            val rect = element.placement.resolve(surface)
-            assertTrue(
-                rect.isWithin(surface),
-                "'${element.id}' resolves to $rect, which is outside the screen",
-            )
+    fun `every control stays on the screen at every size, in both orientations`() {
+        everyScreen().forEach { (surface, scale) ->
+            xbox().elements.forEach { element ->
+                val rect = element.placement.scaledBy(scale).resolve(surface)
+                assertTrue(
+                    rect.isWithin(surface),
+                    "'${element.id}' leaves the screen at ${scale.times(100).toInt()}% on " +
+                        "${surface.widthPx.toInt()}x${surface.heightPx.toInt()}: $rect",
+                )
+            }
         }
     }
 
     @Test
-    fun `every control fits on a portrait phone too, since the layout claims either orientation`() {
-        val surface = LayoutSurface(1080.0, 2400.0)
-        xbox().elements.forEach { element ->
-            val rect = element.placement.resolve(surface)
-            assertTrue(
-                rect.isWithin(surface),
-                "'${element.id}' resolves to $rect, which is outside the screen",
-            )
-        }
-    }
-
-    @Test
-    fun `no two controls overlap, so a thumb cannot press two at once by accident`() {
+    fun `no two controls overlap at any size, in either orientation`() {
         // Compared as circles rather than as bounding boxes, because these controls are round and
         // two squares touching at a corner is not two controls touching. A diamond of four face
         // buttons has overlapping boxes by construction and no overlapping buttons at all.
-        listOf(LayoutSurface(2400.0, 1080.0), LayoutSurface(1080.0, 2400.0)).forEach { surface ->
-            val placed = xbox().elements.map { it.id to it.placement.resolve(surface) }
+        everyScreen().forEach { (surface, scale) ->
+            val placed = xbox().elements.map { it.id to it.placement.scaledBy(scale).resolve(surface) }
             for (i in placed.indices) {
                 for (j in i + 1 until placed.size) {
                     val (leftId, left) = placed[i]
@@ -115,11 +122,46 @@ class BuiltInLayoutsTest {
                         minOf(right.width, right.height) / 2
                     assertTrue(
                         apart >= touching,
-                        "'$leftId' and '$rightId' overlap on " +
+                        "'$leftId' and '$rightId' overlap at ${scale.times(100).toInt()}% on " +
                             "${surface.widthPx.toInt()}x${surface.heightPx.toInt()}: " +
                             "centres ${apart.toInt()}px apart, touching at ${touching.toInt()}px",
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun `the default size reproduces the arrangement measured on the reference device`() {
+        // The pad the project owner tested and approved had face buttons 112px across on a 1080px
+        // short side. The document is authored larger so the setting has somewhere to grow, and the
+        // default brings it back to what a hand settled on.
+        val surface = LayoutSurface(2400.0, 1080.0)
+        val faceA = xbox().element("face.a")!!
+        val rect = faceA.placement
+            .scaledBy(KestrelSettings.DEFAULT_CONTROL_SCALE)
+            .resolve(surface)
+        assertEquals(112.0, rect.width, 4.0, "the default size no longer matches the tested pad")
+    }
+
+    @Test
+    fun `numbers in the shipped layout are readable, because people edit this file`() {
+        // Two decimals. A layout a user is invited to open in a text editor should not be full of
+        // 0.22437499999999998.
+        xbox().elements.forEach { element ->
+            listOf(
+                "offsetX" to element.placement.offsetX,
+                "offsetY" to element.placement.offsetY,
+                "width" to element.placement.width,
+                "height" to element.placement.height,
+            ).forEach { (field, value) ->
+                val rounded = Math.round(value * 100.0) / 100.0
+                assertEquals(
+                    rounded,
+                    value,
+                    1e-9,
+                    "'${element.id}' has $field = $value, which is not two decimals",
+                )
             }
         }
     }

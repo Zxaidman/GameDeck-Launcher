@@ -70,16 +70,22 @@ public object KestrelStorage {
     public fun usingChosenFolder(context: Context): Boolean = current(context) is SafDocumentStore
 
     /**
-     * The intent that asks the user to pick a folder, opened where the folder should go.
+     * The intent that asks the user to pick a folder, opened as close to the answer as possible.
      *
-     * `EXTRA_INITIAL_URI` starts the picker at the top level of internal storage — beside `Android`
-     * rather than inside it — so the choice is one tap rather than a navigation exercise.
+     * `EXTRA_INITIAL_URI` points at **`Kestrel` itself**, at the top level of internal storage. If
+     * that folder is already there — because the user made it, or because a previous installation
+     * did — the picker opens inside it and the whole interaction is one tap on *Use this folder*.
+     * If it is not there, the picker falls back to somewhere near it and the user makes it, once.
      *
-     * **Kestrel cannot create that folder itself, and the reason is worth stating.** Creating a
-     * directory at the top of shared storage needs `MANAGE_EXTERNAL_STORAGE`, which is access to
-     * every file on the phone; and declaring a permission of that class is exactly what got Kestrel
-     * blocked by Play Protect when the accessibility service was declared (`ADR-006`). So the folder
-     * is made through the picker, by the person who owns the storage, once.
+     * **Kestrel cannot create that folder itself, and the reason is worth stating rather than
+     * leaving as an apparent oversight.** Creating a directory at the top of shared storage needs
+     * `MANAGE_EXTERNAL_STORAGE` — access to every file on the phone. It is a restricted permission,
+     * and declaring a permission of that class is exactly what got Kestrel blocked by Play Protect
+     * when the accessibility service was declared, measured in `ADR-006`. The picker costs the user
+     * one tap, once; the permission would cost every user their install.
+     *
+     * Whatever the user picks, [useFolder] ensures a `Kestrel` folder inside it, so picking the
+     * right folder and picking its parent both end in the right place.
      */
     public fun folderPicker(): Intent =
         Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
@@ -94,7 +100,7 @@ public object KestrelStorage {
                         DocumentsContract.EXTRA_INITIAL_URI,
                         DocumentsContract.buildDocumentUri(
                             "com.android.externalstorage.documents",
-                            "primary:",
+                            "primary:$SUGGESTED_FOLDER_NAME",
                         ),
                     )
                 }
