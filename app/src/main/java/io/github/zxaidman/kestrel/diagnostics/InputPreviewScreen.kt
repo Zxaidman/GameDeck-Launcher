@@ -652,7 +652,9 @@ private fun FallbackProbeSection(context: android.content.Context) {
         Mono(
             "In the setting list:  ${if (enabled) "yes" else "no"}\n" +
                 "Service connected:    ${if (connected) "yes" else "no"}\n" +
-                "WRITE_SECURE_SETTINGS: ${if (holdsPermission) "held" else "not held"}\n" +
+                "Can inject:           ${if (ProbeState.canPerformGestures) "yes" else "no"}" +
+                (if (connected) "  (capabilities 0x%x)".format(ProbeState.capabilities) else "") +
+                "\nWRITE_SECURE_SETTINGS: ${if (holdsPermission) "held" else "not held"}\n" +
                 "Service says:         ${ProbeState.note}"
         )
         Row(
@@ -707,7 +709,20 @@ private fun FallbackProbeSection(context: android.content.Context) {
                             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 },
-            ) { Text("Settings") }
+            ) { Text("A11y") }
+            // Where the restricted-settings block is lifted, if that is what is refusing the
+            // writes: App info, overflow menu, Allow restricted settings. Worth its own button
+            // because it is three taps deep and nobody finds it by looking.
+            Button(
+                onClick = {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:" + context.packageName),
+                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                },
+            ) { Text("App info") }
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),

@@ -1,6 +1,7 @@
 package io.github.zxaidman.kestrel.platform.input.fallback
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.os.Handler
@@ -36,13 +37,28 @@ public class TouchInjectionService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         ProbeState.connected = true
-        ProbeState.note = "Service connected. Gesture dispatch is available."
+
+        // What the platform actually handed over, rather than what the configuration asked for.
+        // A service can connect with a capability withheld, and "connected" would then read as
+        // success right up until the first gesture silently does nothing.
+        val info = serviceInfo
+        val canGesture = info != null &&
+            (info.capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
+        ProbeState.capabilities = info?.capabilities ?: 0
+        ProbeState.canPerformGestures = canGesture
+        ProbeState.note = if (canGesture) {
+            "Connected, and gesture dispatch was granted."
+        } else {
+            "Connected, but gesture dispatch was NOT granted. Nothing can be injected."
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         if (instance === this) instance = null
         ProbeState.connected = false
+        ProbeState.canPerformGestures = false
+        ProbeState.capabilities = 0
         ProbeState.note = "Service disconnected."
     }
 
@@ -120,5 +136,9 @@ public class TouchInjectionService : AccessibilityService() {
 /** What the probe knows, for any screen or report that needs to say so. */
 public object ProbeState {
     @Volatile public var connected: Boolean = false
+
+    /** Granted by the platform on connection, not requested in the configuration. */
+    @Volatile public var canPerformGestures: Boolean = false
+    @Volatile public var capabilities: Int = 0
     @Volatile public var note: String = "Not enabled."
 }

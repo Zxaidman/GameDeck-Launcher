@@ -86,6 +86,27 @@ matter: an empty list, a repeat run that must not duplicate, a list that already
 else's service, removing Kestrel from the middle of three, removing it when it is the only one, and
 removing it when it is already absent. The other services survive every one.
 
+## 4b. The one test that separates the two candidates
+
+The writes fail silently by both routes, and two different explanations fit. **Enabling by hand
+distinguishes them**, and nothing else does.
+
+1. Press **App info** in the probe section. In the overflow menu, look for **Allow restricted
+   settings**.
+   - **If it is there**, the platform's sideload block is what has been refusing. Allow it, then go
+     on to step 2.
+   - **If it is absent**, this device has already lifted it or never applied it — go to step 2 and
+     the answer is likely the OEM layer.
+2. Press **A11y**, find Kestrel in the list, and turn it on by hand.
+   - **If the toggle is greyed out or an explanation appears**, record it exactly. That is the
+     block naming itself.
+   - **If it turns on**, come back to Kestrel. *In the setting list* and *Service connected* should
+     both read yes.
+3. Check the **Can inject** line. This is what the platform actually granted, not what the
+   configuration asked for — a service can connect with the gesture capability withheld, and
+   "connected" would then look like success until the first gesture silently does nothing.
+4. If it can inject, press **Measure** and the numbers finally exist.
+
 ## 5. Procedure
 
 Nothing here needs a target application. Everything is measured against Kestrel's own window.

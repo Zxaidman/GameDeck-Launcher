@@ -107,6 +107,8 @@ public object DiagnosticReport {
             JSONObject().apply {
                 put("enabledInSettings", FallbackProbe.enabledInSettings(context))
                 put("serviceConnected", ProbeState.connected)
+                put("canPerformGestures", ProbeState.canPerformGestures)
+                put("capabilitiesRaw", ProbeState.capabilities)
                 put("holdsWriteSecureSettings", FallbackProbe.holdsWriteSecureSettings(context))
                 put("serviceNote", ProbeState.note)
                 val measured = FallbackProbe.last
