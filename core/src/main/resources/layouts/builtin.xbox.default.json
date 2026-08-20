@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "type": "controller-layout",
+  "id": "builtin.xbox.default",
+  "name": "Xbox — default",
+  "orientation": "any",
+  "elements": [
+    {
+      "id": "stick.left",
+      "kind": "stick",
+      "binds": "left-stick",
+      "anchor": "bottom-left",
+      "offsetX": 0.189,
+      "offsetY": 0.189,
+      "width": 0.28
+    },
+    {
+      "id": "stick.left.press",
+      "kind": "button",
+      "binds": "left-stick-press",
+      "anchor": "bottom-left",
+      "offsetX": 0.4,
+      "offsetY": 0.189,
+      "width": 0.102
+    },
+    {
+      "id": "dpad",
+      "kind": "dpad",
+      "binds": "dpad",
+      "anchor": "bottom-left",
+      "offsetX": 0.147,
+      "offsetY": 0.465,
+      "width": 0.202
+    },
+    {
+      "id": "face.y",
+      "kind": "button",
+      "binds": "y",
+      "anchor": "bottom-right",
+      "offsetX": 0.189,
+      "offsetY": 0.274,
+      "width": 0.104
+    },
+    {
+      "id": "face.x",
+      "kind": "button",
+      "binds": "x",
+      "anchor": "bottom-right",
+      "offsetX": 0.274,
+      "offsetY": 0.189,
+      "width": 0.104
+    },
+    {
+      "id": "face.b",
+      "kind": "button",
+      "binds": "b",
+      "anchor": "bottom-right",
+      "offsetX": 0.104,
+      "offsetY": 0.189,
+      "width": 0.104
+    },
+    {
+      "id": "face.a",
+      "kind": "button",
+      "binds": "a",
+      "anchor": "bottom-right",
+      "offsetX": 0.189,
+      "offsetY": 0.104,
+      "width": 0.104
+    },
+    {
+      "id": "stick.right",
+      "kind": "stick",
+      "binds": "right-stick",
+      "anchor": "bottom-right",
+      "offsetX": 0.189,
+      "offsetY": 0.507,
+      "width": 0.28
+    },
+    {
+      "id": "stick.right.press",
+      "kind": "button",
+      "binds": "right-stick-press",
+      "anchor": "bottom-right",
+      "offsetX": 0.4,
+      "offsetY": 0.507,
+      "width": 0.102
+    },
+    {
+      "id": "shoulder.l1",
+      "kind": "button",
+      "binds": "left-bumper",
+      "anchor": "top-left",
+      "offsetX": 0.086,
+      "offsetY": 0.086,
+      "width": 0.078
+    },
+    {
+      "id": "shoulder.l2",
+      "kind": "analog-trigger",
+      "binds": "left-trigger",
+      "anchor": "top-left",
+      "offsetX": 0.292,
+      "offsetY": 0.086,
+      "width": 0.078
+    },
+    {
+      "id": "menu.select",
+      "kind": "button",
+      "binds": "select",
+      "anchor": "top-left",
+      "offsetX": 0.086,
+      "offsetY": 0.179,
+      "width": 0.078
+    },
+    {
+      "id": "shoulder.r1",
+      "kind": "button",
+      "binds": "right-bumper",
+      "anchor": "top-right",
+      "offsetX": 0.086,
+      "offsetY": 0.086,
+      "width": 0.078
+    },
+    {
+      "id": "shoulder.r2",
+      "kind": "analog-trigger",
+      "binds": "right-trigger",
+      "anchor": "top-right",
+      "offsetX": 0.292,
+      "offsetY": 0.086,
+      "width": 0.078
+    },
+    {
+      "id": "menu.start",
+      "kind": "button",
+      "binds": "start",
+      "anchor": "top-right",
+      "offsetX": 0.086,
+      "offsetY": 0.179,
+      "width": 0.078
+    }
+  ]
+}

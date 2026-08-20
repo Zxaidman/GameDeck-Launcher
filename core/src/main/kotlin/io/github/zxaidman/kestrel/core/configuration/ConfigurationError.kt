@@ -90,6 +90,22 @@ public sealed interface ConfigurationError : DomainError {
         override val message: String = "Field '$path' is $found but must be between $min and $max."
     }
 
+    /**
+     * Text that is not a document at all.
+     *
+     * Separate from every error beside it, and deliberately so: those describe a document that
+     * parsed and then failed a rule, which a user can act on by editing a named field. This one
+     * says the file never became a document, and the only useful thing to report is where reading
+     * stopped.
+     */
+    public data class MalformedDocument(
+        public val offset: Int,
+        public val reason: String,
+        override val path: FieldPath = "",
+    ) : ConfigurationError {
+        override val message: String = "Not readable as a document: $reason (at character $offset)."
+    }
+
     /** An identifier that does not meet the rules in `docs/CONFIGURATION_SCHEMA.md`. */
     public data class InvalidId(
         override val path: FieldPath,

@@ -405,6 +405,81 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 2 — A Layout Is A Document Now
+
+The arrangement of controls lived in a Kotlin file, and that one fact was blocking three phases of
+`PRD.md` at once: there was nothing for a layout editor to edit, nothing for a skin to dress, and
+nothing for a profile to select. They were all waiting on the same missing noun.
+
+**`core/layout/ControllerLayout`** is that noun. A layout is a validated document — exportable,
+importable, versioned, shareable — which is what `ADR-001` chose JSON for in the first place.
+Nothing in it draws anything or knows a pixel; `Placement` turns an element into a rectangle only
+once a surface is known.
+
+**`core/input/GamepadControl`** is the vocabulary the layout speaks: `A`, `LEFT_TRIGGER`,
+`LEFT_STICK`. `CLAUDE.md` §5 has always required domain and interface code to use controller
+semantics rather than key codes, and the overlay had been carrying `304` and `ABS_BRAKE` in its own
+control table — the boundary being crossed in the layer furthest from the kernel. Nothing in the new
+enum knows how a control is delivered, which is the whole point of naming them.
+
+Three rules in the reader are worth stating, because each exists to catch a specific failure:
+
+- **What an element *is* and what it *drives* must agree.** A stick bound to `A` draws correctly and
+  does nothing, which is the hardest kind of fault to see from outside. It is now a message naming
+  the field and listing what would have been valid.
+- **A decoration must not bind.** Artwork that sends input is a control that was mislabelled.
+- **Duplicate element ids are refused, not resolved.** Picking one silently would make a layout
+  behave differently from the file that describes it.
+
+Both trigger kinds bind to a trigger, because presenting an analog trigger as a button is a choice
+the user is entitled to make (`ADR-007`) rather than a different control.
+
+### Phase 2 — The Built-In Layout Is A Shipped File, Not Code
+
+`builtin.xbox.default` is a JSON resource, parsed by **the same reader that parses an imported
+layout**. That is the point rather than an implementation detail: a built-in defined in Kotlin would
+be the one layout in the product that never goes through validation, so the schema could drift from
+what the application renders and the drift would surface first for a user importing a file. This way
+each is a continuous test of the other. It is also immutable by construction — the source is a
+read-only resource — rather than by a disabled button.
+
+Its numbers are not invented. **Every offset and size is the arrangement measured on the reference
+device at the default control scale**, converted to fractions of the shorter side.
+
+Ten tests check the shipped file rather than a fixture, and two of them failed on the first run and
+were right to: a first attempt at the geometry put the right stick off the top of a landscape screen
+and overlapped the pad with a shoulder button. A third caught the left stick's press sitting inside
+the stick. The tests now assert that every control resolves inside the screen in **both**
+orientations, that no two overlap, that every control the pad declares is bound exactly once, and
+that nothing is anchored where a thumb cannot reach it.
+
+Controls are compared as circles rather than as bounding boxes, because a diamond of four round face
+buttons has overlapping boxes by construction and no overlapping buttons at all.
+
+### Phase 2 — `core` Reads JSON Without A Dependency
+
+`core/configuration/Json` is a small, strict reader producing `ConfigNode`.
+
+**Why not a dependency.** `core` is plain Kotlin so that the rules are testable without a device.
+Every configuration rule in it operates on `ConfigNode`, so with nothing to produce one from text,
+the only place a document could be read was `platform/` and the only place it could be *tested* was
+a phone — putting the validation this project most depends on behind its slowest feedback loop. A
+reader that fits in one file buys the fast loop back and costs nothing.
+
+**Strict on purpose**, because an imported document is untrusted input: no comments, no trailing
+commas, no unquoted keys, no single quotes, no trailing content, no leading zeros, no `Infinity` or
+`NaN`, no raw control characters inside text, and a repeated key is refused rather than resolved —
+JSON does not say which wins, so any choice would be this reader's opinion silently overriding the
+author's. Nesting is capped, because recursive descent on untrusted input without a cap is a stack
+overflow waiting for a file full of open brackets, and a crash is not a typed error.
+
+`ConfigurationError.MalformedDocument` is deliberately separate from every other error: the rest
+describe a document that parsed and then failed a rule, which a user can act on by editing a named
+field. This one says the file never became a document, and reports where reading stopped.
+
+**Not yet wired to anything.** The overlay still draws its hardcoded arrangement; rendering from the
+document is next. `:core` tests: **144, all passing**.
+
 ### Artwork Cleared, And One Inbox Instead Of Three Places
 
 **The skin pack's licence is CC0**, and that was the item blocking it. It is *Xelu's Free Controller
