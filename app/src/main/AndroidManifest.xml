@@ -12,6 +12,20 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Declared so it can be granted, never held by default. WRITE_SECURE_SETTINGS is
+         signature|privileged|development, and the development flag is what lets `pm grant` hand it
+         over from a shell — but only to an application that has *asked* for it. Without this line
+         the grant has nothing to grant and the permission can never read as held, which is exactly
+         what the first probe run showed: `pm grant` exited zero and the permission stayed absent.
+
+         Declaring it costs nothing while it is ungranted: the platform does not give it to an
+         ordinary installation, so Kestrel runs without it unless someone deliberately grants it.
+         What it buys is the fallback being enabled later with Shizuku not running at all
+         (docs/FALLBACK_PROBE.md §4). -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
     <!-- The controls must be drawn over the target, in a window that never takes focus: the
          platform delivers a controller's events to the focused window, so controls inside an
          ordinary activity send their input back to Kestrel. Measured — see

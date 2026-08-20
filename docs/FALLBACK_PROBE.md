@@ -60,6 +60,32 @@ Both writes **append** to the list rather than replacing it. The setting is shar
 Kestrel into it would silently switch off every accessibility service the user depends on. A
 diagnostic that does that is not acceptable regardless of what it measures.
 
+## 4a. Two faults in the probe itself, found on its first run
+
+Recorded because both are the kind that recur, and because a probe that reports a fault of its own
+as a fault of the thing it measures is worse than no probe.
+
+**`pm grant` succeeded and granted nothing.** `WRITE_SECURE_SETTINGS` is
+`signature|privileged|development`, and the `development` flag is what lets a shell hand it over —
+**but only to an application that has asked for it.** Kestrel had never declared it, so the grant
+had nothing to act on, exited zero, printed nothing, and the permission stayed absent. It is
+declared in the manifest now. Declaring it costs nothing while it is ungranted: the platform does
+not give it to an ordinary installation.
+
+**A value formatted for a person was parsed as data.** The enable route read the current
+accessibility list into Kotlin, edited it and wrote it back — and `exec` returns human-readable
+text, so an empty setting came back as the literal string `(no output, exit=0)`, which was written
+into the next command and produced `sh: syntax error: unexpected '('`.
+
+The fix is not to parse that string more carefully. **The shell now reads, decides and writes
+without the value ever crossing back into the application**, which removes the whole class of fault
+rather than this instance of it. The same script shape is used to disable.
+
+Both scripts were exercised against a stand-in `settings` before shipping, over the cases that
+matter: an empty list, a repeat run that must not duplicate, a list that already contains somebody
+else's service, removing Kestrel from the middle of three, removing it when it is the only one, and
+removing it when it is already absent. The other services survive every one.
+
 ## 5. Procedure
 
 Nothing here needs a target application. Everything is measured against Kestrel's own window.
@@ -67,8 +93,10 @@ Nothing here needs a target application. Everything is measured against Kestrel'
 1. Install the build. Open Kestrel. Bind Shizuku as usual.
 2. Grant the draw-over-other-apps permission if it has not been granted — the measurement aims a
    touch at an overlay window.
-3. In **Fallback probe**, press **Grant permission**. Record what it says, including whether the
-   permission reads as held afterwards.
+3. In **Fallback probe**, press **Grant permission**. It now reports the **platform's** answer as
+   well as Kestrel's, from `dumpsys`. If the platform lists the permission as granted and Kestrel
+   still says *not held*, close Kestrel from the recent list and open it again — a permission
+   granted to a running process can be cached — then check the line again.
 4. Press **Enable via Shizuku**. Check the two status lines: *in the setting list* and *service
    connected*. Both should become yes within a second or two.
 5. Press **Measure**. A box appears in the middle of the screen. **Do not touch it** — the point is

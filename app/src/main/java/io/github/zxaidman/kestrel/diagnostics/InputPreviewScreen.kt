@@ -689,9 +689,17 @@ private fun FallbackProbeSection(context: android.content.Context) {
             Button(onClick = { status = FallbackProbe.enableWithOwnPermission(context) }) {
                 Text("Enable without shell")
             }
-            Button(onClick = { status = FallbackProbe.disableWithOwnPermission(context) }) {
-                Text("Disable")
-            }
+            Button(
+                onClick = {
+                    // Prefers the shell, because undoing must work even when the grant did not.
+                    val shell = ShizukuCapability.shell()
+                    status = if (shell != null) {
+                        FallbackProbe.disableViaShell(context, shell)
+                    } else {
+                        FallbackProbe.disableWithOwnPermission(context)
+                    }
+                },
+            ) { Text("Disable") }
             Button(
                 onClick = {
                     context.startActivity(

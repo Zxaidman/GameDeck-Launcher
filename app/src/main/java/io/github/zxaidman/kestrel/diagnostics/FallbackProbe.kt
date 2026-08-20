@@ -90,20 +90,48 @@ public object FallbackProbe {
      * **Appends rather than replaces.** The setting is a shared list, and writing only Kestrel into
      * it would silently switch off every accessibility service the user actually depends on. That
      * is not an acceptable side effect of a diagnostic.
+     *
+     * **The append happens inside the shell**, and that is the whole point of the shape of this.
+     * The first attempt read the current list into Kotlin, edited it there and wrote it back — and
+     * `exec` returns *human-readable* text, so an empty setting came back as the literal string
+     * `(no output, exit=0)`, which was then written into the next command and produced
+     * `sh: syntax error: unexpected '('`. A value that is formatted for a person cannot be parsed
+     * as data, and the fix is not to parse it more carefully but to never round-trip it: the shell
+     * reads, decides and writes without the value ever crossing back.
      */
     public fun enableViaShell(context: Context, shell: IPrivilegedShell): String {
         val mine = component(context)
-        val existing = runCatching { shell.exec("settings get secure enabled_accessibility_services", 4000) }
-            .getOrDefault("")
-            .trim()
-            .let { if (it == "null") "" else it }
-        val parts = existing.split(':').filter { it.isNotBlank() }
-        val updated = (parts + mine).distinct().joinToString(":")
-        return buildString {
-            appendLine(shell.exec("settings put secure enabled_accessibility_services $updated", 4000))
-            appendLine(shell.exec("settings put secure accessibility_enabled 1", 4000))
-            append("Requested: $updated")
-        }
+        val script = listOf(
+            "COMP='$mine'",
+            "CUR=\$(settings get secure enabled_accessibility_services)",
+            "[ \"\$CUR\" = null ] && CUR=''",
+            "case \":\$CUR:\" in",
+            "  *\":\$COMP:\"*) NEW=\"\$CUR\" ;;",
+            "  *) [ -z \"\$CUR\" ] && NEW=\"\$COMP\" || NEW=\"\$CUR:\$COMP\" ;;",
+            "esac",
+            "settings put secure enabled_accessibility_services \"\$NEW\"",
+            "settings put secure accessibility_enabled 1",
+            "echo \"list is now: \$(settings get secure enabled_accessibility_services)\"",
+        ).joinToString("\n")
+        return runCatching { shell.exec(script, 6000) }
+            .getOrElse { "failed: ${it.javaClass.simpleName}" }
+    }
+
+    /** Takes Kestrel back out of the list through the shell, leaving every other service alone. */
+    public fun disableViaShell(context: Context, shell: IPrivilegedShell): String {
+        val mine = component(context)
+        val script = listOf(
+            "COMP='$mine'",
+            "CUR=\$(settings get secure enabled_accessibility_services)",
+            "[ \"\$CUR\" = null ] && CUR=''",
+            // tr and sed rather than paste: the platform's shell is toybox, and reaching for a
+            // tool that may not be there would fail at the moment a user is trying to undo this.
+            "NEW=\$(echo \"\$CUR\" | tr ':' '\\n' | grep -v -x \"\$COMP\" | tr '\\n' ':' | sed 's/:*\$//')",
+            "settings put secure enabled_accessibility_services \"\$NEW\"",
+            "echo \"list is now: \$(settings get secure enabled_accessibility_services)\"",
+        ).joinToString("\n")
+        return runCatching { shell.exec(script, 6000) }
+            .getOrElse { "failed: ${it.javaClass.simpleName}" }
     }
 
     /**
@@ -114,14 +142,21 @@ public object FallbackProbe {
      * does not have it.
      */
     public fun grantWriteSecureSettings(context: Context, shell: IPrivilegedShell): String {
-        val out = runCatching {
-            shell.exec(
-                "pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS",
-                6000,
-            )
-        }.getOrElse { "failed: ${it.javaClass.simpleName}" }
+        val pkg = context.packageName
+        // The platform's own answer as well as ours. Kestrel's view of its permissions is cached in
+        // this process, so a fresh grant can read as absent here while being present in the package
+        // manager — and the two disagreeing is itself worth seeing rather than hiding.
+        val script = listOf(
+            "pm grant $pkg android.permission.WRITE_SECURE_SETTINGS 2>&1",
+            "echo '--- platform says:'",
+            "dumpsys package $pkg | grep -i WRITE_SECURE_SETTINGS || echo '(not listed)'",
+        ).joinToString("\n")
+        val out = runCatching { shell.exec(script, 8000) }
+            .getOrElse { "failed: ${it.javaClass.simpleName}" }
         val held = holdsWriteSecureSettings(context)
-        return "pm grant said: ${out.trim().ifBlank { "(nothing)" }}\nHeld now: ${if (held) "yes" else "no"}"
+        return out.trim() + "\n--- Kestrel says: " + (if (held) "held" else "not held") +
+            if (held) "" else "\nIf the platform lists it as granted but Kestrel does not, close " +
+                "Kestrel from the recent list and open it again."
     }
 
     /** Turns the service on using Kestrel's own permission, with no shell involved. */

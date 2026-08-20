@@ -405,6 +405,35 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Fallback — Two Faults In The Probe, Found On Its First Run
+
+Neither was a finding about the fallback. Both were the probe being wrong, which is worth recording
+because a probe that reports its own fault as the subject's fault is worse than no probe.
+
+**`pm grant` succeeded and granted nothing.** `WRITE_SECURE_SETTINGS` is
+`signature|privileged|development`, and the `development` flag is what lets a shell hand it over —
+**but only to an application that has asked for it.** Kestrel never declared it, so the grant had
+nothing to act on: it exited zero, printed nothing, and the permission stayed absent, which read
+exactly like the platform refusing. It is declared now, and the grant reports the platform's own
+answer from `dumpsys` alongside Kestrel's, because a permission granted to a running process can be
+cached and the two disagreeing is itself worth seeing.
+
+**A value formatted for a person was parsed as data.** The enable route read the accessibility list
+into Kotlin, edited it and wrote it back — and `exec` returns human-readable text, so an empty
+setting came back as the literal string `(no output, exit=0)`, which went into the next command and
+produced `sh: syntax error: unexpected '('`.
+
+The fix is not to parse that string more carefully. **The shell now reads, decides and writes
+without the value ever crossing back into the application.** That removes the class of fault rather
+than the instance, and the same shape does the disable. `paste` was avoided in favour of `tr` and
+`sed`: the platform's shell is toybox, and reaching for a tool that might not be there would fail at
+the moment a user is trying to undo this.
+
+Both scripts were exercised against a stand-in `settings` before shipping, over every case that
+matters — an empty list, a repeat that must not duplicate, a list already holding someone else's
+service, removal from the middle of three, removal when Kestrel is the only entry, and removal when
+it is already absent. Other services survive all six.
+
 ### Fallback — A Probe Before A Backend
 
 `ADR-006` chose touch simulation through an accessibility service as the direction for a user
