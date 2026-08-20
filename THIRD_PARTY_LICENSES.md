@@ -29,6 +29,37 @@ If the license is unclear, do not merge the dependency until it has been reviewe
 
 ---
 
+## Bundled Assets
+
+Artwork and other non-code material distributed with Kestrel, or held in the repository pending a
+decision. Tracked here for the same reason dependencies are: what ships must have terms on the
+record.
+
+### Xelu's Free Controller Prompts
+
+| | |
+| --- | --- |
+| **Author** | Nicolae "Xelu" Berbece — Those Awesome Guys |
+| **Licence** | **CC0 1.0** — public domain dedication |
+| **Licence text** | `docs/inbox/skins/LICENSE.txt`, as shipped with the pack |
+| **In the repository at** | `docs/inbox/skins/` — 233 files, 256×256 PNG |
+| **Distributed in Kestrel** | **Not yet.** Assessed and cleared; moves to `data/` when a skin format exists (`docs/SKIN_ASSETS.md`) |
+
+CC0 imposes no notice or attribution requirement, and there is no copyleft conflict with GPLv3. The
+author asks to be credited and says explicitly that he does not mind if he is not. **Kestrel credits
+him anyway** — taking someone's work and not naming them is a choice about this project rather than
+about the licence, and the licence permitting it does not make it the right thing to do.
+
+Attribution appears wherever a skin drawn from this pack is shown, and here.
+
+*Separate from the licence:* the pack draws shapes associated with hardware vendors, which is a
+trademark question that a licence on the files does not answer. `docs/SKIN_ASSETS.md` records the
+position. Kestrel presents its own device identity rather than another vendor's
+(`docs/CONTROLLER_FAMILIES.md` §2), so a skin drawing familiar glyphs is not a device claiming to be
+someone else's hardware.
+
+---
+
 ## Dependency Categories
 
 The project should track at least:

@@ -2,7 +2,7 @@
 
 **Document:** `docs/SKIN_ASSETS.md`  
 **Status:** Active — assessment of the artwork now in the repository, and the conventions it implies  
-**Source material:** `docs/phase0/results/inbox/Skins/` (233 files, pushed by the project owner)  
+**Source material:** `docs/inbox/skins/` (233 files, pushed by the project owner)  
 
 ---
 
@@ -89,23 +89,37 @@ alternative rather than a conversion target — the whole pack is 1.4 MB, which 
 trading a lossless, universally-inspectable format for. Recorded so nobody "optimises" it later
 without a reason.
 
-### Provenance and licence — known origin, terms still unconfirmed
+### Provenance and licence — resolved
 
-Kestrel is GPLv3 (`ADR-005`) and `THIRD_PARTY_LICENSES.md` records what everything included is
-under, so anything that ships needs terms on the record.
+**The licence is CC0.** The pack is *Xelu's Free Controller Prompts* by **Nicolae "Xelu" Berbece**
+(Those Awesome Guys). The licence file shipped with it is stored alongside the artwork at
+`docs/inbox/skins/LICENSE.txt`, and states: *"You can use all these assets in any project you want
+to (be it commercial or not). All of the assets are in the public domain under Creative Commons 0
+(CC0)."*
 
-**Origin, as stated by the project owner:** a Reddit post titled *FREE Keyboard and controllers
-prompts pack*. That answers where it came from and does not by itself answer either of the two
-questions that matter:
+That answers the question that was blocking. **CC0 is a public-domain dedication, so redistribution
+inside a GPLv3 application is unencumbered** — there is no copyleft conflict, no notice requirement,
+and no attribution obligation. The author asks to be credited and explicitly says he does not mind
+if he is not; Kestrel will credit him regardless, because taking work and not naming its author is a
+choice about the project rather than about the licence.
 
-- **The licence of these files.** "Free" in a post title is not a licence. Whether these can be
-  redistributed inside a GPLv3 application depends on the terms the author actually attached, and
-  those need to be found and recorded before anything is copied into `data/`.
-- **The shapes themselves.** Drawing a recognisable ✕/○/□/△ or a Switch face layout is a trademark
-  question, not a copyright one, and a permissive licence on the files does not resolve it.
+Recorded in `THIRD_PARTY_LICENSES.md`.
 
-The pack therefore stays in `docs/phase0/results/inbox/`, which is a drop zone rather than a
-distribution path.
+**What CC0 does not answer.** The trademark question is separate and a licence on the files does not
+touch it: drawing a recognisable ✕/○/□/△ or a Switch face arrangement is about marks belonging to
+hardware vendors, not about who owns the drawing. Two things are worth stating precisely.
+
+- The licence resolves **redistribution**. It does not resolve **what the shapes depict**.
+- The pack is used in a long list of commercially released titles, named in its own licence file.
+  That is **context, not a guarantee**, and it is recorded as context.
+
+The practical consequence is small, because `ADR-INPUT-001` already decided Kestrel presents its own
+identity rather than claiming another vendor's (`docs/CONTROLLER_FAMILIES.md` §2). A skin that draws
+familiar glyphs while the device says "Kestrel" is a different thing from a device that claims to be
+someone else's hardware.
+
+**Status: cleared for use.** The pack may move into `data/` once a skin format exists to receive it
+— which, per §2a, comes from building Kestrel's own skin first rather than from this pack's shape.
 
 ---
 
@@ -168,7 +182,7 @@ change, not a controller reconnecting.
 | Set contents as listed in §1 | **Measured** — every file rendered and inspected |
 | No pressed state, no L3/R3, no diagonal d-pad art | **Measured** — by absence across all 233 |
 | 256 px is adequate at the current control sizes | **Reasoned** from the drawn sizes on the reference device |
-| Provenance: a Reddit post, *FREE Keyboard and controllers prompts pack* | **Stated** by the project owner |
-| The licence terms attached to it | **Unconfirmed** — a post title is not a licence |
+| Provenance: *Xelu's Free Controller Prompts*, Nicolae "Xelu" Berbece | **Confirmed** — licence file in the pack |
+| The licence is CC0, so redistribution under GPLv3 is unencumbered | **Confirmed** — `docs/inbox/skins/LICENSE.txt` |
 | Trademark position on the drawn shapes | **Open** — separate question, not answered by a licence |
 | That the skin format is derived from Kestrel's own skin, not from this pack | **Decided** — §2a |

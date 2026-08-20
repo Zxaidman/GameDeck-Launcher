@@ -405,6 +405,45 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Artwork Cleared, And One Inbox Instead Of Three Places
+
+**The skin pack's licence is CC0**, and that was the item blocking it. It is *Xelu's Free Controller
+Prompts* by Nicolae "Xelu" Berbece; the licence file shipped with the pack is stored beside the
+artwork at `docs/inbox/skins/LICENSE.txt`. A public-domain dedication means no copyleft conflict
+with GPLv3, no notice requirement, and no attribution obligation.
+
+**Kestrel credits the author anyway.** The licence permits taking the work without naming him, and
+the author says he does not mind — neither makes it the right thing to do. Recorded in
+`THIRD_PARTY_LICENSES.md`, which gains a *Bundled Assets* section, because the project now carries
+material that is not code and the same rule applies to it: what ships has terms on the record.
+
+**Still separate, still open:** the trademark question. A licence on the files says nothing about
+what the shapes depict. The practical exposure is small because `ADR-INPUT-001` already decided
+Kestrel presents its own device identity rather than another vendor's — a skin drawing familiar
+glyphs is not a device claiming to be someone else's hardware — and the position is written down
+rather than assumed.
+
+**Status: cleared for use**, and still not adopted. Per `docs/SKIN_ASSETS.md` §2a the skin format
+comes from building Kestrel's own skin first, so the pack moves into `data/` when there is a format
+to receive it and not before.
+
+### One Inbox
+
+`docs/inbox/` replaces `docs/phase0/results/inbox/`, which was named for a phase that has finished
+and had been collecting artwork and reports it was never meant to hold. Three folders — `reports/`,
+`ideas/`, `skins/` — and its README says what the inbox is *not*: not a distribution path, and not a
+queue. Nothing ships from it; material moves out only by being adopted into `docs/`, `docs/adr/` or
+`data/`, which is what keeps unassessed or unlicensed content out of the product by construction.
+
+The old path keeps a README pointing at the new one rather than disappearing.
+
+### Confirmed: The Play Protect Block Was The Accessibility Declaration
+
+Measured in both directions now. `0.0.15-dev` added the service declaration and was blocked;
+`0.0.18-dev` removes the service and permission declarations, changes nothing else about how Kestrel
+installs, and scans as *"This app looks safe"*. The block appeared with the declaration and
+disappeared with it, so the attribution in `ADR-006` is measured rather than inferred.
+
 ### Fallback — Measured, Works, Rejected
 
 `ADR-006` is decided. The mechanism was built, measured on the reference device, and **rejected on

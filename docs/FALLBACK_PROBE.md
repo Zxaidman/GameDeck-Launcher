@@ -204,6 +204,10 @@ user to turn that protection off.
 The attribution is clean, because `0.0.15-dev` added the service declaration and `0.0.16-dev` added
 the permission declaration, and the block began with the former.
 
+**Confirmed in both directions.** `0.0.18-dev` removes the declarations and changes nothing else
+about how Kestrel installs; it scans as *"This app looks safe"* and installs normally. The block
+appeared with the declaration and disappeared with it.
+
 This is the cost `ARCHITECTURE.md` §16 asked to be evaluated, arriving as a measurement rather than
 a prediction, and it is paid by **every** user — including every user who never enables the fallback
 — because a manifest declaration is visible at install time whether or not the code ever runs.

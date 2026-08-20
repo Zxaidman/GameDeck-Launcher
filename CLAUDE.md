@@ -331,6 +331,24 @@ Known limitations:
 State plainly when something could not be run — in this repository, "Tests run: none, no build
 system exists yet" is the correct and honest answer.
 
+### Standing reporting convention
+
+Requested by the project owner, and binding on every reply rather than on milestones.
+
+- **Say where the roadmap stands.** Every reply ends with the current position in the phase list of
+  §6, what moved this time, and what is next. A reader should never have to ask "so where are we".
+- **`CHANGELOG.md` at the repository root is the record**, and it is updated in the same commit as
+  the work it describes — never afterwards, never in a batch. It carries what was *established*,
+  including what was established to be false.
+- **Report outcomes by kind, and separately.** A reply distinguishes:
+  - **Success** — what now works, and what evidence says so.
+  - **Failure** — what did not work, including a failure of the agent's own making. A failed
+    experiment is a result and is written down as one.
+  - **Warning** — something that works but carries a cost, a limit, or an assumption not yet tested.
+  - **Do / Do not** — what follows for anyone working here next, when the work produced a rule.
+- **Never let a good outcome bury a caveat.** If something works on one device, in one firmware,
+  once, the reply says so in the same breath as the result.
+
 ---
 
 ## 9. Principle

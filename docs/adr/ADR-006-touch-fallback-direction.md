@@ -163,7 +163,12 @@ service in the manifest changed how Kestrel installs: `0.0.14-dev` sideloaded wi
 unknown-source warning, and `0.0.15-dev` — which added the service and nothing else relevant — is
 **blocked by Play Protect**, requiring the user to switch that protection off. A manifest
 declaration is visible at install time whether the code ever runs or not, so the whole audience pays
-it for a capability a subset would use. This is exactly the *distribution-policy implication* that
+it for a capability a subset would use.
+
+**Confirmed in both directions.** `0.0.18-dev`, which removes the service and permission
+declarations and changes nothing else about how Kestrel installs, scans as *"This app looks safe"*
+and installs normally. The block appeared with the declaration and disappeared with it, so the
+attribution is measured rather than inferred. This is exactly the *distribution-policy implication* that
 `ARCHITECTURE.md` §16 required to be evaluated, arriving as a measurement.
 
 Weighed together: a working mechanism, delivering a weaker product, with per-target calibration
