@@ -48,6 +48,8 @@ import io.github.zxaidman.kestrel.core.profile.TargetDescriptor
 import io.github.zxaidman.kestrel.core.profile.matchProfile
 import io.github.zxaidman.kestrel.platform.session.ControllerSessionService
 import io.github.zxaidman.kestrel.platform.session.SessionState
+import io.github.zxaidman.kestrel.platform.settings.AppSettings
+import io.github.zxaidman.kestrel.platform.storage.KestrelStorage
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 import kotlinx.coroutines.delay
 import kotlin.math.min
@@ -210,17 +212,17 @@ public fun InputPreviewScreen(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var deadzone by remember { mutableStateOf(0.10f) }
-    var curve by remember { mutableStateOf(1.0f) }
-    var sensitivity by remember { mutableStateOf(1.0f) }
-    var invertY by remember { mutableStateOf(false) }
+    // The shaping is the settings document's, not this screen's. It used to be four `remember`s,
+    // which is why every run started by setting it up again.
+    val profile = AppSettings.current.value.stickProfile
+    val deadzone = profile.deadzone.toFloat()
+    val curve = profile.curve.toFloat()
+    val sensitivity = profile.sensitivity.toFloat()
+    val invertY = profile.invertY
 
-    val profile = AnalogProfile(
-        deadzone = deadzone.toDouble(),
-        curve = curve.toDouble(),
-        sensitivity = sensitivity.toDouble(),
-        invertY = invertY,
-    )
+    fun shape(change: (AnalogProfile) -> AnalogProfile) {
+        AppSettings.update { it.copy(stickProfile = change(it.stickProfile)) }
+    }
 
     // Everything below reads the platform and Shizuku, neither of which is snapshot state, so
     // nothing recomposed and the screen only updated when it was recreated from scratch — which is
@@ -275,6 +277,8 @@ public fun InputPreviewScreen(
                 },
             )
         }
+
+        StorageSection(context)
 
         Section("Controller session") {
             Mono(
@@ -365,7 +369,9 @@ public fun InputPreviewScreen(
                     // Applied to the windows already on screen rather than by putting them up
                     // again, so a control being held is not dropped mid-press.
                     SessionState.overlay?.resize(it)
+                    AppSettings.update { s -> s.copy(controlScale = it.toDouble()) }
                 },
+                onValueChangeFinished = { AppSettings.persist(context) },
                 valueRange = io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MIN_SCALE
                     ..io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MAX_SCALE,
             )
@@ -447,17 +453,40 @@ public fun InputPreviewScreen(
         }
 
         Section("Shaping") {
-            Labelled("Dead zone", deadzone) { deadzone = it }
-            Slider(value = deadzone, onValueChange = { deadzone = it }, valueRange = 0f..0.5f)
-            Labelled("Curve", curve) { curve = it }
-            Slider(value = curve, onValueChange = { curve = it }, valueRange = 0.4f..3f)
-            Labelled("Sensitivity", sensitivity) { sensitivity = it }
-            Slider(value = sensitivity, onValueChange = { sensitivity = it }, valueRange = 0.5f..2.5f)
+            // Written when a drag ends rather than on every frame of it: a slider produces a value
+            // per frame, and sixty writes for one decision is sixty writes to the user's storage.
+            Labelled("Dead zone", deadzone)
+            Slider(
+                value = deadzone,
+                onValueChange = { v -> shape { it.copy(deadzone = v.toDouble()) } },
+                onValueChangeFinished = { AppSettings.persist(context) },
+                valueRange = 0f..0.5f,
+            )
+            Labelled("Curve", curve)
+            Slider(
+                value = curve,
+                onValueChange = { v -> shape { it.copy(curve = v.toDouble()) } },
+                onValueChangeFinished = { AppSettings.persist(context) },
+                valueRange = 0.4f..3f,
+            )
+            Labelled("Sensitivity", sensitivity)
+            Slider(
+                value = sensitivity,
+                onValueChange = { v -> shape { it.copy(sensitivity = v.toDouble()) } },
+                onValueChangeFinished = { AppSettings.persist(context) },
+                valueRange = 0.5f..2.5f,
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Switch(checked = invertY, onCheckedChange = { invertY = it })
+                Switch(
+                    checked = invertY,
+                    onCheckedChange = { v ->
+                        shape { it.copy(invertY = v) }
+                        AppSettings.persist(context)
+                    },
+                )
                 Mono("Invert Y")
             }
             Mono(
@@ -615,6 +644,80 @@ private fun Mono(text: String) {
 }
 
 @Composable
-private fun Labelled(label: String, value: Float, onChange: (Float) -> Unit) {
+private fun Labelled(label: String, value: Float) {
     Mono("$label  %.2f".format(value))
+}
+
+/**
+ * Where Kestrel keeps what the user made, and the one action that moves it somewhere lasting.
+ *
+ * Placed near the top of the screen rather than buried in a settings page, because until it is
+ * answered every layout, profile and setting is one uninstall away from being gone — and the whole
+ * point of asking is that the user should not discover that afterwards.
+ */
+@Composable
+private fun StorageSection(context: android.content.Context) {
+    var refresh by remember { mutableStateOf(0) }
+    val chosen = remember(refresh) { KestrelStorage.usingChosenFolder(context) }
+    val store = remember(refresh) { KestrelStorage.current(context) }
+
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val tree = result.data?.data
+        if (tree == null) {
+            AppSettings.message.value = "No folder was chosen, so nothing changed."
+        } else {
+            AppSettings.message.value = when (val outcome = KestrelStorage.useFolder(context, tree)) {
+                is io.github.zxaidman.kestrel.core.common.Outcome.Success -> outcome.value
+                is io.github.zxaidman.kestrel.core.common.Outcome.Failure -> outcome.error.message
+            }
+            AppSettings.reload(context)
+            refresh += 1
+        }
+    }
+
+    Section("Files") {
+        Mono(
+            "Kept in: ${store.description}\n" +
+                if (chosen) {
+                    "Everything here survives uninstalling Kestrel, and can be copied in a file " +
+                        "manager or on a computer."
+                } else {
+                    "This is inside Android/data, which a file manager cannot open and which is " +
+                        "deleted when Kestrel is uninstalled. Choose a folder to keep your work."
+                }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(onClick = { picker.launch(KestrelStorage.folderPicker()) }) {
+                Text(if (chosen) "Change folder" else "Choose folder")
+            }
+            if (chosen) {
+                Button(
+                    onClick = {
+                        AppSettings.message.value = KestrelStorage.forgetFolder(context)
+                        AppSettings.reload(context)
+                        refresh += 1
+                    },
+                ) { Text("Stop using it") }
+            }
+            Button(
+                onClick = {
+                    AppSettings.reload(context)
+                    refresh += 1
+                },
+            ) { Text("Reload") }
+        }
+        if (!chosen) {
+            Mono(
+                "\nMake a folder called ${KestrelStorage.SUGGESTED_FOLDER_NAME} at the top level " +
+                    "of your storage — beside Android, not inside it — and pick that. Anything " +
+                    "already saved is copied into it."
+            )
+        }
+        if (AppSettings.message.value.isNotBlank()) Mono("\n" + AppSettings.message.value)
+    }
 }

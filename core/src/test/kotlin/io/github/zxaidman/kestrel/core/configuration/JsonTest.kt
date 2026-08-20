@@ -157,3 +157,71 @@ class JsonTest {
         assertEquals("Example", (ConfigReader.text(obj, "name") as Outcome.Success).value)
     }
 }
+
+/** Writing, and the property that matters most: what is written reads back as what it was. */
+class JsonWriteTest {
+
+    private fun roundTrip(text: String): ConfigNode {
+        val first = Json.parse(text)
+        assertTrue(first is Outcome.Success, "could not parse `$text`: $first")
+        val node = (first as Outcome.Success).value
+        val written = Json.write(node)
+        val second = Json.parse(written)
+        assertTrue(second is Outcome.Success, "could not parse what was written:\n$written\n$second")
+        assertEquals(node, (second as Outcome.Success).value, "round trip changed the document")
+        return node
+    }
+
+    @Test
+    fun `a document survives being written and read again`() {
+        roundTrip("""{"a": 1, "b": [true, false, null], "c": {"d": "text"}, "e": 0.125}""")
+    }
+
+    @Test
+    fun `empty containers survive`() {
+        roundTrip("""{"a": {}, "b": []}""")
+    }
+
+    @Test
+    fun `text that needs escaping survives`() {
+        roundTrip(""" {"a": "quote \" backslash \\ newline \n tab \t"} """)
+    }
+
+    @Test
+    fun `text outside ASCII survives and is written as itself`() {
+        // A layout named in the author's own language should look like it in the file.
+        val node = roundTrip("""{"name": "Manette — français"}""")
+        assertTrue(Json.write(node).contains("Manette — français"), Json.write(node))
+    }
+
+    @Test
+    fun `a whole number is written without a decimal point`() {
+        // A layout full of 0.104 and 1.0 reads as though one of them is special.
+        assertEquals("1", Json.write(ConfigNode.Num(1.0)))
+        assertEquals("0", Json.write(ConfigNode.Num(0.0)))
+        assertEquals("-3", Json.write(ConfigNode.Num(-3.0)))
+        assertEquals("0.125", Json.write(ConfigNode.Num(0.125)))
+    }
+
+    @Test
+    fun `output is indented, because these files are meant to be opened by hand`() {
+        val written = Json.write(ConfigNode.Obj(mapOf("a" to ConfigNode.Num(1.0))))
+        assertEquals("{\n  \"a\": 1\n}", written)
+    }
+
+    @Test
+    fun `field order is the order it was read in, not sorted`() {
+        // Sorting would reorder somebody else's file every time Kestrel touched it.
+        val text = """{"zebra": 1, "apple": 2}"""
+        val node = (Json.parse(text) as Outcome.Success).value
+        assertTrue(Json.write(node).indexOf("zebra") < Json.write(node).indexOf("apple"))
+    }
+
+    @Test
+    fun `the shipped built-in survives a round trip through this writer`() {
+        // The strongest form of the promise: the document Kestrel ships is one Kestrel can rewrite.
+        val text = Json::class.java.getResourceAsStream("/layouts/builtin.xbox.default.json")!!
+            .use { it.readBytes().decodeToString() }
+        roundTrip(text)
+    }
+}

@@ -21,6 +21,7 @@ minSdk = "29"
 composeBom = "2026.05.01"
 coreKtx = "1.17.0"
 activityCompose = "1.12.4"
+documentFile = "1.1.0"
 lifecycleRuntimeKtx = "2.9.4"
 
 # Testing.
@@ -37,6 +38,7 @@ shizuku = "13.1.5"
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentFile" }
 
 # Compose versions come from the BOM, so the individual artifacts carry no version.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

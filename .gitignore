@@ -26,6 +26,10 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+# Except the testing key, which is deliberately committed so a new build installs *over* the last
+# one instead of forcing an uninstall that takes every permission and setting with it. It is not a
+# secret and must never be used for a release — signing/README.md says why.
+!signing/kestrel-testing.p12
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json

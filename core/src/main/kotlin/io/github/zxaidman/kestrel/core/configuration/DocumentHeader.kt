@@ -9,6 +9,15 @@ public enum class DocumentType(public val wireName: String) {
     SKIN("skin"),
     GAMING_PROFILE("gaming-profile"),
     MANUAL_APPLICATION("manual-application"),
+
+    /**
+     * The one-per-installation document.
+     *
+     * A document like the rest, rather than a private key-value store, because it lives in the
+     * folder the user chose and is meant to be readable, editable and copyable there. Settings that
+     * can only be changed through the application are settings that vanish with the application.
+     */
+    SETTINGS("settings"),
     ;
 
     public companion object {

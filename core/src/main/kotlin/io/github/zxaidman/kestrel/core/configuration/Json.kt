@@ -192,6 +192,104 @@ public object Json {
         }
     }
 
+    /**
+     * Writes a node back out as JSON.
+     *
+     * The counterpart to [parse], and required by the same rule that required the parser: a
+     * document Kestrel exports must be one Kestrel can read back, and the only way to know that is
+     * to be able to do both in a test rather than on a phone.
+     *
+     * Indented, always. These files are meant to be opened, read and edited by hand in the folder
+     * the user chose — that is most of the reason the folder is where it is — and a document
+     * written as one long line is a document nobody will edit.
+     */
+    public fun write(node: ConfigNode, indent: Int = 2): String =
+        StringBuilder().also { render(node, it, indent, 0) }.toString()
+
+    private fun render(node: ConfigNode, out: StringBuilder, indent: Int, depth: Int) {
+        when (node) {
+            is ConfigNode.Null -> out.append("null")
+            is ConfigNode.Bool -> out.append(if (node.value) "true" else "false")
+            is ConfigNode.Num -> out.append(number(node.value))
+            is ConfigNode.Text -> escape(node.value, out)
+
+            is ConfigNode.Arr -> if (node.items.isEmpty()) {
+                out.append("[]")
+            } else {
+                out.append("[")
+                node.items.forEachIndexed { at, item ->
+                    if (at > 0) out.append(",")
+                    newline(out, indent, depth + 1)
+                    render(item, out, indent, depth + 1)
+                }
+                newline(out, indent, depth)
+                out.append("]")
+            }
+
+            is ConfigNode.Obj -> if (node.fields.isEmpty()) {
+                out.append("{}")
+            } else {
+                out.append("{")
+                var first = true
+                // Insertion order, which for a document that was read and is being written back is
+                // the order the author had. Sorting would reorder somebody else's file every time
+                // Kestrel touched it.
+                node.fields.forEach { (key, value) ->
+                    if (!first) out.append(",")
+                    first = false
+                    newline(out, indent, depth + 1)
+                    escape(key, out)
+                    out.append(": ")
+                    render(value, out, indent, depth + 1)
+                }
+                newline(out, indent, depth)
+                out.append("}")
+            }
+        }
+    }
+
+    private fun newline(out: StringBuilder, indent: Int, depth: Int) {
+        if (indent <= 0) return
+        out.append("\n")
+        repeat(indent * depth) { out.append(' ') }
+    }
+
+    /**
+     * A number in the shortest form that reads back as the same value.
+     *
+     * `1.0` is written as `1`, because a layout full of `0.104` and `1.0` reads as though one of
+     * them is special. Anything not finite is refused rather than written: JSON has no `NaN`, and
+     * writing one would produce a file this reader would reject.
+     */
+    private fun number(value: Double): String {
+        require(value.isFinite()) { "a document cannot hold $value" }
+        return if (value == value.toLong().toDouble() && kotlin.math.abs(value) < 1e15) {
+            value.toLong().toString()
+        } else {
+            value.toString()
+        }
+    }
+
+    private fun escape(text: String, out: StringBuilder) {
+        out.append('"')
+        text.forEach { c ->
+            when {
+                c == '"' -> out.append("\\\"")
+                c == '\\' -> out.append("\\\\")
+                c == '\n' -> out.append("\\n")
+                c == '\r' -> out.append("\\r")
+                c == '\t' -> out.append("\\t")
+                c == '\b' -> out.append("\\b")
+                c == '\u000C' -> out.append("\\f")
+                // Everything else printable is written as itself, including anything outside ASCII:
+                // a layout named in the author's own language should look like it in the file.
+                c < ' ' -> out.append("\\u%04x".format(c.code))
+                else -> out.append(c)
+            }
+        }
+        out.append('"')
+    }
+
     private val NUMBER = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?")
 
     private fun Char.isJsonWhitespace(): Boolean =

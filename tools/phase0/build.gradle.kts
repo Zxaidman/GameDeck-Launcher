@@ -27,8 +27,20 @@ android {
         versionName = "phase0-0.0.17"
     }
 
+    // The same committed testing key as the product, so the harness updates in place too rather
+    // than being uninstalled and reinstalled. signing/README.md says why it is committed.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("signing/kestrel-testing.p12")
+            storePassword = "kestrel-testing"
+            keyAlias = "kestrel-testing"
+            keyPassword = "kestrel-testing"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
         }
     }

@@ -25,6 +25,7 @@ import io.github.zxaidman.kestrel.diagnostics.DiagnosticReport
 import io.github.zxaidman.kestrel.diagnostics.ExportState
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewScreen
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewState
+import io.github.zxaidman.kestrel.platform.settings.AppSettings
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 import java.io.File
 
@@ -102,6 +103,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Before anything reads a setting. Kestrel had never kept one, so every run began by
+        // setting the same things up again and an uninstall lost them for good.
+        AppSettings.ensureLoaded(this)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=

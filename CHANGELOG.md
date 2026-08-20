@@ -405,6 +405,122 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### One Signing Key, So An Install Is An Update
+
+Reinstalling meant granting every permission again and losing every setting, and the cause was not
+the settings — it was the **signature**. Android treats a signature as an application's identity, so
+two builds signed by different keys are two different applications and the second cannot install
+over the first. Gradle's default debug config generates a keystore on the machine that builds, and a
+CI runner is a fresh machine every time, so **every build was signed by a different key**. The
+workflow's own release notes had been saying so: *"signed with a per-machine debug key, so a newer
+build may not count as an update."*
+
+`signing/kestrel-testing.p12` is committed, and both modules use it. Verified rather than assumed —
+`apksigner` reports the same certificate for both APKs:
+
+```text
+Signer #1 certificate DN: CN=Kestrel Testing Key, OU=Testing, O=Kestrel
+SHA-256: 69d5958dc3fda5d46a53280b7365ea6e74c085f88703f63acab7b8515d7a4f95
+```
+
+**The key is public and must never sign a release.** Anyone can use it to sign an application that
+installs *as an update* over a user's Kestrel — acceptable for builds people are testing
+deliberately, unacceptable for builds people are trusting. `signing/README.md` carries the reasoning
+and the steps for a real key; `docs/RELEASE.md` makes it a gate.
+
+**One more uninstall is needed.** The key changed, so this build cannot install over one signed by
+the old per-machine key. From the next one onwards, installs are updates.
+
+### Files Live Where The User Can Reach Them
+
+**Everything Kestrel keeps now goes in a folder the user chooses, at the top level of shared storage
+— beside `Android`, not inside it.** It survives uninstalling Kestrel, opens in a file manager, and
+copies to a computer like any other folder. `docs/STORAGE.md` is the decision.
+
+The alternative was `MANAGE_EXTERNAL_STORAGE`: access to every file on the phone, a restricted
+permission, and an unknown install-time cost. Having just watched a manifest declaration turn
+Kestrel into an application Play Protect blocks outright (`ADR-006`), a second restricted
+declaration is not something to add on a hunch. **The Storage Access Framework grants one folder,
+declares nothing, and asks a question whose answer is exactly the folder the user wanted.**
+
+One consequence stated plainly: on Android 11 and later the picker will not allow selecting the root
+of shared storage itself. A folder inside it — `Kestrel` — is selectable, which is what was wanted.
+
+**Never required.** With no folder chosen Kestrel keeps working from its own directory and says on
+screen that what it writes there dies with an uninstall — `docs/DEGRADED_STATE.md` §2, the
+application does not refuse to start because something is unavailable. Choosing a folder **copies
+what is already there into it**, because starting somebody's settings again from defaults as a
+reward for answering a question would be a punishment for answering it.
+
+`core/storage/DocumentStore` is the interface, with a memory implementation that the tests describe
+the promises against, and two platform implementations behind it. Folder names are a **fixed list**
+rather than paths — a security property, since an imported document that could choose its own path
+could choose one outside the folder. Document names are validated before reaching a filesystem: no
+separators, no `..`, nothing over 96 characters, and none of the names Windows reserves, because
+copying the folder to a computer is supported and a file that cannot be copied is one that quietly
+does not get backed up.
+
+Two faults were designed out rather than found later, both specific to the framework: `createFile`
+invents a new name when one is taken — `settings (1).json` — so a blind create would leave the real
+file untouched while appearing to succeed; and an output stream opened without `"wt"` leaves the
+tail of a longer document behind a shorter one, producing a file that parses as neither.
+
+### Settings Are A Document, And Therefore Survive
+
+Kestrel had never kept a setting. Control size and stick shaping were adjusted, used, and lost when
+the process ended — which is why every test run began by setting the same things up again.
+
+`settings.json` is a configuration document with a schema version, in the chosen folder, beside the
+layouts. Readable, editable by hand, copyable to another phone, and kept when Kestrel is
+uninstalled. **Settings that can only be changed from inside the application are settings that
+disappear with the application.**
+
+Three behaviours that are decisions:
+
+- **A file that cannot be read is left alone.** Kestrel runs on defaults, says so, and refuses to
+  save over it. A file that failed to parse may be one the user can fix; replacing it with defaults
+  would destroy the only copy while looking like recovery.
+- **Fields Kestrel does not recognise are written back**, so a settings file from a newer build read
+  and saved by an older one keeps what the older one did not understand.
+- **Writing is deliberate.** A slider produces a value every frame; state changes as it is dragged
+  and is persisted when the drag ends, so one decision is one write.
+
+`:core` tests: **181, all passing.** All of it is untested on a device — the picker, the grant, and
+whether the folder survives an uninstall are the next things to find out.
+
+### The Game Stage Spec, Assessed
+
+`docs/inbox/ideas/Game-stage-and-veiwport/ASSESSMENT.md`. The spec asks in its §18 for conflicts to
+be flagged in a specific form rather than worked around, and there is one.
+
+**Kestrel cannot place an external application's picture inside a rectangle it controls.** The
+spec's viewport is *"the actual game/application display rectangle inside the Game Stage"*, and for
+every target Kestrel launches, that window is drawn by the platform at the size the platform gives
+it. `ARCHITECTURE.md` §22 and `CLAUDE.md` §5 already say so; the spec is written from desktop
+frontend conventions, where the frontend owns the surface the game draws into. On Android it does
+not and cannot be given it.
+
+The minimal change is an **inversion**, and most of the spec survives it: instead of a container
+that positions the game, the stage becomes a description of where the picture is expected to be, and
+therefore where Kestrel's own controls and art go around it. Aspect ratio and alignment become a
+prediction of the letterbox a target will produce rather than something imposed on it. What does not
+survive is Fill, Stretch and Integer Scaling as things Kestrel applies — those belong to the target,
+and most emulators already expose them.
+
+Nothing is being built from it. It lands in Phase 4 and needs a session that can launch a target,
+which does not exist.
+
+### Release Criteria Recorded
+
+`docs/RELEASE.md`. The project owner's gate for `v0.1.0`: overlay, controller editor, gaming session
+and Shizuku finished, CI green, no known defect outstanding. Tagging `v*` already publishes a
+release with both APKs attached, so the mechanism exists.
+
+Three things are recorded as also required, because they are the difference between a build for one
+person and a build for anyone: a release key that is **not** in this repository, release notes that
+say `ADR-INPUT-001` is scoped to one device, and a compatibility document reflecting what was tested
+rather than what is expected to work.
+
 ### Phase 2 — A Layout Is A Document Now
 
 The arrangement of controls lived in a Kotlin file, and that one fact was blocking three phases of
