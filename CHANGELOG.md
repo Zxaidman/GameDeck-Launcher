@@ -405,6 +405,50 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Fallback — First Results, And A Cost That Is Not About The Fallback
+
+Reference device, `0.0.16-dev`. Three measurements, one of them about how Kestrel installs rather
+than about input.
+
+**The permission grant works.** `pm grant` through the Shizuku shell succeeded, `dumpsys` reports
+`WRITE_SECURE_SETTINGS: granted=true`, and Kestrel reads it as held in the same session with no
+restart. The project owner's own suggestion — a one-time grant so the fallback can be enabled later
+with Shizuku not running — is **confirmed**.
+
+**Writing the accessibility list does not take, by either route.** Through the shell, the script's
+own read-back reported `list is now: null`. Through Kestrel's granted permission,
+`Settings.Secure.putString` reported success and the list stayed empty. Both routes claim success
+and neither changes anything, which is the failure mode that looks most like working code.
+
+It is not the script this time: it was exercised against a stand-in `settings` over six cases before
+shipping, and a mis-formed write would read back as empty rather than as `null`. `null` means the
+key is absent, so the write was reverted or refused. Two candidates — the platform's *restricted
+settings* block on sideloaded applications, or the OEM layer protecting this particular setting —
+and **neither is confirmed**. Enabling the service by hand is the test that separates them, and it
+has not been run.
+
+**Nothing was measured.** The service never connected, so latency, drag resolution, and behaviour
+under Kestrel's overlay all remain unknown.
+
+**And the finding that is not about the fallback: declaring the service changed how Kestrel
+installs.** Up to `0.0.14-dev`, sideloading gave the ordinary unknown-source warning and proceeded.
+`0.0.15-dev` — which added the accessibility service and nothing else relevant — is **blocked by
+Play Protect**: *"App blocked to protect your device."* Installing now requires turning that
+protection off.
+
+The attribution is clean: the service arrived in `0.0.15-dev`, the permission in `0.0.16-dev`, and
+the block began with the former. This is the distribution cost `ARCHITECTURE.md` §16 asked to be
+evaluated, arriving as a measurement rather than a prediction — and it is paid by **every** user,
+including everyone who never enables the fallback, because a manifest declaration is visible at
+install time whether or not the code ever runs.
+
+**The ceiling, recorded next to the results because it bounds what a good outcome could have been.**
+Without a privileged shell there is no way for an application to deliver controller input to another
+application: creating a device needs shell or root, `injectInputEvent` needs a signature permission,
+and an accessibility service dispatches touches and nothing else. The best imaginable result was
+never "Kestrel works without Shizuku" — it was "Kestrel's layout can press an emulator's own
+on-screen buttons", a puppet layer over controls the target already draws.
+
 ### Fallback — Two Faults In The Probe, Found On Its First Run
 
 Neither was a finding about the fallback. Both were the probe being wrong, which is worth recording
