@@ -405,6 +405,55 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — The Stick Press Lives On The Stick
+
+The project owner asked for something that sounds like a layout preference and is not: **hold `L3`,
+slide onto the stick, and have both stay live**, because some titles need a stick press held while
+the stick is moving.
+
+It could not be done with `L3` in its own window, and the reason is worth recording rather than
+rediscovering. **A pointer belongs to the window that received its touch-down and stays there for
+the life of the gesture.** `FLAG_SPLIT_TOUCH` lets a *new* finger reach a *different* window; it
+does not hand an existing finger over. So a press button in a window of its own can be held, or the
+stick can be moved, and never both by one thumb — no amount of care in the touch handler changes
+that, because the second window never sees the finger at all.
+
+**The press therefore shares the stick's window**, in a strip on the inner side, and two rules
+follow:
+
+- **The press latches to its finger, not to its area.** Sliding off does not release it; only
+  lifting does. Releasing on slide-off is right for a face button and wrong here, since sliding off
+  is the entire point.
+- **A press finger may take over the stick** if no other finger already holds it, and goes on
+  holding the press while it does.
+
+`Select` and `Start` moved under their own bumpers at the same time. The four of them — with the
+stick presses — had shared one narrow strip across the bottom of the screen, which made every one of
+them the smallest thing on screen and put two of them where a thumb has no reason to be. The strip
+is gone.
+
+The right stick is now the same size as the left. It was smaller to save room, which cost it half
+its precision and its press a third of its radius for no reason a hand could feel; both fit at full
+size in either orientation, verified against the window rectangles rather than by eye.
+
+**One experiment rides along.** A cluster window is a rectangle and its controls are not, so the
+space between them was being swallowed — a touch there reached neither the control nor whatever is
+underneath. Those touches are now **refused** rather than consumed. Whether refusing them lets them
+through to the application below is a property of the platform's input dispatch that has not been
+measured here, and the two possible outcomes are "the gap becomes transparent" and "the gap stays
+dead, as it already was". Recorded as an experiment because it is one.
+
+### Phase 1 — Measured: Diagonals Work In Play
+
+The open question from the previous entry is closed. A title running under Eden was played with the
+eight-way pad and **the character moves diagonally**; titles are playable there generally.
+
+This settles what the binding screens could not. PPSSPP and Eden each capture only the nearer of the
+two axes when a diagonal is held, which is what a binding screen is built to do — it asks for one
+control and picks the dominant one. It was never evidence about play, and play now says the pad is
+read as a pad. `docs/COMPATIBILITY.md` gains nothing new about the backend; what changed is that a
+Phase 1 control behaviour is measured rather than reasoned.
+
 ### Phase 1 — Overlay Geometry Solved Rather Than Assumed
 
 Device feedback on the previous build: multi-touch, sliding presses, the cross, the diagonals and
@@ -449,8 +498,7 @@ being delivered and the platform is deriving true diagonals from them**.
 PPSSPP lists the control as `Pad1.Hat.-/+X` and `-/+Y`, and Eden as axes `-/+15` and `16`; both
 capture only the nearer of the two axes when a diagonal is pressed. That is what a **binding** screen
 does — it asks which single control to bind and picks the dominant one — and it is not evidence
-about what those targets read during play. Whether they act on both axes while playing is
-**untested** and needs a title, not a binding screen.
+about what those targets read during play. (Since confirmed in play: see the entry above.)
 
 Recorded because the distinction is easy to get backwards: a binding screen showing one axis is not
 a pad sending one axis.
