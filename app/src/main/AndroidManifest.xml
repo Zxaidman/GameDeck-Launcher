@@ -46,6 +46,22 @@
                     visible and stoppable while it exists." />
         </service>
 
+        <!-- The fallback under measurement (ADR-006), not a backend. It is declared so it can be
+             enabled by hand for a test and does nothing until it is; no product code refers to it.
+             ARCHITECTURE.md §16 requires that accessibility be removable without affecting the rest
+             of the system, and nothing depends on this. -->
+        <service
+            android:name=".platform.input.fallback.TouchInjectionService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/fallback_probe_service" />
+        </service>
+
         <!-- Lets Share hand over the report as an actual file. Not exported: nothing can pull a
              file out of Kestrel without Kestrel offering it. -->
         <provider

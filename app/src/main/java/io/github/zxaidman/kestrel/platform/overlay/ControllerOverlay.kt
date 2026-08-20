@@ -907,23 +907,43 @@ private class PadView(
     /** Whether the touch that started this gesture landed on a control of ours. */
     private var owned = false
 
+    private var lastFrameNanos = 0L
+
     private val ramp = object : Runnable {
         override fun run() {
+            // Timed, not counted. Stepping a fixed amount per frame ties the ramp to the display:
+            // a trail from the reference device showed a press intended to take half a second
+            // taking 0.31, because that panel runs at 120 Hz rather than the 60 the constant
+            // assumed. Elapsed time is the same everywhere.
+            val now = System.nanoTime()
+            val seconds = if (lastFrameNanos == 0L) {
+                1f / 60f
+            } else {
+                // Capped, because a frame delayed by a stall would otherwise jump the value.
+                min((now - lastFrameNanos) / 1_000_000_000f, 0.1f)
+            }
+            lastFrameNanos = now
+
             var busy = false
             controls.forEachIndexed { i, c ->
                 if (!c.analog) return@forEachIndexed
                 val target = if (engaged[i]) 1f else 0f
                 if (level[i] == target) return@forEachIndexed
                 level[i] = if (engaged[i]) {
-                    min(target, level[i] + RISE)
+                    min(target, level[i] + seconds / RISE_SECONDS)
                 } else {
-                    max(target, level[i] - FALL)
+                    max(target, level[i] - seconds / FALL_SECONDS)
                 }
                 c.onLevel(level[i].toDouble())
                 busy = true
             }
             invalidate()
-            if (busy) postOnAnimation(this) else ramping = false
+            if (busy) {
+                postOnAnimation(this)
+            } else {
+                ramping = false
+                lastFrameNanos = 0L
+            }
         }
     }
 
@@ -1095,14 +1115,17 @@ private class PadView(
     companion object {
 
         /**
-         * How fast a trigger travels, per frame at about sixty a second.
+         * How long a trigger takes to travel, in seconds.
          *
-         * Full press in roughly half a second, full release in roughly a third. The first attempt
-         * used 0.2 s and 0.13 s, which is a ramp on paper and a switch in the hand — the reference
-         * device could not feel the difference and the fill was gone before it could be read.
+         * Seconds rather than a step per frame. The first attempt used 0.2 s, which is a ramp on
+         * paper and a switch in the hand. The second used a fixed step per frame, which is 0.5 s
+         * only on a 60 Hz display — the reference device runs at 120 and a trail measured the press
+         * taking 0.31 s there. Release is quicker than press on purpose: a control that lingers
+         * after the thumb has gone feels broken, while one that takes a moment to reach full feels
+         * like a trigger.
          */
-        const val RISE = 0.030f
-        const val FALL = 0.055f
+        const val RISE_SECONDS = 0.50f
+        const val FALL_SECONDS = 0.30f
 
         /** A little past the drawn edge, because a thumb's centre is not where it looks. */
         const val REACH = 1.15f

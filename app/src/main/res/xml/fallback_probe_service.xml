@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The narrowest configuration that can still dispatch a gesture.
+
+  canPerformGestures is the whole reason the service exists. Everything that would let it *read*
+  the screen is deliberately left out: no canRetrieveWindowContent, no event types, no package
+  filter that implies watching. An accessibility service is a powerful thing to enable, and a probe
+  that can only inject is a smaller thing to be asked to trust than one that can also observe
+  (SECURITY.md, ARCHITECTURE.md §16).
+-->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canPerformGestures="true"
+    android:description="@string/fallback_probe_description"
+    android:notificationTimeout="1000" />

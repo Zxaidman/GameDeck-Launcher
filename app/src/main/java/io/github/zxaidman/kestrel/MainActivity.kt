@@ -146,11 +146,29 @@ class MainActivity : ComponentActivity() {
         return super.dispatchGenericMotionEvent(event)
     }
 
-    // androidx marks its own override as library-group restricted. Calling through to it is
-    // exactly what an observer must do, and not calling through would swallow the back gesture.
+    /**
+     * Observes every key, and **consumes the ones a controller sent**.
+     *
+     * Measured, not guessed: an export showed each controller button arriving twice — `BUTTON_A`
+     * with `DPAD_CENTER`, `BUTTON_X` with `DEL`, `BUTTON_Y` with `SPACE`, and `BUTTON_B` with
+     * **`BACK`**. Those second events are the platform's fallback keys, generated for a gamepad
+     * button that **nothing handled**. This screen was observing without handling, so pressing `B`
+     * on Kestrel's own controls asked Kestrel to navigate back.
+     *
+     * Handling a controller's keys stops the fallbacks being generated at all. Only a controller's:
+     * everything else, the back gesture included, still goes where it was going, because swallowing
+     * those would take the way out of the screen with it.
+     */
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         preview.record(event)
+        if (fromController(event)) return true
         return super.dispatchKeyEvent(event)
     }
+
+    private fun fromController(event: KeyEvent): Boolean =
+        event.device?.let { device ->
+            device.supportsSource(android.view.InputDevice.SOURCE_GAMEPAD) ||
+                device.supportsSource(android.view.InputDevice.SOURCE_JOYSTICK)
+        } ?: false
 }

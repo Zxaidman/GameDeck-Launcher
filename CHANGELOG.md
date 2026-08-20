@@ -405,6 +405,71 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Fallback — A Probe Before A Backend
+
+`ADR-006` chose touch simulation through an accessibility service as the direction for a user
+without Shizuku, and accepted it **untested**. Three documents already assume it works:
+`docs/DEGRADED_STATE.md` describes what such a user is told and offered, and `ADR-007` promises one
+layout across capability tiers. Finding out the direction is not viable after a launcher, an editor
+and a skin system have been built on it is the mistake Phase 0 existed to prevent.
+
+So: a probe, not a backend. `docs/FALLBACK_PROBE.md` is the procedure. Four questions, and they are
+separate because a yes to one says nothing about the others:
+
+1. **Can it be enabled without sending the user hunting through settings?** Three routes are
+   reported apart — through the privileged shell, by granting `WRITE_SECURE_SETTINGS` once so
+   Kestrel can write the setting itself later, and by hand. The middle one is the project owner's
+   own suggestion and the one that matters: a grant that survives means the fallback can be turned
+   on with Shizuku **not running at all**.
+2. **How long does an injected touch take to arrive?** Measured end to end with no human in the
+   loop: a tap is aimed at a window Kestrel owns, and the time from asking to landing is the number.
+3. **How finely can a movement be drawn?** A drag is dispatched and the movements it produces are
+   counted. This is the question most likely to decide the answer — a stick is continuous, and a
+   drag arriving as a handful of points cannot simulate one however low its latency is.
+4. **Does it work with Kestrel's overlay up?** The measurement target *is* an overlay window, so
+   every number above is already taken under that condition.
+
+Two things are deliberate about the shape of it.
+
+**The service can inject and cannot observe.** No `canRetrieveWindowContent`, no event types beyond
+the one the platform requires, nothing read from the screen. An accessibility service is a large
+thing to ask a user to enable, and a probe that can only inject is a smaller thing to trust than one
+that can also watch.
+
+**Both enable routes append to the accessibility list rather than replacing it.** The setting is
+shared, and writing only Kestrel into it would silently switch off every service the user actually
+depends on. A diagnostic that does that is unacceptable regardless of what it measures.
+
+Nothing in product code refers to any of it, which is `ARCHITECTURE.md` §16's requirement that
+accessibility be removable without affecting the rest of the system.
+
+**What it cannot decide, stated before any result is read:** whether Kestrel works without Shizuku.
+It cannot — nothing here creates a device. A good result means a target's own on-screen touch
+controls can be driven, which is a real product for an emulator that draws them and nothing at all
+for a target that does not.
+
+### Phase 1 — Two Faults The Trail Found On Its First Run
+
+The report added in the entry below was used once and immediately earned itself. Both of these were
+invisible in every export before it.
+
+**Every controller button was arriving twice.** `BUTTON_A` with `DPAD_CENTER`, `BUTTON_X` with
+`DEL`, `BUTTON_Y` with `SPACE` — and `BUTTON_B` with **`BACK`**. The second of each pair is a
+platform fallback key, generated for a gamepad button that **nothing handled**. Kestrel's own screen
+was observing keys without handling them, so pressing `B` on Kestrel's controls was asking Kestrel
+to navigate back. A controller's keys are now consumed, which stops the fallbacks being generated at
+all; everything else, the back gesture included, still goes where it was going.
+
+**The trigger ramp was tied to the display.** It stepped a fixed amount per frame, which is half a
+second only at 60 Hz — the reference device runs at 120, and the trail measured a press intended to
+take 0.50 s taking **0.31 s**. Elapsed time is now what advances it, so the ramp is the same
+everywhere, and a frame delayed by a stall is capped rather than jumping the value.
+
+The trail also confirmed what it was built to confirm: every press in the run had its matching
+release, a slide from `Y` to `X` released one and pressed the other in the same millisecond, the
+eight-way pad walked all eight directions and returned to centre, and the trigger reported
+thirty-four intermediate values on the way up rather than 0 and 1.
+
 ### Phase 1 — A Report That Shows A Sequence
 
 The exports every conclusion in this project rests on carried the **most recent** value of each
