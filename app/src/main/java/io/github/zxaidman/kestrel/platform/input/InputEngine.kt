@@ -1,5 +1,7 @@
 package io.github.zxaidman.kestrel.platform.input
 
+import io.github.zxaidman.kestrel.core.diagnostics.InputTrail
+import io.github.zxaidman.kestrel.core.diagnostics.changedEnough
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
 import io.github.zxaidman.kestrel.core.input.applyStick
 import io.github.zxaidman.kestrel.core.input.applyTrigger
@@ -39,6 +41,22 @@ public class InputEngine(private val shell: IPrivilegedShell) {
 
     @Volatile public var lastError: String = ""
         private set
+
+    /**
+     * What was sent, in order.
+     *
+     * The other half of a diagnostic report. Knowing what the platform delivered back answers "did
+     * anything arrive"; knowing what Kestrel sent in the same file answers the question that
+     * actually gets asked when something is wrong — **whether the fault is above the device or
+     * below it.** A press with no matching release, or a release Kestrel never sent, is visible
+     * here and nowhere else.
+     */
+    public val trail: InputTrail = InputTrail()
+
+    private var markedX = 0.0
+    private var markedY = 0.0
+    private var markedRightX = 0.0
+    private var markedRightY = 0.0
 
     public fun start(streamPath: String): Boolean {
         val opened = try {
@@ -103,21 +121,36 @@ public class InputEngine(private val shell: IPrivilegedShell) {
 
     /** A button, written immediately: a press is a moment, not a position to be coalesced. */
     public fun button(code: Int, pressed: Boolean) {
+        mark("button", "$code ${if (pressed) "down" else "up"}")
         write(report(listOf(EV_KEY, code, if (pressed) 1 else 0)))
     }
 
     /** The d-pad, as the hat axes a controller reports rather than as four buttons. */
     public fun hat(x: Int, y: Int) {
+        mark("hat", "x=$x y=$y")
         write(report(listOf(EV_ABS, ABS_HAT0X, x, EV_ABS, ABS_HAT0Y, y)))
     }
 
     /** A trigger, shaped like any other analog control. */
     public fun trigger(raw: Double, profile: AnalogProfile, right: Boolean) {
-        val value = (applyTrigger(raw, profile) * TRIGGER_MAX).toInt()
+        val shaped = applyTrigger(raw, profile)
+        val value = (shaped * TRIGGER_MAX).toInt()
+        mark(if (right) "R2" else "L2", "%.3f -> %d".format(shaped, value))
         write(report(listOf(EV_ABS, if (right) ABS_GAS else ABS_BRAKE, value)))
     }
 
+    private fun mark(kind: String, detail: String) {
+        trail.add(System.currentTimeMillis(), kind, detail)
+    }
+
     private fun writeRightStick(x: Double, y: Double) {
+        // Coalesced before it is recorded: a thumb held still writes sixty identical positions a
+        // second, and sixty copies of one value would crowd every press out of the trail.
+        if (changedEnough(markedRightX, x) || changedEnough(markedRightY, y)) {
+            markedRightX = x
+            markedRightY = y
+            mark("rightStick", "%+.3f %+.3f".format(x, y))
+        }
         write(
             report(
                 listOf(
@@ -129,6 +162,11 @@ public class InputEngine(private val shell: IPrivilegedShell) {
     }
 
     private fun writeStick(x: Double, y: Double) {
+        if (changedEnough(markedX, x) || changedEnough(markedY, y)) {
+            markedX = x
+            markedY = y
+            mark("leftStick", "%+.3f %+.3f".format(x, y))
+        }
         write(
             report(
                 listOf(

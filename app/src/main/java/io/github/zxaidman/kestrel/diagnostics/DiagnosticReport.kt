@@ -98,7 +98,56 @@ public object DiagnosticReport {
             },
         )
 
+        // The two halves of the same story: what Kestrel sent, and what the platform delivered
+        // back. Either one alone can only say whether something happened at that instant; together
+        // and in order they say where a fault is — above the virtual device or below it.
+        report.put("sent", trail(SessionState.engine?.trail, null))
+        report.put(
+            "received",
+            trail(
+                state.trail,
+                "Only fills while Kestrel's own screen has focus. The platform delivers a " +
+                    "controller's events to the focused window, so an empty trail during play in " +
+                    "another application is expected and is not evidence that nothing arrived.",
+            ),
+        )
+
         return report.toString(2)
+    }
+
+    /**
+     * A trail, oldest first, with times relative to its own first mark.
+     *
+     * Relative because the question a reader has is "how long after the press did the release
+     * arrive", not "what time was it". `dropped` is reported even when it is zero: a reader has to
+     * be able to tell a quiet trail from a truncated one, and silence about it would leave that
+     * ambiguous.
+     */
+    private fun trail(
+        source: io.github.zxaidman.kestrel.core.diagnostics.InputTrail?,
+        note: String?,
+    ): JSONObject {
+        val marks = source?.snapshot().orEmpty()
+        val first = marks.firstOrNull()?.atMillis ?: 0L
+        return JSONObject().apply {
+            put("count", marks.size)
+            put("dropped", source?.dropped ?: 0L)
+            if (note != null) put("note", note)
+            put(
+                "marks",
+                JSONArray().apply {
+                    marks.forEach { mark ->
+                        put(
+                            JSONObject().apply {
+                                put("tMs", mark.atMillis - first)
+                                put("kind", mark.kind)
+                                put("detail", mark.detail)
+                            },
+                        )
+                    }
+                },
+            )
+        }
     }
 
     private fun versionOf(context: Context): String = try {

@@ -43,6 +43,18 @@ import kotlin.math.min
  * made every other control — and the rest of the phone — stop responding. `FLAG_SPLIT_TOUCH` is
  * what makes a second finger reach a second window, and without it a pad with separate clusters is
  * unplayable no matter how it is drawn.
+ *
+ * **A window's rectangle is dead everywhere its controls are not, and that cannot be fixed from
+ * here.** Measured on the reference device: a view returning "not handled" for a touch does **not**
+ * hand it to the application underneath — the window is chosen before the view hierarchy is
+ * consulted, so refusing merely wastes the touch instead of using it. The gaps between the circles
+ * in a cluster are therefore inert. The platform's own remedy is an irregular touchable region,
+ * which is not public API and so is not available to this project (`CLAUDE.md` §8). The remaining
+ * public option is one window per control, which would trade away sliding a thumb from one control
+ * to the next — a thing that works and was asked for. The gaps stay; the tradeoff is recorded.
+ *
+ * Controls still refuse touches that miss them, because it costs nothing and expresses what the
+ * window is for. It is not claimed to make the gaps transparent — it does not.
  */
 public class ControllerOverlay(
     private val context: Context,
@@ -511,7 +523,10 @@ private class StickView(
         canvas.drawCircle(plateX, plateY, r, plateRim)
         val kx = plateX + x * travel
         val ky = plateY + y * travel
-        canvas.drawCircle(kx, ky, knobRadius, knob)
+        // Lit while a thumb is on it, the same as every other control. A stick was the one thing on
+        // the overlay that gave no sign it had been touched, so a thumb resting at centre looked
+        // identical to a thumb that had missed it.
+        canvas.drawCircle(kx, ky, knobRadius, if (pointer >= 0) glow else knob)
         canvas.drawCircle(kx, ky, knobRadius, rim)
 
         val pr = pressRadius

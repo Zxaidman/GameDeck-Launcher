@@ -405,6 +405,65 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Phase 1 — A Report That Shows A Sequence
+
+The exports every conclusion in this project rests on carried the **most recent** value of each
+field and nothing else. That is enough to answer "did anything arrive" and no other question. It
+cannot show a press that never got its release, two controls firing when one was touched, or a value
+climbing while a thumb sat still — and those are the failures that have actually cost time here.
+Each of them is a sequence, and a moment cannot contain one.
+
+`core/diagnostics/InputTrail` is a bounded, oldest-first record of what happened, with two of them
+in every report:
+
+- **`sent`** — what Kestrel wrote to the virtual device.
+- **`received`** — what the platform delivered back.
+
+Together and in order they answer the question that actually gets asked when something is wrong:
+**whether the fault is above the virtual device or below it.** Neither half alone can.
+
+Three details that are decisions rather than defaults:
+
+- **Bounded, keeping the newest.** A stick held still writes sixty positions a second, so an
+  unbounded log is a memory leak with extra steps — and a bounded one keeping the *oldest* entries
+  would fill with the moments before the interesting one and never reach it. What was dropped is
+  counted and reported even when it is zero, so a quiet trail is distinguishable from a truncated
+  one.
+- **Analog values are coalesced** past a movement threshold. Sixty copies of one value say nothing
+  the first said and crowd out every press around them.
+- **Key releases are recorded**, though only presses update the screen. The release is the half that
+  matters when a control is stuck, and it was the half being discarded.
+
+The `received` trail carries a note saying it only fills while Kestrel's own screen has focus, so an
+empty one during play in another application is not misread as nothing having arrived. A **Clear
+trail** button starts a test clean.
+
+Five tests cover the trail's ordering, its wrap behaviour, its dropped count, and the coalescing
+threshold.
+
+### Phase 1 — Measured: Refusing A Touch Does Not Pass It On
+
+A cluster window is a rectangle and its controls are circles, so the space between them was
+swallowing touches — reaching neither a control nor the application underneath. The previous build
+made those touches **refused** rather than consumed, as an experiment, with the outcome stated in
+advance as either "the gap becomes transparent" or "the gap stays dead".
+
+**It stays dead.** On the reference device a touch in the gap reached nothing: the application below
+did not scroll and no control fired. The window is chosen before the view hierarchy is consulted, so
+a view returning "not handled" wastes the touch rather than forwarding it.
+
+What follows from that, recorded so it is not re-attempted:
+
+- The platform's own remedy is an **irregular touchable region**, which is not public API. `CLAUDE.md`
+  §8 forbids building on hidden APIs, so it is not available here.
+- The remaining public option is **one window per control**, which would trade away sliding a thumb
+  from one control to the next — a thing that works and was asked for.
+- The gaps therefore stay inert. The refusal stays too, because it costs nothing and is the correct
+  expression of what the window is for; it is simply not claimed to do anything it does not.
+
+Also: the stick knob now lights while a thumb is on it. It was the one control on the overlay that
+gave no sign of being touched, so a thumb resting at centre looked the same as a thumb that missed.
+
 ### Phase 1 — The Stick Press Lives On The Stick
 
 The project owner asked for something that sounds like a layout preference and is not: **hold `L3`,
@@ -441,7 +500,8 @@ space between them was being swallowed — a touch there reached neither the con
 underneath. Those touches are now **refused** rather than consumed. Whether refusing them lets them
 through to the application below is a property of the platform's input dispatch that has not been
 measured here, and the two possible outcomes are "the gap becomes transparent" and "the gap stays
-dead, as it already was". Recorded as an experiment because it is one.
+dead, as it already was". Recorded as an experiment because it is one. *(Since measured: it stays
+dead. See the entry above.)*
 
 ### Phase 1 — Measured: Diagonals Work In Play
 

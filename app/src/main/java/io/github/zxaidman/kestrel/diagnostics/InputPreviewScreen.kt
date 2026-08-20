@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.zxaidman.kestrel.core.diagnostics.changedEnough
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
 import io.github.zxaidman.kestrel.core.input.CapabilityState
 import io.github.zxaidman.kestrel.core.input.InputCapability
@@ -75,6 +76,26 @@ public object ExportState {
 
 /** Live values read from whatever controller is connected. */
 public class InputPreviewState {
+
+    /**
+     * What arrived, in order.
+     *
+     * The fields below hold the **latest** value of each thing, which is what a screen needs and
+     * what an export used to carry. A moment is enough to answer "did anything arrive" and nothing
+     * else: it cannot show a press that never got its release, two controls firing when one was
+     * touched, or a value climbing while a thumb sat still. Those are the failures that have cost
+     * this project time, and each of them is a **sequence**.
+     */
+    public val trail: io.github.zxaidman.kestrel.core.diagnostics.InputTrail =
+        io.github.zxaidman.kestrel.core.diagnostics.InputTrail()
+
+    private var markedX = 0.0
+    private var markedY = 0.0
+    private var markedRightX = 0.0
+    private var markedRightY = 0.0
+    private var markedLeftTrigger = 0.0
+    private var markedRightTrigger = 0.0
+
     public var rawX: Double by mutableStateOf(0.0)
     public var rawY: Double by mutableStateOf(0.0)
     public var rawRightX: Double by mutableStateOf(0.0)
@@ -95,13 +116,30 @@ public class InputPreviewState {
         rawRightTrigger = event.getAxisValue(MotionEvent.AXIS_GAS).toDouble()
         sourceDevice = describe(event.deviceId)
         eventCount += 1
+        traceAxes(event.deviceId)
     }
 
+    /**
+     * Records a key event.
+     *
+     * **Both directions go into the trail**, though only a press updates the field on screen. A
+     * release is the half that matters when a control is stuck, and it was the half being thrown
+     * away.
+     */
     public fun record(event: KeyEvent) {
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            lastButton = KeyEvent.keyCodeToString(event.keyCode).removePrefix("KEYCODE_")
-            sourceDevice = describe(event.deviceId)
-            eventCount += 1
+        val name = KeyEvent.keyCodeToString(event.keyCode).removePrefix("KEYCODE_")
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                lastButton = name
+                sourceDevice = describe(event.deviceId)
+                eventCount += 1
+                if (event.repeatCount == 0) {
+                    mark("key", "$name (${event.keyCode}) down  from ${describe(event.deviceId)}")
+                }
+            }
+
+            KeyEvent.ACTION_UP ->
+                mark("key", "$name (${event.keyCode}) up    from ${describe(event.deviceId)}")
         }
     }
 
@@ -111,6 +149,39 @@ public class InputPreviewState {
         rawY = y
         sourceDevice = "touch pad (this screen)"
         eventCount += 1
+        traceAxes(null)
+    }
+
+    /** Only what moved, and only once it has moved enough to mean something. */
+    private fun traceAxes(deviceId: Int?) {
+        val from = if (deviceId == null) "" else "  from ${describe(deviceId)}"
+        if (changedEnough(markedX, rawX) || changedEnough(markedY, rawY)) {
+            markedX = rawX
+            markedY = rawY
+            mark("leftStick", "%+.3f %+.3f%s".format(rawX, rawY, from))
+        }
+        if (changedEnough(markedRightX, rawRightX) || changedEnough(markedRightY, rawRightY)) {
+            markedRightX = rawRightX
+            markedRightY = rawRightY
+            mark("rightStick", "%+.3f %+.3f%s".format(rawRightX, rawRightY, from))
+        }
+        if (changedEnough(markedLeftTrigger, rawLeftTrigger)) {
+            markedLeftTrigger = rawLeftTrigger
+            mark("L2", "%.3f%s".format(rawLeftTrigger, from))
+        }
+        if (changedEnough(markedRightTrigger, rawRightTrigger)) {
+            markedRightTrigger = rawRightTrigger
+            mark("R2", "%.3f%s".format(rawRightTrigger, from))
+        }
+    }
+
+    private fun mark(kind: String, detail: String) {
+        trail.add(System.currentTimeMillis(), kind, detail)
+    }
+
+    /** Starts the trail again, so a test can be run without the run before it in the way. */
+    public fun clearTrail() {
+        trail.clear()
     }
 
     private fun describe(deviceId: Int): String =
@@ -187,8 +258,22 @@ public fun InputPreviewScreen(
             ) {
                 Button(onClick = onSave) { Text("Save…") }
                 Button(onClick = onShare) { Text("Share") }
+                // Start the trail clean, so a test is not read through whatever happened before it.
+                Button(
+                    onClick = {
+                        state.clearTrail()
+                        SessionState.engine?.trail?.clear()
+                        ExportState.message.value = "Trail cleared. Do the test, then export."
+                    },
+                ) { Text("Clear trail") }
             }
-            Mono(ExportState.message.value.ifBlank { "Exports the device, privilege and session state." })
+            Mono(
+                ExportState.message.value.ifBlank {
+                    "Exports the device, privilege and session state, plus the last " +
+                        "${io.github.zxaidman.kestrel.core.diagnostics.InputTrail.DEFAULT_CAPACITY} " +
+                        "things sent and received, in order."
+                },
+            )
         }
 
         Section("Controller session") {
