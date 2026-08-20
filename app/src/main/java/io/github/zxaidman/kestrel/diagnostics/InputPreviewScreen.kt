@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zxaidman.kestrel.core.diagnostics.changedEnough
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
+import io.github.zxaidman.kestrel.core.settings.KestrelSettings
 import io.github.zxaidman.kestrel.core.input.CapabilityState
 import io.github.zxaidman.kestrel.core.input.InputCapability
 import io.github.zxaidman.kestrel.core.input.applyStick
@@ -372,8 +373,8 @@ public fun InputPreviewScreen(
                     AppSettings.update { s -> s.copy(controlScale = it.toDouble()) }
                 },
                 onValueChangeFinished = { AppSettings.persist(context) },
-                valueRange = io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MIN_SCALE
-                    ..io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.MAX_SCALE,
+                valueRange = KestrelSettings.MIN_CONTROL_SCALE.toFloat()
+                    ..KestrelSettings.MAX_CONTROL_SCALE.toFloat(),
             )
             Mono(
                 "\nThe controls on this screen reach the controller only while Kestrel is in " +
@@ -692,7 +693,7 @@ private fun StorageSection(context: android.content.Context) {
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = { picker.launch(KestrelStorage.folderPicker()) }) {
+            Button(onClick = { runCatching { picker.launch(KestrelStorage.folderPicker()) } }) {
                 Text(if (chosen) "Change folder" else "Choose folder")
             }
             if (chosen) {

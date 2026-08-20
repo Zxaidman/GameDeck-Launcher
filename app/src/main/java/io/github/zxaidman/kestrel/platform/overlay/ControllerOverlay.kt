@@ -16,65 +16,60 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
+import io.github.zxaidman.kestrel.core.input.GamepadControl
+import io.github.zxaidman.kestrel.core.layout.Cluster
+import io.github.zxaidman.kestrel.core.layout.Clustering
+import io.github.zxaidman.kestrel.core.layout.ControlKind
+import io.github.zxaidman.kestrel.core.layout.ControllerLayout
+import io.github.zxaidman.kestrel.core.layout.LayoutElement
+import io.github.zxaidman.kestrel.core.layout.LayoutSurface
+import io.github.zxaidman.kestrel.core.layout.PixelRect
+import io.github.zxaidman.kestrel.core.layout.resolve
+import io.github.zxaidman.kestrel.core.layout.scaledBy
+import io.github.zxaidman.kestrel.platform.input.GamepadCodes
 import io.github.zxaidman.kestrel.platform.input.InputEngine
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The controls, drawn over whatever the user is playing, in windows that never take focus.
+ * The controls, drawn from a layout document over whatever the user is playing.
  *
- * Three rules shape everything here, and all three were learned from a device rather than reasoned.
+ * **Nothing here decides what the pad looks like any more.** The arrangement is a
+ * [ControllerLayout] — a file — and this class turns it into windows. What that buys is not
+ * tidiness: it is that the layout editor, the skin system and per-target profiles all become
+ * possible, because there is finally something for them to edit, dress and select. While the pad
+ * was a Kotlin file, none of them had a subject.
+ *
+ * Four rules shape the rest, and every one was learned from a device.
  *
  * **A control must not take focus.** The platform delivers a controller's events to the focused
  * window, so controls inside an ordinary activity send their input back to Kestrel — measured in
  * `docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json`.
  *
  * **A control must not cover anything it does not need.** The first version was one window the size
- * of the screen whose touch handler returned "handled" for every touch, so it consumed every touch
- * on the phone: the home screen, the recent list, settings, all of it. The device could not be
- * operated by finger at all and only a reboot recovered it. That is not a bug to be patched by
- * returning "not handled" more carefully — it is a reason not to put a window there. **Each control
- * cluster now gets its own window, sized to itself.** Everywhere the controls are not, there is no
- * window of ours, so nothing of ours can intercept anything.
+ * of the screen that consumed every touch on the phone; only a reboot recovered it. Each cluster of
+ * controls gets a window sized to itself, and `Clustering` decides what a cluster is.
  *
- * **Touches must split across those windows.** Small windows are not enough on their own: by
- * default the window that receives the first finger owns the whole gesture, so holding the stick
- * made every other control — and the rest of the phone — stop responding. `FLAG_SPLIT_TOUCH` is
- * what makes a second finger reach a second window, and without it a pad with separate clusters is
- * unplayable no matter how it is drawn.
+ * **Touches must split across those windows.** `FLAG_SPLIT_TOUCH` is what lets a second finger reach
+ * a second window. Without it, holding the stick froze every other control and the phone underneath.
  *
- * **A window's rectangle is dead everywhere its controls are not, and that cannot be fixed from
- * here.** Measured on the reference device: a view returning "not handled" for a touch does **not**
- * hand it to the application underneath — the window is chosen before the view hierarchy is
- * consulted, so refusing merely wastes the touch instead of using it. The gaps between the circles
- * in a cluster are therefore inert. The platform's own remedy is an irregular touchable region,
- * which is not public API and so is not available to this project (`CLAUDE.md` §8). The remaining
- * public option is one window per control, which would trade away sliding a thumb from one control
- * to the next — a thing that works and was asked for. The gaps stay; the tradeoff is recorded.
- *
- * Controls still refuse touches that miss them, because it costs nothing and expresses what the
- * window is for. It is not claimed to make the gaps transparent — it does not.
+ * **A window is dead everywhere its controls are not**, and that cannot be fixed from here —
+ * measured: a view refusing a touch does not hand it to the application below, and the platform's
+ * own remedy is not public API. It is why clusters are kept as small as the layout allows.
  */
 public class ControllerOverlay(
     private val context: Context,
     private val engine: InputEngine,
     private var profile: AnalogProfile,
-    private var scale: Float = DEFAULT_SCALE,
+    private var scale: Float,
+    private var layout: ControllerLayout,
 ) {
 
     private val windows = context.getSystemService(WindowManager::class.java)
-    private var stick: StickView? = null
-    private var rightStick: StickView? = null
-    private var buttons: PadView? = null
-    private var dpad: DpadView? = null
-    private var leftShoulders: PadView? = null
-    private var rightShoulders: PadView? = null
+    private var clusters: List<ClusterView> = emptyList()
     private var toggle: ToggleView? = null
     private var controlsVisible = false
-
-    private val everyView: List<View?>
-        get() = listOf(stick, rightStick, buttons, dpad, leftShoulders, rightShoulders)
 
     /** Roughly a thumb's reach, in pixels, from the shorter side of the screen. */
     private val unit: Int
@@ -82,6 +77,11 @@ public class ControllerOverlay(
             val metrics = context.resources.displayMetrics
             return min(metrics.widthPixels, metrics.heightPixels)
         }
+
+    private fun surface(): LayoutSurface {
+        val metrics = context.resources.displayMetrics
+        return LayoutSurface(metrics.widthPixels.toDouble(), metrics.heightPixels.toDouble())
+    }
 
     /**
      * Shows the toggle, and nothing else.
@@ -118,113 +118,84 @@ public class ControllerOverlay(
     public val controlsOn: Boolean
         get() = controlsVisible
 
+    /** How many windows the current layout needed, for a screen that wants to say so. */
+    public val clusterCount: Int
+        get() = clusters.size
+
     public fun update(profile: AnalogProfile) {
         this.profile = profile
-        stick?.profile = profile
-        rightStick?.profile = profile
+        clusters.forEach { it.profile = profile }
     }
 
     /**
-     * Where every cluster sits and how big its window is.
+     * Changes the size, or the layout, by putting the controls up again.
      *
-     * One description, used by both the first layout and every resize, because the two drifting
-     * apart is how a resize ends up putting a control somewhere the first layout never did.
-     */
-    private fun plan(): List<Pair<Int, WindowManager.LayoutParams>> {
-        val big = clusterSize()
-        val small = (big * 0.72f).toInt()
-        val shoulderHeight = (big * 0.62f).toInt()
-        val margin = marginSize()
-        val above = margin + big + margin / 2
-
-        return listOf(
-            // Wider than tall: the plate hugs the outer edge and the stick press sits in the strip
-            // left over on the inner side, in the same window so a thumb can travel between them.
-            STICK to params(
-                (big * StickView.WIDTH).toInt(), big,
-                Gravity.BOTTOM or Gravity.START, margin, margin,
-            ),
-            FACES to params(big, big, Gravity.BOTTOM or Gravity.END, margin, margin),
-            DPAD to params(small, small, Gravity.BOTTOM or Gravity.START, margin, above),
-            // The same size as the left. It was smaller to save room, which cost the right stick
-            // half its precision and its press button a third of its radius for no reason a hand
-            // could feel; there is space for both at full size in either orientation.
-            RIGHT_STICK to params(
-                (big * StickView.WIDTH).toInt(), big,
-                Gravity.BOTTOM or Gravity.END, margin, above,
-            ),
-            LEFT_SHOULDERS to
-                params(big, shoulderHeight, Gravity.TOP or Gravity.START, margin, margin),
-            RIGHT_SHOULDERS to
-                params(big, shoulderHeight, Gravity.TOP or Gravity.END, margin, margin),
-        )
-    }
-
-    private fun viewFor(slot: Int): View? = when (slot) {
-        STICK -> stick
-        FACES -> buttons
-        DPAD -> dpad
-        RIGHT_STICK -> rightStick
-        LEFT_SHOULDERS -> leftShoulders
-        RIGHT_SHOULDERS -> rightShoulders
-        else -> null
-    }
-
-    /**
-     * Resizes the controls without taking them away and putting them back.
-     *
-     * Removing and re-adding the windows would drop any control being held at that moment, so a
-     * size change during play would leave a button stuck down. Existing windows are re-measured
-     * instead.
+     * Rebuilt rather than re-measured. The previous version moved existing windows so a control
+     * being held was not dropped — but a layout change can alter which controls share a window at
+     * all, so there is not always a window to move. Everything is released first, which is what
+     * that approach was really protecting against: a control that disappears mid-press leaves
+     * nothing behind able to release it.
      */
     public fun resize(scale: Float) {
-        this.scale = scale.coerceIn(MIN_SCALE, MAX_SCALE)
-        if (!controlsVisible) return
-        plan().forEach { (slot, layout) ->
-            val view = viewFor(slot) ?: return@forEach
-            runCatching { windows?.updateViewLayout(view, layout) }
-        }
+        this.scale = scale
+        rebuild()
     }
 
-    private fun clusterSize(): Int = (unit * 0.46f * scale).toInt()
+    public fun apply(layout: ControllerLayout) {
+        this.layout = layout
+        rebuild()
+    }
 
-    private fun marginSize(): Int = (unit * 0.04f).toInt()
+    private fun rebuild() {
+        if (!controlsVisible) return
+        hideControls()
+        showControls()
+    }
 
     private fun toggleControls() {
         if (controlsVisible) hideControls() else showControls()
     }
 
     /**
-     * Every control a standard pad has, so what a target does with each can be tested.
+     * Turns the layout into windows.
      *
-     * Laid out as a controller is: sticks and d-pad on the left half, face buttons on the right,
-     * shoulders along the top edge where index fingers reach, with Select and Start beneath their
-     * own bumpers and each stick press beside its own stick. Each cluster is a separate window, so
-     * none of them covers anything it does not need to.
+     * Placements are scaled, resolved against this screen, grouped into clusters, and each cluster
+     * becomes one window holding the controls inside it. Every number comes from the document; the
+     * only thing decided here is which controls are close enough to share a window.
      */
     private fun showControls() {
         if (controlsVisible) return
+        val surface = surface()
+        val factor = scale.toDouble()
 
-        val stickView = StickView(context, engine, profile, right = false)
-        val rightStickView = StickView(context, engine, profile, right = true)
-        val buttonsView = PadView(context, PadView.face(engine), plate = true)
-        val dpadView = DpadView(context, engine)
-        val leftShoulderView = PadView(context, PadView.leftCluster(engine, profile))
-        val rightShoulderView = PadView(context, PadView.rightCluster(engine, profile))
+        val placed = layout.elements.map { element ->
+            element.id to element.placement.scaledBy(factor).resolve(surface)
+        }
+        if (placed.isEmpty()) return
+
+        val byId = layout.elements.associateBy { it.id }
+        val rects = placed.toMap()
+        val grouped = Clustering.group(placed, Clustering.DEFAULT_GAP * surface.shortSide)
 
         val added = mutableListOf<View>()
-        val ok = plan().all { (slot, layout) ->
-            val view = when (slot) {
-                STICK -> stickView
-                FACES -> buttonsView
-                DPAD -> dpadView
-                RIGHT_STICK -> rightStickView
-                LEFT_SHOULDERS -> leftShoulderView
-                else -> rightShoulderView
-            }
+        val built = mutableListOf<ClusterView>()
+
+        val ok = grouped.all { cluster ->
+            val bounds = padded(cluster)
+            val view = clusterView(cluster, byId, rects, bounds) ?: return@all true
             runCatching {
-                windows?.addView(view, layout)
+                windows?.addView(
+                    view,
+                    params(
+                        bounds.width.toInt(),
+                        bounds.height.toInt(),
+                        Gravity.TOP or Gravity.START,
+                        bounds.left.toInt(),
+                        bounds.top.toInt(),
+                    ),
+                )
                 added += view
+                built += view
                 true
             }.getOrElse { false }
         }
@@ -234,38 +205,55 @@ public class ControllerOverlay(
             return
         }
 
-        stick = stickView
-        rightStick = rightStickView
-        buttons = buttonsView
-        dpad = dpadView
-        leftShoulders = leftShoulderView
-        rightShoulders = rightShoulderView
+        clusters = built
         controlsVisible = true
+    }
+
+    /** Room for the outline, which is stroked centred on an edge and would be half clipped. */
+    private fun padded(cluster: Cluster): PixelRect {
+        val pad = unit * 0.012
+        return PixelRect(
+            centerX = cluster.bounds.centerX,
+            centerY = cluster.bounds.centerY,
+            width = cluster.bounds.width + pad * 2,
+            height = cluster.bounds.height + pad * 2,
+        )
+    }
+
+    private fun clusterView(
+        cluster: Cluster,
+        byId: Map<String, LayoutElement>,
+        rects: Map<String, PixelRect>,
+        bounds: PixelRect,
+    ): ClusterView? {
+        val members = cluster.elementIds.mapNotNull { id ->
+            val element = byId[id] ?: return@mapNotNull null
+            val rect = rects[id] ?: return@mapNotNull null
+            // Local to the window, so a view never needs to know where on the screen it is.
+            PlacedControl(
+                element = element,
+                centerX = (rect.centerX - bounds.left).toFloat(),
+                centerY = (rect.centerY - bounds.top).toFloat(),
+                radius = (min(rect.width, rect.height) / 2).toFloat(),
+            )
+        }
+        if (members.isEmpty()) return null
+        return ClusterView(context, engine, profile, members)
     }
 
     private fun hideControls() {
         // Everything is released before anything is removed. A control that disappears mid-press
         // leaves nothing behind able to release it, and a stick removed at full deflection keeps
         // the platform emitting directional keys indefinitely.
+        clusters.forEach { it.releaseAll() }
         engine.stick(0.0, 0.0, profile)
         engine.rightStick(0.0, 0.0, profile)
         engine.hat(0, 0)
         engine.trigger(0.0, profile, right = false)
         engine.trigger(0.0, profile, right = true)
-        buttons?.releaseAll()
-        dpad?.release()
-        stick?.releaseAll()
-        rightStick?.releaseAll()
-        leftShoulders?.releaseAll()
-        rightShoulders?.releaseAll()
 
-        everyView.filterNotNull().forEach { runCatching { windows?.removeView(it) } }
-        stick = null
-        rightStick = null
-        buttons = null
-        dpad = null
-        leftShoulders = null
-        rightShoulders = null
+        clusters.forEach { runCatching { windows?.removeView(it) } }
+        clusters = emptyList()
         controlsVisible = false
     }
 
@@ -286,8 +274,8 @@ public class ControllerOverlay(
         },
         // NOT_FOCUSABLE is why any of this works: without it the overlay becomes the focused window
         // on touch and the controller's own events come back to Kestrel. NOT_TOUCH_MODAL lets
-        // everything outside these small windows reach whatever is underneath. SPLIT_TOUCH is what
-        // makes them independent: without it the first window to see a finger owns the gesture, so
+        // everything outside these windows reach whatever is underneath. SPLIT_TOUCH is what makes
+        // them independent: without it the first window to see a finger owns the gesture, so
         // holding the stick froze every other control and froze the phone underneath with it.
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -300,47 +288,38 @@ public class ControllerOverlay(
     }
 
     public companion object {
-
-        private const val STICK = 0
-        private const val FACES = 1
-        private const val DPAD = 2
-        private const val RIGHT_STICK = 3
-        private const val LEFT_SHOULDERS = 4
-        private const val RIGHT_SHOULDERS = 5
-
-        /**
-         * How large the controls are, as a fraction of the size they were first drawn at.
-         *
-         * The first size was chosen by arithmetic — a fraction of the short side that seemed
-         * thumb-sized — and looked too large on the reference device in both orientations. This is
-         * the kind of number only a hand can settle, so it is a setting with a default rather than
-         * a constant, and the default is what that hand asked for.
-         */
-        public const val DEFAULT_SCALE: Float = 0.65f
-        public const val MIN_SCALE: Float = 0.35f
-        public const val MAX_SCALE: Float = 1.3f
-
         /** Whether the user has allowed drawing over other applications. */
         public fun permitted(context: Context): Boolean = Settings.canDrawOverlays(context)
     }
 }
 
+/** One control, resolved onto the window that holds it. */
+private class PlacedControl(
+    val element: LayoutElement,
+    val centerX: Float,
+    val centerY: Float,
+    val radius: Float,
+) {
+    val id: String get() = element.id
+    val kind: ControlKind get() = element.kind
+    val binds: GamepadControl? get() = element.binds
+    val label: String get() = element.label ?: element.binds?.defaultLabel ?: ""
+}
+
 /**
- * One palette for every control, and why it is built the way it is.
+ * One palette for every control, and the reason it is built this way.
  *
- * The first attempt at "visible on a white screen" was a heavy dark ring around a pale shape. It
- * worked and it looked like a diagram. What commercial pads on this platform actually do — and what
- * the project owner asked for — is the opposite arrangement: **a dark translucent plate carries the
- * cluster, and the controls sit on it in a lighter grey**. The plate is what makes the whole cluster
- * legible over a white page, so each individual control no longer needs a ring heavy enough to do
- * that job alone.
+ * The first answer to "invisible on a white screen" was a heavy dark ring around a pale shape. It
+ * worked and it looked like a diagram. What commercial pads on this platform do — and what the
+ * project owner asked for — is the opposite: **a dark translucent plate carries the cluster, and
+ * the controls sit on it in a lighter grey**. The plate is what makes the cluster legible over a
+ * white page, so no individual control needs a ring heavy enough to do that alone.
  *
- * Labels are still drawn twice, dark stroke then light fill, because a label is small enough that
- * it can fall on either tone within a single control.
+ * Labels are still drawn twice, dark stroke then light fill, because a label is small enough to
+ * fall on either tone within a single control.
  */
 private object Ink {
 
-    /** The disc a cluster sits on. Dark enough to define the cluster against a white page. */
     fun plate(): Paint = Paint().apply {
         color = Color.argb(122, 20, 22, 27)
         isAntiAlias = true
@@ -352,7 +331,6 @@ private object Ink {
         isAntiAlias = true
     }
 
-    /** A control itself: lighter than its plate, darker than its label. */
     fun body(): Paint = Paint().apply {
         color = Color.argb(205, 92, 98, 108)
         isAntiAlias = true
@@ -388,6 +366,7 @@ private object Ink {
 
     /** A label that survives both a white menu and a black game. */
     fun label(canvas: Canvas, s: String, cx: Float, cy: Float, size: Float, fill: Paint, edge: Paint) {
+        if (s.isEmpty()) return
         fill.textSize = size
         edge.textSize = size
         edge.strokeWidth = max(2f, size * 0.17f)
@@ -424,127 +403,228 @@ private class ToggleView(context: Context, private val onTap: () -> Unit) : View
 }
 
 /**
- * A stick and its press, in one window, because a thumb has to be able to travel between them.
+ * One window's worth of controls, of whatever kinds the layout put together.
  *
- * The press — `L3` or `R3` — could not be a separate window, and the reason is worth writing down
- * rather than rediscovering. A pointer belongs to the window that received its touch-down and stays
- * there for the life of the gesture; `FLAG_SPLIT_TOUCH` lets a *new* finger reach a *different*
- * window, but it does not hand an existing finger over. So a press button in its own window can be
- * held or the stick can be moved, never both by one thumb.
+ * A single view rather than one class per kind, because the interesting behaviour is **between**
+ * controls rather than inside them. A thumb rolling from one face button to the next, or holding a
+ * stick press and then moving the stick, happens across two controls in one gesture, and code split
+ * by control type has nowhere to put it.
  *
- * Sharing a window makes the sequence the project owner asked for possible: **hold the press, slide
- * onto the stick, and both are live**. Some titles need exactly that — a stick press held while the
- * stick is being moved.
+ * The touch model, which is the whole of it:
  *
- * Two rules follow from it:
- *
- * - **The press latches to its finger, not to its area.** Sliding off the button does not release
- *   it; only lifting does. Releasing on slide-off is right for a face button and wrong here, since
- *   sliding off is the whole point.
- * - **A press finger may take over the stick** if no other finger already has it, and keeps holding
- *   the press while it does.
+ * - **A stick or a pad belongs to one finger** until that finger lifts. A second finger landing on
+ *   it is ignored, because a stick is one thumb and a stray palm used to cancel the direction being
+ *   held.
+ * - **A button follows its finger onto another button**, which is what makes rolling across a
+ *   diamond press each in turn.
+ * - **A button does not release when its finger slides onto nothing, or onto a stick.** Sliding off
+ *   is how a thumb holds `L3` and then moves the stick, which some titles need; and a press lost by
+ *   drifting a few pixels is a press the player did not mean to lose. Lifting is what releases.
  */
-private class StickView(
+private class ClusterView(
     context: Context,
     private val engine: InputEngine,
     var profile: AnalogProfile,
-    private val right: Boolean = false,
+    private val controls: List<PlacedControl>,
 ) : View(context) {
 
     private val plate = Ink.plate()
     private val plateRim = Ink.plateRim()
-    private val knob = Ink.body().apply { color = Color.argb(215, 132, 139, 150) }
     private val body = Ink.body()
-    private val glow = Ink.active()
     private val rim = Ink.rim()
+    private val glow = Ink.active()
+    private val ring = Ink.active().apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val arrow = Paint().apply { color = Color.argb(225, 16, 18, 23); isAntiAlias = true }
+    private val hub = Paint().apply { color = Color.argb(70, 10, 12, 17); isAntiAlias = true }
     private val text = Ink.text()
     private val textEdge = Ink.textEdge()
+    private val arc = RectF()
 
-    private var x = 0f
-    private var y = 0f
+    /** Live state, by element id. The layout is the shape; none of this comes from it. */
+    private val pressed = mutableMapOf<String, Boolean>()
+    private val level = mutableMapOf<String, Float>()
+    private val stickX = mutableMapOf<String, Float>()
+    private val stickY = mutableMapOf<String, Float>()
+    private val hat = mutableMapOf<String, Pair<Int, Int>>()
 
-    /**
-     * Which finger owns the stick, and which fingers are holding the press.
-     *
-     * A stick is one thumb. Reading whichever pointer happens to be first in the event — which is
-     * what `event.x` does — let a second finger landing anywhere in the window yank the stick to
-     * itself, so a thumb on the stick and a thumb on a button fought each other.
-     */
-    private var pointer = -1
-    private val pressing = mutableSetOf<Int>()
+    /** Which finger is doing what. */
+    private val pointerButton = mutableMapOf<Int, String>()
+    private val pointerAxis = mutableMapOf<Int, String>()
 
-    /** Whether the touch that started this gesture landed on something of ours. */
     private var owned = false
+    private var ramping = false
+    private var lastFrameNanos = 0L
 
-    private val pressCode: Int get() = if (right) 318 else 317
-    private val pressLabel: String get() = if (right) "R3" else "L3"
+    private val crossPaths = mutableMapOf<String, Path>()
+    private val arrowPaths = mutableMapOf<String, List<Path>>()
 
-    /** Room left for the outline, which is stroked centred on the edge and would be half clipped. */
-    private val inset: Float get() = height * 0.03f
-    private val outerRadius: Float get() = height / 2f - inset
-    private val knobRadius: Float get() = outerRadius * 0.42f
+    init {
+        controls.filter { it.kind == ControlKind.DPAD }.forEach { buildCross(it) }
+    }
 
-    /** The plate hugs the outer edge of the screen; the strip left over holds the press. */
-    private val plateX: Float get() = if (right) width - height / 2f else height / 2f
-    private val plateY: Float get() = height / 2f
+    // --- drawing ------------------------------------------------------------------------------
 
-    private val stripWidth: Float get() = width - height.toFloat()
+    private fun buildCross(control: PlacedControl) {
+        val arm = control.radius * 0.94f
+        val half = arm * 0.33f
+        val cx = control.centerX
+        val cy = control.centerY
 
-    /**
-     * The press is bounded by the strip it sits in **and** by the stick it belongs to.
-     *
-     * Without the second bound it grows with the strip and ends up larger than a face button, which
-     * reads as the most important control on that side of the screen. It is not.
-     */
-    private val pressRadius: Float get() = min(stripWidth * 0.42f, height * 0.17f)
-    private val pressX: Float get() = if (right) stripWidth / 2f else width - stripWidth / 2f
-    private val pressY: Float get() = height / 2f
+        crossPaths[control.id] = Path().apply {
+            moveTo(cx - half, cy - arm)
+            lineTo(cx + half, cy - arm)
+            lineTo(cx + half, cy - half)
+            lineTo(cx + arm, cy - half)
+            lineTo(cx + arm, cy + half)
+            lineTo(cx + half, cy + half)
+            lineTo(cx + half, cy + arm)
+            lineTo(cx - half, cy + arm)
+            lineTo(cx - half, cy + half)
+            lineTo(cx - arm, cy + half)
+            lineTo(cx - arm, cy - half)
+            lineTo(cx - half, cy - half)
+            close()
+        }
 
-    /**
-     * How far the knob's **centre** may travel.
-     *
-     * The first version moved the centre the full radius, so at full deflection half the knob hung
-     * outside the window and was clipped — visible as a thumb sliced flat against the edge. A knob
-     * that is drawn cannot be allowed further out than its own radius from the edge.
-     */
-    private val travel: Float get() = outerRadius - knobRadius
-
-    private fun send(dx: Double, dy: Double) {
-        if (right) engine.rightStick(dx, dy, profile) else engine.stick(dx, dy, profile)
+        val reach = (arm + half) / 2f
+        val size = half * 0.52f
+        arrowPaths[control.id] = listOf(0f to -1f, 1f to 0f, 0f to 1f, -1f to 0f).map { (ux, uy) ->
+            val px = -uy
+            val py = ux
+            val ox = cx + ux * reach
+            val oy = cy + uy * reach
+            Path().apply {
+                moveTo(ox + ux * size, oy + uy * size)
+                lineTo(ox - ux * size * 0.55f + px * size * 0.85f, oy - uy * size * 0.55f + py * size * 0.85f)
+                lineTo(ox - ux * size * 0.55f - px * size * 0.85f, oy - uy * size * 0.55f - py * size * 0.85f)
+                close()
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
-        val r = outerRadius
-        if (r <= 0f) return
-        plateRim.strokeWidth = max(2f, r * 0.030f)
-        rim.strokeWidth = max(2f, r * 0.045f)
-
-        canvas.drawCircle(plateX, plateY, r, plate)
-        canvas.drawCircle(plateX, plateY, r, plateRim)
-        val kx = plateX + x * travel
-        val ky = plateY + y * travel
-        // Lit while a thumb is on it, the same as every other control. A stick was the one thing on
-        // the overlay that gave no sign it had been touched, so a thumb resting at centre looked
-        // identical to a thumb that had missed it.
-        canvas.drawCircle(kx, ky, knobRadius, if (pointer >= 0) glow else knob)
-        canvas.drawCircle(kx, ky, knobRadius, rim)
-
-        val pr = pressRadius
-        if (pr > 0f) {
-            canvas.drawCircle(pressX, pressY, pr, body)
-            if (pressing.isNotEmpty()) canvas.drawCircle(pressX, pressY, pr, glow)
-            canvas.drawCircle(pressX, pressY, pr, rim)
-            val size = pr * 0.78f
-            Ink.label(canvas, pressLabel, pressX, pressY + size / 3f, size, text, textEdge)
+        controls.forEach { control ->
+            when (control.kind) {
+                ControlKind.STICK -> drawStick(canvas, control)
+                ControlKind.DPAD -> drawPad(canvas, control)
+                ControlKind.DECORATION -> drawDecoration(canvas, control)
+                else -> drawButton(canvas, control)
+            }
         }
     }
+
+    private fun drawStick(canvas: Canvas, control: PlacedControl) {
+        val r = control.radius
+        plateRim.strokeWidth = max(2f, r * 0.030f)
+        rim.strokeWidth = max(2f, r * 0.045f)
+        canvas.drawCircle(control.centerX, control.centerY, r, plate)
+        canvas.drawCircle(control.centerX, control.centerY, r, plateRim)
+
+        val knobRadius = r * KNOB
+        val travel = r - knobRadius
+        val kx = control.centerX + (stickX[control.id] ?: 0f) * travel
+        val ky = control.centerY + (stickY[control.id] ?: 0f) * travel
+        // Lit while a thumb is on it, like every other control. A stick was once the one control
+        // that gave no sign of being touched.
+        val held = pointerAxis.containsValue(control.id)
+        canvas.drawCircle(kx, ky, knobRadius, if (held) glow else body)
+        canvas.drawCircle(kx, ky, knobRadius, rim)
+    }
+
+    private fun drawPad(canvas: Canvas, control: PlacedControl) {
+        val cross = crossPaths[control.id] ?: return
+        val r = control.radius
+        val arm = r * 0.94f
+        val half = arm * 0.33f
+        val corner = CornerPathEffect(half * 0.5f)
+        body.pathEffect = corner
+        rim.pathEffect = corner
+        rim.strokeWidth = max(2f, r * 0.05f)
+        plateRim.strokeWidth = max(2f, r * 0.030f)
+
+        canvas.drawCircle(control.centerX, control.centerY, r, plate)
+        canvas.drawCircle(control.centerX, control.centerY, r, plateRim)
+        canvas.drawPath(cross, body)
+
+        val (hx, hy) = hat[control.id] ?: (0 to 0)
+        if (hx != 0 || hy != 0) {
+            val cx = control.centerX
+            val cy = control.centerY
+            canvas.save()
+            // Clipped to the cross, so a highlight can be a plain rectangle and still land exactly
+            // on the arm it belongs to — including both arms of a diagonal.
+            canvas.clipPath(cross)
+            if (hy < 0) canvas.drawRect(cx - arm, cy - arm, cx + arm, cy - half, glow)
+            if (hy > 0) canvas.drawRect(cx - arm, cy + half, cx + arm, cy + arm, glow)
+            if (hx < 0) canvas.drawRect(cx - arm, cy - arm, cx - half, cy + arm, glow)
+            if (hx > 0) canvas.drawRect(cx + half, cy - arm, cx + arm, cy + arm, glow)
+            canvas.restore()
+        }
+
+        canvas.drawPath(cross, rim)
+        body.pathEffect = null
+        rim.pathEffect = null
+        canvas.drawCircle(control.centerX, control.centerY, half * 0.45f, hub)
+        arrowPaths[control.id]?.forEach { canvas.drawPath(it, arrow) }
+    }
+
+    private fun drawButton(canvas: Canvas, control: PlacedControl) {
+        val r = control.radius
+        rim.strokeWidth = max(2f, r * 0.09f)
+        ring.strokeWidth = max(3f, r * 0.14f)
+        val cx = control.centerX
+        val cy = control.centerY
+
+        canvas.drawCircle(cx, cy, r, body)
+
+        val analog = control.kind == ControlKind.ANALOG_TRIGGER
+        val value = level[control.id] ?: 0f
+        if (analog && value > 0f) {
+            canvas.save()
+            // Fills from the bottom upward, in proportion to the value being sent — the same number
+            // the target receives, shown where the thumb is.
+            canvas.clipRect(cx - r, cy + r - 2f * r * value, cx + r, cy + r)
+            canvas.drawCircle(cx, cy, r, glow)
+            canvas.restore()
+            // And again as a ring closing clockwise, drawn just inside the edge: a fill inside a
+            // small circle is exactly the part of the control a thumb is covering.
+            val ringRadius = r - ring.strokeWidth * 0.6f
+            arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
+            canvas.drawArc(arc, -90f, 360f * value, false, ring)
+        } else if (!analog && pressed[control.id] == true) {
+            canvas.drawCircle(cx, cy, r, glow)
+        }
+
+        canvas.drawCircle(cx, cy, r, rim)
+        val size = r * when {
+            control.label.length > 2 -> 0.66f
+            control.label.length > 1 -> 0.78f
+            else -> 0.86f
+        }
+        Ink.label(canvas, control.label, cx, cy + size / 3f, size, text, textEdge)
+    }
+
+    private fun drawDecoration(canvas: Canvas, control: PlacedControl) {
+        val size = control.radius * 0.6f
+        Ink.label(canvas, control.label, control.centerX, control.centerY + size / 3f, size, text, textEdge)
+    }
+
+    // --- touch --------------------------------------------------------------------------------
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                owned = claim(event, event.actionIndex)
-                return owned
+                // A cluster window is a rectangle and its controls are not. A touch in the space
+                // between them is refused rather than swallowed — which does not, on the reference
+                // device, hand it to the application below, but costs nothing and says what the
+                // window is for.
+                owned = controlAt(event.getX(0), event.getY(0)) != null
+                if (!owned) return false
+                claim(event, 0)
             }
 
             MotionEvent.ACTION_POINTER_DOWN -> {
@@ -554,27 +634,12 @@ private class StickView(
 
             MotionEvent.ACTION_MOVE -> {
                 if (!owned) return false
-                for (i in 0 until event.pointerCount) {
-                    val id = event.getPointerId(i)
-                    if (id == pointer) {
-                        aim(event, i)
-                    } else if (pointer == -1 && id in pressing && onPlate(event.getX(i), event.getY(i))) {
-                        // The finger holding the press has arrived on the stick. It drives the
-                        // stick from here and goes on holding the press until it lifts.
-                        pointer = id
-                        aim(event, i)
-                    }
-                }
+                for (i in 0 until event.pointerCount) move(event, i)
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 if (!owned) return false
-                val id = event.getPointerId(event.actionIndex)
-                if (id == pointer) releaseStick()
-                if (pressing.remove(id) && pressing.isEmpty()) {
-                    engine.button(pressCode, false)
-                    invalidate()
-                }
+                lift(event.getPointerId(event.actionIndex))
                 if (event.actionMasked == MotionEvent.ACTION_UP) owned = false
             }
 
@@ -583,338 +648,190 @@ private class StickView(
                 owned = false
             }
         }
+        invalidate()
         return true
     }
 
-    /** Returns whether this touch landed on the stick or the press; anything else is not ours. */
-    private fun claim(event: MotionEvent, index: Int): Boolean {
-        val px = event.getX(index)
-        val py = event.getY(index)
+    private fun claim(event: MotionEvent, index: Int) {
         val id = event.getPointerId(index)
-        if (onPress(px, py)) {
-            if (pressing.isEmpty()) engine.button(pressCode, true)
-            pressing += id
-            invalidate()
-            return true
+        val control = controlAt(event.getX(index), event.getY(index)) ?: return
+        when (control.kind) {
+            ControlKind.STICK, ControlKind.DPAD -> takeAxis(id, control, event, index)
+            ControlKind.DECORATION -> Unit
+            else -> holdButton(id, control)
         }
-        if (pointer == -1 && onPlate(px, py)) {
-            pointer = id
-            aim(event, index)
-            return true
-        }
-        return false
     }
 
-    private fun onPress(px: Float, py: Float): Boolean =
-        pressRadius > 0f && hypot(px - pressX, py - pressY) <= pressRadius * 1.15f
+    private fun move(event: MotionEvent, index: Int) {
+        val id = event.getPointerId(index)
+        val x = event.getX(index)
+        val y = event.getY(index)
 
-    private fun onPlate(px: Float, py: Float): Boolean =
-        hypot(px - plateX, py - plateY) <= outerRadius
-
-    private fun aim(event: MotionEvent, index: Int) {
-        val dx = (event.getX(index) - plateX) / travel
-        val dy = (event.getY(index) - plateY) / travel
-
-        // Clamped as a circle, not per axis. Clamping each axis to ±1 separately lets a diagonal
-        // reach 1.41 from centre, which is both outside the ring the user can see and a deflection
-        // a real stick cannot produce.
-        val magnitude = hypot(dx, dy)
-        if (magnitude > 1f) {
-            x = dx / magnitude
-            y = dy / magnitude
-        } else {
-            x = dx
-            y = dy
+        pointerAxis[id]?.let { axisId ->
+            controls.firstOrNull { it.id == axisId }?.let { aim(it, x, y) }
+            return
         }
-        send(x.toDouble(), y.toDouble())
-        invalidate()
+
+        val under = controlAt(x, y)
+        when {
+            under == null -> Unit // Keeps whatever this finger already holds.
+            under.kind == ControlKind.STICK || under.kind == ControlKind.DPAD ->
+                takeAxis(id, under, event, index)
+            under.kind == ControlKind.DECORATION -> Unit
+            under.id != pointerButton[id] -> holdButton(id, under)
+        }
     }
 
-    private fun releaseStick() {
-        pointer = -1
-        x = 0f
-        y = 0f
-        send(0.0, 0.0)
-        invalidate()
+    private fun takeAxis(id: Int, control: PlacedControl, event: MotionEvent, index: Int) {
+        // One finger owns a stick until it lifts. A second used to take it over, so a stray palm
+        // cancelled the direction being held.
+        if (pointerAxis.containsValue(control.id)) return
+        pointerAxis[id] = control.id
+        aim(control, event.getX(index), event.getY(index))
+    }
+
+    private fun holdButton(id: Int, control: PlacedControl) {
+        pointerButton[id]?.let { previous -> if (previous != control.id) release(previous) }
+        pointerButton[id] = control.id
+        press(control)
+    }
+
+    private fun lift(id: Int) {
+        pointerButton.remove(id)?.let { release(it) }
+        pointerAxis.remove(id)?.let { axisId ->
+            controls.firstOrNull { it.id == axisId }?.let { centre(it) }
+        }
     }
 
     fun releaseAll() {
-        releaseStick()
-        if (pressing.isNotEmpty()) {
-            pressing.clear()
-            engine.button(pressCode, false)
+        pointerButton.values.toList().forEach { release(it) }
+        pointerButton.clear()
+        pointerAxis.values.toList().forEach { axisId ->
+            controls.firstOrNull { it.id == axisId }?.let { centre(it) }
+        }
+        pointerAxis.clear()
+        // A trigger mid-ramp is dropped rather than drained: nothing is going to run the ramp once
+        // the window is gone, and a trigger left part-pressed is one nobody can release.
+        controls.filter { it.kind == ControlKind.ANALOG_TRIGGER }.forEach { control ->
+            if ((level[control.id] ?: 0f) != 0f) {
+                level[control.id] = 0f
+                sendTrigger(control, 0.0)
+            }
         }
         invalidate()
     }
 
-    companion object {
-        /**
-         * How much wider than tall the window is.
-         *
-         * The extra is the strip the press sits in. It has to be wide enough for a thumb and narrow
-         * enough that the window still covers little more than the controls in it.
-         */
-        const val WIDTH = 1.42f
+    /** The last one wins, so a control drawn on top of another is the one a touch reaches. */
+    private fun controlAt(x: Float, y: Float): PlacedControl? = controls.lastOrNull { control ->
+        control.kind != ControlKind.DECORATION &&
+            hypot(x - control.centerX, y - control.centerY) <= control.radius * REACH
     }
-}
 
-/**
- * The d-pad, drawn as one cross on a plate and read as a direction rather than as four buttons.
- *
- * Four circles was wrong in two ways at once. It looked like four buttons that happened to be
- * arranged in a diamond, which is not what a d-pad is; and it could only ever report the one circle
- * a finger landed in, so a thumb rolling from up into the corner produced up, then nothing, then
- * right — never up-and-right. **A cross with a direction read from the thumb's position** fixes
- * both: the shape says what it is, and the eight-way read means a diagonal is a place on the pad
- * rather than a pair of presses to be timed.
- */
-private class DpadView(context: Context, private val engine: InputEngine) : View(context) {
+    // --- sending ------------------------------------------------------------------------------
 
-    private val plate = Ink.plate()
-    private val plateRim = Ink.plateRim()
-    private val body = Ink.body()
-    private val rim = Ink.rim()
-    private val glow = Ink.active()
-    private val arrow = Paint().apply { color = Color.argb(225, 16, 18, 23); isAntiAlias = true }
-    private val hub = Paint().apply { color = Color.argb(70, 10, 12, 17); isAntiAlias = true }
-
-    private val cross = Path()
-    private val arrows = listOf(Path(), Path(), Path(), Path())
-    private var plateRadius = 0f
-    private var armLength = 0f
-    private var armHalf = 0f
-
-    private var hatX = 0
-    private var hatY = 0
-    private var pointer = -1
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        val cx = w / 2f
-        val cy = h / 2f
-        plateRadius = min(w, h) / 2f - min(w, h) * 0.03f
-        armLength = plateRadius * 0.88f
-        armHalf = armLength * 0.33f
-        val l = armLength
-        val a = armHalf
-
-        cross.reset()
-        cross.moveTo(cx - a, cy - l)
-        cross.lineTo(cx + a, cy - l)
-        cross.lineTo(cx + a, cy - a)
-        cross.lineTo(cx + l, cy - a)
-        cross.lineTo(cx + l, cy + a)
-        cross.lineTo(cx + a, cy + a)
-        cross.lineTo(cx + a, cy + l)
-        cross.lineTo(cx - a, cy + l)
-        cross.lineTo(cx - a, cy + a)
-        cross.lineTo(cx - l, cy + a)
-        cross.lineTo(cx - l, cy - a)
-        cross.lineTo(cx - a, cy - a)
-        cross.close()
-
-        // Rounded corners on the whole outline at once, so the fill and the stroke agree. Rounding
-        // each arm separately would leave seams where the arms meet.
-        val corner = CornerPathEffect(a * 0.5f)
-        body.pathEffect = corner
-        rim.pathEffect = corner
-        rim.strokeWidth = max(2f, armLength * 0.05f)
-        plateRim.strokeWidth = max(2f, plateRadius * 0.030f)
-
-        val reach = (l + a) / 2f
-        val size = a * 0.52f
-        listOf(0f to -1f, 1f to 0f, 0f to 1f, -1f to 0f).forEachIndexed { i, (ux, uy) ->
-            val px = -uy
-            val py = ux
-            val ox = cx + ux * reach
-            val oy = cy + uy * reach
-            arrows[i].reset()
-            arrows[i].moveTo(ox + ux * size, oy + uy * size)
-            arrows[i].lineTo(ox - ux * size * 0.55f + px * size * 0.85f, oy - uy * size * 0.55f + py * size * 0.85f)
-            arrows[i].lineTo(ox - ux * size * 0.55f - px * size * 0.85f, oy - uy * size * 0.55f - py * size * 0.85f)
-            arrows[i].close()
+    private fun press(control: PlacedControl) {
+        pressed[control.id] = true
+        when (control.kind) {
+            ControlKind.ANALOG_TRIGGER -> startRamp()
+            ControlKind.DIGITAL_TRIGGER -> sendTrigger(control, 1.0)
+            else -> control.binds?.let { GamepadCodes.buttonCode(it) }?.let { engine.button(it, true) }
         }
     }
 
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawCircle(width / 2f, height / 2f, plateRadius, plate)
-        canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateRim)
-        canvas.drawPath(cross, body)
-
-        if (hatX != 0 || hatY != 0) {
-            val cx = width / 2f
-            val cy = height / 2f
-            canvas.save()
-            // Clipped to the cross, so a highlight can be a plain rectangle and still land exactly
-            // on the arm it belongs to — including both arms of a diagonal.
-            canvas.clipPath(cross)
-            if (hatY < 0) canvas.drawRect(cx - armLength, cy - armLength, cx + armLength, cy - armHalf, glow)
-            if (hatY > 0) canvas.drawRect(cx - armLength, cy + armHalf, cx + armLength, cy + armLength, glow)
-            if (hatX < 0) canvas.drawRect(cx - armLength, cy - armLength, cx - armHalf, cy + armLength, glow)
-            if (hatX > 0) canvas.drawRect(cx + armHalf, cy - armLength, cx + armLength, cy + armLength, glow)
-            canvas.restore()
+    private fun release(id: String) {
+        val control = controls.firstOrNull { it.id == id } ?: return
+        pressed[id] = false
+        when (control.kind) {
+            ControlKind.ANALOG_TRIGGER -> startRamp()
+            ControlKind.DIGITAL_TRIGGER -> sendTrigger(control, 0.0)
+            else -> control.binds?.let { GamepadCodes.buttonCode(it) }?.let { engine.button(it, false) }
         }
-
-        canvas.drawPath(cross, rim)
-        canvas.drawCircle(width / 2f, height / 2f, armHalf * 0.45f, hub)
-        arrows.forEach { canvas.drawPath(it, arrow) }
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                val i = event.actionIndex
-                val onPlate = hypot(event.getX(i) - width / 2f, event.getY(i) - height / 2f) <=
-                    plateRadius
-                if (event.actionMasked == MotionEvent.ACTION_DOWN && !onPlate) return false
-                // First finger down owns the pad until it lifts. A second finger used to take it
-                // over, so a stray palm or a second thumb cancelled the direction being held.
-                if (pointer == -1 && onPlate) {
-                    pointer = event.getPointerId(i)
-                    aim(event, i)
+    private fun aim(control: PlacedControl, x: Float, y: Float) {
+        when (control.kind) {
+            ControlKind.STICK -> {
+                val knobRadius = control.radius * KNOB
+                val travel = control.radius - knobRadius
+                val dx = (x - control.centerX) / travel
+                val dy = (y - control.centerY) / travel
+                // Clamped as a circle, not per axis. Clamping each axis to ±1 separately lets a
+                // diagonal reach 1.41 from centre, which is outside the ring the user can see and a
+                // deflection no real stick can produce.
+                val magnitude = hypot(dx, dy)
+                val nx = if (magnitude > 1f) dx / magnitude else dx
+                val ny = if (magnitude > 1f) dy / magnitude else dy
+                stickX[control.id] = nx
+                stickY[control.id] = ny
+                sendStick(control, nx.toDouble(), ny.toDouble())
+            }
+
+            ControlKind.DPAD -> {
+                val arm = control.radius * 0.94f
+                val dx = x - control.centerX
+                val dy = y - control.centerY
+                val magnitude = hypot(dx, dy)
+                var hx = 0
+                var hy = 0
+                if (magnitude > arm * CENTRE) {
+                    val ux = dx / magnitude
+                    val uy = dy / magnitude
+                    if (ux > SECTOR) hx = 1 else if (ux < -SECTOR) hx = -1
+                    if (uy > SECTOR) hy = 1 else if (uy < -SECTOR) hy = -1
+                }
+                if (hat[control.id] != (hx to hy)) {
+                    hat[control.id] = hx to hy
+                    engine.hat(hx, hy)
                 }
             }
 
-            MotionEvent.ACTION_MOVE -> {
-                if (pointer != -1) {
-                    val i = event.findPointerIndex(pointer)
-                    if (i >= 0) aim(event, i)
-                }
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                if (event.getPointerId(event.actionIndex) == pointer) release()
-            }
-
-            MotionEvent.ACTION_CANCEL -> release()
+            else -> Unit
         }
-        return true
-    }
-
-    /** Eight directions from where the thumb is, read fresh on every move. */
-    private fun aim(event: MotionEvent, index: Int) {
-        val dx = event.getX(index) - width / 2f
-        val dy = event.getY(index) - height / 2f
-        val magnitude = hypot(dx, dy)
-        var nx = 0
-        var ny = 0
-        if (magnitude > armLength * CENTRE) {
-            val ux = dx / magnitude
-            val uy = dy / magnitude
-            if (ux > SECTOR) nx = 1 else if (ux < -SECTOR) nx = -1
-            if (uy > SECTOR) ny = 1 else if (uy < -SECTOR) ny = -1
-        }
-        send(nx, ny)
-    }
-
-    private fun send(nx: Int, ny: Int) {
-        if (nx == hatX && ny == hatY) return
-        hatX = nx
-        hatY = ny
-        engine.hat(hatX, hatY)
         invalidate()
     }
 
-    fun release() {
-        pointer = -1
-        send(0, 0)
+    private fun centre(control: PlacedControl) {
+        when (control.kind) {
+            ControlKind.STICK -> {
+                stickX[control.id] = 0f
+                stickY[control.id] = 0f
+                sendStick(control, 0.0, 0.0)
+            }
+
+            ControlKind.DPAD -> {
+                hat[control.id] = 0 to 0
+                engine.hat(0, 0)
+            }
+
+            else -> Unit
+        }
         invalidate()
     }
 
-    private companion object {
-        /** Inside this fraction of an arm, the thumb is on the hub and no direction is held. */
-        const val CENTRE = 0.20f
-
-        /**
-         * Where a cardinal ends and a diagonal begins.
-         *
-         * `sin(22.5°) ≈ 0.383` would make all eight sectors equal. Slightly above it gives the four
-         * cardinals about 50° each and the diagonals about 40°, because a thumb aiming for "up"
-         * misses more often than a thumb aiming for a corner it can feel it is reaching for.
-         */
-        const val SECTOR = 0.42f
+    private fun sendStick(control: PlacedControl, x: Double, y: Double) {
+        val binds = control.binds ?: return
+        if (GamepadCodes.isRight(binds)) engine.rightStick(x, y, profile) else engine.stick(x, y, profile)
     }
-}
 
-/**
- * A cluster of controls that are not sticks — face buttons, shoulders, triggers, menu buttons.
- *
- * One class rather than four, because the difference between them is where they sit and what they
- * send, not how they behave. Each control says what to do when it is pressed and released, so a
- * trigger sending an analog value and a button sending a key code are the same thing here.
- *
- * Three behaviours are shared by all of them and matter more than the drawing.
- *
- * **Nothing overlaps and nothing is clipped.** The first version picked a radius from a fixed
- * divisor and then placed each control a full half-window from centre, which put the outer edge of
- * every control exactly on the window boundary — so half of each outline was cut off — and left the
- * face buttons overlapping each other by a third of their width. The radius is now **solved for**:
- * the largest one at which no two controls come within a gap of each other and every control, with
- * its outline, still fits inside the window.
- *
- * **Every finger is read on every event, not only when it lands.** A press used to be decided once,
- * at touch-down, and never revisited — so sliding from one button into its neighbour kept the first
- * one held and never pressed the second. Now the set of controls under the fingers is recomputed on
- * every move and the difference is applied.
- *
- * **A trigger is a ramp, not a switch.** L2 and R2 sent 0 or 1 with nothing between, which is not
- * what those controls are on a pad. Holding one now raises its value over about half a second and
- * releasing drains it in about a third, slow enough to feel; the button fills from the bottom and a
- * ring closes around its edge, so the level is visible on the control itself.
- */
-private class PadView(
-    context: Context,
-    private val controls: List<Control>,
-    private val plate: Boolean = false,
-) : View(context) {
-
-    class Control(
-        val label: String,
-        /** Position within the window, from -1 to 1 on each axis. */
-        val dx: Float,
-        val dy: Float,
-        /** Whether this control ramps between 0 and 1 instead of switching. */
-        val analog: Boolean = false,
-        val onDown: () -> Unit = {},
-        val onUp: () -> Unit = {},
-        val onLevel: (Double) -> Unit = {},
-    )
-
-    private val plateFill = Ink.plate()
-    private val plateRim = Ink.plateRim()
-    private val body = Ink.body()
-    private val glow = Ink.active()
-    private val ring = Ink.active().apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
+    private fun sendTrigger(control: PlacedControl, value: Double) {
+        val binds = control.binds ?: return
+        engine.trigger(value, profile, GamepadCodes.isRight(binds))
     }
-    private val rim = Ink.rim()
-    private val text = Ink.text()
-    private val textEdge = Ink.textEdge()
-    private val arc = RectF()
 
-    /** Whether a finger is on each control, and how far an analog one has travelled. */
-    private val engaged = BooleanArray(controls.size)
-    private val level = FloatArray(controls.size)
-    private var ramping = false
+    // --- the trigger ramp ---------------------------------------------------------------------
 
-    private var radius = 0f
-    private var spreadX = 0f
-    private var spreadY = 0f
-    private var plateRadius = 0f
-
-    /** Whether the touch that started this gesture landed on a control of ours. */
-    private var owned = false
-
-    private var lastFrameNanos = 0L
+    private fun startRamp() {
+        if (ramping) return
+        ramping = true
+        lastFrameNanos = 0L
+        postOnAnimation(ramp)
+    }
 
     private val ramp = object : Runnable {
         override fun run() {
-            // Timed, not counted. Stepping a fixed amount per frame ties the ramp to the display:
-            // a trail from the reference device showed a press intended to take half a second
-            // taking 0.31, because that panel runs at 120 Hz rather than the 60 the constant
-            // assumed. Elapsed time is the same everywhere.
+            // Timed, not counted. Stepping a fixed amount per frame ties the ramp to the display: a
+            // trail from the reference device showed a press intended to take half a second taking
+            // 0.31, because that panel runs at 120 Hz rather than the 60 the constant assumed.
             val now = System.nanoTime()
             val seconds = if (lastFrameNanos == 0L) {
                 1f / 60f
@@ -925,16 +842,17 @@ private class PadView(
             lastFrameNanos = now
 
             var busy = false
-            controls.forEachIndexed { i, c ->
-                if (!c.analog) return@forEachIndexed
-                val target = if (engaged[i]) 1f else 0f
-                if (level[i] == target) return@forEachIndexed
-                level[i] = if (engaged[i]) {
-                    min(target, level[i] + seconds / RISE_SECONDS)
+            controls.filter { it.kind == ControlKind.ANALOG_TRIGGER }.forEach { control ->
+                val target = if (pressed[control.id] == true) 1f else 0f
+                val current = level[control.id] ?: 0f
+                if (current == target) return@forEach
+                val next = if (target > current) {
+                    min(target, current + seconds / RISE_SECONDS)
                 } else {
-                    max(target, level[i] - seconds / FALL_SECONDS)
+                    max(target, current - seconds / FALL_SECONDS)
                 }
-                c.onLevel(level[i].toDouble())
+                level[control.id] = next
+                sendTrigger(control, next.toDouble())
                 busy = true
             }
             invalidate()
@@ -947,220 +865,32 @@ private class PadView(
         }
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        val pad = min(w, h) * 0.04f
-        plateRadius = min(w, h) / 2f - min(w, h) * 0.03f
+    private companion object {
+        /** A little past the drawn edge, because a thumb's centre is not where it looks. */
+        const val REACH = 1.15f
 
-        // Solved rather than assumed: the largest radius that keeps every control inside the window
-        // and every pair of controls a visible gap apart. Twenty-four halvings settle it to well
-        // under a pixel, which is as exact as a drawn edge can be.
-        var low = 1f
-        var high = min(w, h) / 2f - pad
-        repeat(24) {
-            val mid = (low + high) / 2f
-            if (fits(mid, w, h, pad)) low = mid else high = mid
-        }
-        radius = low
-        spreadX = w / 2f - radius - pad
-        spreadY = h / 2f - radius - pad
-    }
+        /** The knob, as a fraction of the plate it sits on. */
+        const val KNOB = 0.42f
 
-    private fun fits(r: Float, w: Int, h: Int, pad: Float): Boolean {
-        val sx = w / 2f - r - pad
-        val sy = h / 2f - r - pad
-        if (sx < 0f || sy < 0f) return false
-        for (i in controls.indices) {
-            for (j in i + 1 until controls.size) {
-                val dx = (controls[i].dx - controls[j].dx) * sx
-                val dy = (controls[i].dy - controls[j].dy) * sy
-                if (hypot(dx, dy) < 2f * r + r * GAP) return false
-            }
-        }
-        return true
-    }
+        /** Inside this fraction of an arm, the thumb is on the pad's hub and no direction is held. */
+        const val CENTRE = 0.20f
 
-    private fun centreX(c: Control): Float = width / 2f + c.dx * spreadX
-
-    private fun centreY(c: Control): Float = height / 2f + c.dy * spreadY
-
-    override fun onDraw(canvas: Canvas) {
-        if (radius <= 0f) return
-        val r = radius
-        rim.strokeWidth = max(2f, r * 0.09f)
-        plateRim.strokeWidth = max(2f, plateRadius * 0.030f)
-        ring.strokeWidth = max(3f, r * 0.14f)
-
-        if (plate) {
-            canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateFill)
-            canvas.drawCircle(width / 2f, height / 2f, plateRadius, plateRim)
-        }
-
-        controls.forEachIndexed { i, c ->
-            val cx = centreX(c)
-            val cy = centreY(c)
-            canvas.drawCircle(cx, cy, r, body)
-            if (c.analog) {
-                if (level[i] > 0f) {
-                    canvas.save()
-                    // Fills from the bottom of the button upward, in proportion to the value being
-                    // sent — the same number the target receives, shown where the thumb is.
-                    canvas.clipRect(cx - r, cy + r - 2f * r * level[i], cx + r, cy + r)
-                    canvas.drawCircle(cx, cy, r, glow)
-                    canvas.restore()
-                    // And again as a ring closing clockwise, because a fill inside a small circle
-                    // under a thumb is exactly the part of the control the thumb is covering. Drawn
-                    // just inside the edge rather than around it: outside, the ring would reach past
-                    // the radius the window was solved for and be clipped at full travel.
-                    val ringRadius = r - ring.strokeWidth * 0.6f
-                    arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
-                    canvas.drawArc(arc, -90f, 360f * level[i], false, ring)
-                }
-            } else if (engaged[i]) {
-                canvas.drawCircle(cx, cy, r, glow)
-            }
-            canvas.drawCircle(cx, cy, r, rim)
-            val size = r * when {
-                c.label.length > 2 -> 0.66f
-                c.label.length > 1 -> 0.78f
-                else -> 0.86f
-            }
-            Ink.label(canvas, c.label, cx, cy + size / 3f, size, text, textEdge)
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                // A cluster window is a rectangle and its controls are not. A touch in the space
-                // between them is refused rather than swallowed, so it has the chance to reach
-                // whatever is underneath instead of becoming a dead patch of screen.
-                owned = indexAt(event.x, event.y) >= 0
-                if (!owned) return false
-                sync(event, lifted = -1)
-            }
-
-            MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_MOVE -> {
-                if (!owned) return false
-                sync(event, lifted = -1)
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                if (!owned) return false
-                sync(event, lifted = event.getPointerId(event.actionIndex))
-                if (event.actionMasked == MotionEvent.ACTION_UP) owned = false
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                releaseAll()
-                owned = false
-            }
-        }
-        return true
-    }
-
-    /** Whatever the fingers are on now becomes what is held now. */
-    private fun sync(event: MotionEvent, lifted: Int) {
-        val now = BooleanArray(controls.size)
-        for (i in 0 until event.pointerCount) {
-            if (event.getPointerId(i) == lifted) continue
-            val hit = indexAt(event.getX(i), event.getY(i))
-            if (hit >= 0) now[hit] = true
-        }
-        apply(now)
-    }
-
-    private fun apply(now: BooleanArray) {
-        var needsRamp = false
-        controls.forEachIndexed { i, c ->
-            if (now[i] == engaged[i]) {
-                if (c.analog && level[i] != (if (engaged[i]) 1f else 0f)) needsRamp = true
-                return@forEachIndexed
-            }
-            engaged[i] = now[i]
-            if (c.analog) needsRamp = true else if (now[i]) c.onDown() else c.onUp()
-        }
-        if (needsRamp && !ramping) {
-            ramping = true
-            postOnAnimation(ramp)
-        }
-        invalidate()
-    }
-
-    fun releaseAll() {
-        controls.forEachIndexed { i, c ->
-            engaged[i] = false
-            if (c.analog) {
-                // Not drained — dropped. Nothing is going to run the ramp once the window is gone,
-                // and a trigger left part-pressed is a trigger nobody can release.
-                if (level[i] != 0f) {
-                    level[i] = 0f
-                    c.onLevel(0.0)
-                }
-            } else {
-                c.onUp()
-            }
-        }
-        invalidate()
-    }
-
-    private fun indexAt(px: Float, py: Float): Int {
-        controls.forEachIndexed { i, c ->
-            if (hypot(px - centreX(c), py - centreY(c)) <= radius * REACH) return i
-        }
-        return -1
-    }
-
-    companion object {
+        /**
+         * Where a cardinal ends and a diagonal begins.
+         *
+         * `sin(22.5°) ≈ 0.383` would make all eight sectors equal. Slightly above it gives the four
+         * cardinals about 50° each and the diagonals about 40°, because a thumb aiming for "up"
+         * misses more often than one aiming for a corner it can feel it is reaching for.
+         */
+        const val SECTOR = 0.42f
 
         /**
          * How long a trigger takes to travel, in seconds.
          *
-         * Seconds rather than a step per frame. The first attempt used 0.2 s, which is a ramp on
-         * paper and a switch in the hand. The second used a fixed step per frame, which is 0.5 s
-         * only on a 60 Hz display — the reference device runs at 120 and a trail measured the press
-         * taking 0.31 s there. Release is quicker than press on purpose: a control that lingers
-         * after the thumb has gone feels broken, while one that takes a moment to reach full feels
-         * like a trigger.
+         * Release is quicker than press on purpose: a control that lingers after the thumb has gone
+         * feels broken, while one that takes a moment to reach full feels like a trigger.
          */
         const val RISE_SECONDS = 0.50f
         const val FALL_SECONDS = 0.30f
-
-        /** A little past the drawn edge, because a thumb's centre is not where it looks. */
-        const val REACH = 1.15f
-
-        /** Clear space between two controls, as a fraction of their radius. */
-        const val GAP = 0.34f
-
-        fun face(engine: InputEngine): List<Control> = listOf(
-            Control("Y", 0f, -1f, onDown = { engine.button(308, true) }, onUp = { engine.button(308, false) }),
-            Control("X", -1f, 0f, onDown = { engine.button(307, true) }, onUp = { engine.button(307, false) }),
-            Control("B", 1f, 0f, onDown = { engine.button(305, true) }, onUp = { engine.button(305, false) }),
-            Control("A", 0f, 1f, onDown = { engine.button(304, true) }, onUp = { engine.button(304, false) }),
-        )
-
-        /**
-         * The left shoulder cluster, with Select beneath the bumper.
-         *
-         * Select and Start used to share a strip across the bottom of the screen with L3 and R3.
-         * Four controls in one narrow row made every one of them the smallest thing on screen, and
-         * put two of them where a thumb has no reason to be. Under the bumpers there is room, and
-         * the two that left — the stick presses — went where they belong, on the sticks.
-         */
-        fun leftCluster(engine: InputEngine, profile: AnalogProfile): List<Control> = listOf(
-            Control("L1", -1f, -1f, onDown = { engine.button(310, true) }, onUp = { engine.button(310, false) }),
-            // L2 is analog on a real pad, so it ramps rather than switching. A target that reads the
-            // axis sees every value on the way; one that reads the button still sees the key the
-            // platform derives once the axis crosses its threshold.
-            Control("L2", 1f, -1f, analog = true, onLevel = { engine.trigger(it, profile, right = false) }),
-            Control("SEL", -1f, 1f, onDown = { engine.button(314, true) }, onUp = { engine.button(314, false) }),
-        )
-
-        fun rightCluster(engine: InputEngine, profile: AnalogProfile): List<Control> = listOf(
-            Control("R2", -1f, -1f, analog = true, onLevel = { engine.trigger(it, profile, right = true) }),
-            Control("R1", 1f, -1f, onDown = { engine.button(311, true) }, onUp = { engine.button(311, false) }),
-            Control("STA", 1f, 1f, onDown = { engine.button(315, true) }, onUp = { engine.button(315, false) }),
-        )
     }
 }

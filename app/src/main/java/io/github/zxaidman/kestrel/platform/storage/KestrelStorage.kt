@@ -3,6 +3,8 @@ package io.github.zxaidman.kestrel.platform.storage
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import io.github.zxaidman.kestrel.core.common.Outcome
 import io.github.zxaidman.kestrel.core.common.flatMap
@@ -67,7 +69,18 @@ public object KestrelStorage {
     /** Whether the user's own folder is in use, as opposed to the directory that dies on uninstall. */
     public fun usingChosenFolder(context: Context): Boolean = current(context) is SafDocumentStore
 
-    /** The intent that asks the user to pick a folder. */
+    /**
+     * The intent that asks the user to pick a folder, opened where the folder should go.
+     *
+     * `EXTRA_INITIAL_URI` starts the picker at the top level of internal storage — beside `Android`
+     * rather than inside it — so the choice is one tap rather than a navigation exercise.
+     *
+     * **Kestrel cannot create that folder itself, and the reason is worth stating.** Creating a
+     * directory at the top of shared storage needs `MANAGE_EXTERNAL_STORAGE`, which is access to
+     * every file on the phone; and declaring a permission of that class is exactly what got Kestrel
+     * blocked by Play Protect when the accessibility service was declared (`ADR-006`). So the folder
+     * is made through the picker, by the person who owns the storage, once.
+     */
     public fun folderPicker(): Intent =
         Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
             .addFlags(
@@ -75,6 +88,20 @@ public object KestrelStorage {
                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
                     Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
             )
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    putExtra(
+                        DocumentsContract.EXTRA_INITIAL_URI,
+                        DocumentsContract.buildDocumentUri(
+                            "com.android.externalstorage.documents",
+                            "primary:",
+                        ),
+                    )
+                }
+            }
+
+    /** The name Kestrel gives its own folder when it makes one inside what the user picked. */
+    public const val FOLDER_NAME: String = "Kestrel"
 
     /**
      * Accepts the folder the user picked, and moves what was already written into it.
@@ -99,7 +126,11 @@ public object KestrelStorage {
         }
 
         val chosen = openTree(context, tree)
-            ?: return Outcome.Failure(StorageError.NoLocation("that folder cannot be opened"))
+            ?: return Outcome.Failure(
+                StorageError.NoLocation(
+                    "that folder cannot be opened, or Kestrel could not make a folder inside it"
+                )
+            )
 
         val previous = current(context)
         val moved = if (previous is SafDocumentStore) 0 else copyEverything(previous, chosen)
@@ -152,9 +183,25 @@ public object KestrelStorage {
             it.uri == tree && it.isReadPermission && it.isWritePermission
         }
         if (!held) return null
+        val folder = kestrelFolderIn(context, tree) ?: return null
+        if (!folder.isDirectory || !folder.canWrite()) return null
+        return SafDocumentStore(context, folder)
+    }
+
+    /**
+     * Kestrel's own folder inside whatever the user picked, created if it is not there yet.
+     *
+     * The same rule on every path, which is what makes reopening after a restart land in the same
+     * place as choosing did. Someone who selects the whole of Documents has not agreed to have
+     * `settings.json` dropped among their documents; someone who made a `Kestrel` folder
+     * deliberately should have that one used rather than nested inside itself.
+     */
+    private fun kestrelFolderIn(context: Context, tree: Uri): DocumentFile? {
         val root = runCatching { DocumentFile.fromTreeUri(context, tree) }.getOrNull() ?: return null
-        if (!root.isDirectory || !root.canWrite()) return null
-        return SafDocumentStore(context, root)
+        if (!root.isDirectory) return null
+        if (root.name.equals(FOLDER_NAME, ignoreCase = true)) return root
+        root.findFile(FOLDER_NAME)?.let { if (it.isDirectory) return it }
+        return runCatching { root.createDirectory(FOLDER_NAME) }.getOrNull()
     }
 
     private fun copyEverything(from: DocumentStore, to: DocumentStore): Int {

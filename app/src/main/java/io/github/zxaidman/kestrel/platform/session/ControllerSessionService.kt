@@ -40,7 +40,12 @@ public object SessionState {
 
     /** How large the on-screen controls are drawn. A hand's judgement, not arithmetic. */
     public val controlScale: androidx.compose.runtime.MutableState<Float> =
-        mutableStateOf(io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay.DEFAULT_SCALE)
+        mutableStateOf(
+            io.github.zxaidman.kestrel.core.settings.KestrelSettings.DEFAULT_CONTROL_SCALE.toFloat()
+        )
+
+    /** Why the requested layout could not be used, when a fallback had to stand in for it. */
+    public val layoutProblem: androidx.compose.runtime.MutableState<String> = mutableStateOf("")
 
     /** The overlay currently on screen, so a setting can reach it without restarting it. */
     @Volatile
@@ -136,7 +141,23 @@ public class ControllerSessionService : Service() {
                 "Kestrel needs permission to draw over other applications. Grant it, then try again."
             return
         }
-        val view = ControllerOverlay(this, engine, SessionState.profile, SessionState.controlScale.value)
+        val loaded = io.github.zxaidman.kestrel.core.layout.LayoutRepository(
+            io.github.zxaidman.kestrel.platform.storage.KestrelStorage.current(this)
+        ).loadOrDefault(io.github.zxaidman.kestrel.platform.settings.AppSettings.current.value.layoutId)
+        SessionState.layoutProblem.value = loaded.problem.orEmpty()
+        val layout = loaded.layout ?: run {
+            SessionState.detail.value =
+                "No layout could be loaded, so there are no controls to draw. ${loaded.problem}"
+            return
+        }
+
+        val view = ControllerOverlay(
+            this,
+            engine,
+            SessionState.profile,
+            SessionState.controlScale.value,
+            layout,
+        )
         if (!view.show()) {
             SessionState.detail.value = "Could not put the controls on screen."
             return
@@ -145,8 +166,9 @@ public class ControllerSessionService : Service() {
         SessionState.overlay = view
         SessionState.overlayShown.value = true
         SessionState.detail.value =
-            "Controls are on screen. The round K button at the top shows and hides them, and " +
-                "nothing outside the controls is covered."
+            "Controls are on screen, drawn from '${layout.header.name}'. The round K button at the " +
+                "top shows and hides them." +
+                if (loaded.problem != null) "\n\nThe chosen layout could not be used: ${loaded.problem}" else ""
     }
 
     private fun hideOverlay() {

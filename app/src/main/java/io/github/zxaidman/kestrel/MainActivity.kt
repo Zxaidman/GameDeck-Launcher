@@ -26,6 +26,7 @@ import io.github.zxaidman.kestrel.diagnostics.ExportState
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewScreen
 import io.github.zxaidman.kestrel.diagnostics.InputPreviewState
 import io.github.zxaidman.kestrel.platform.settings.AppSettings
+import io.github.zxaidman.kestrel.platform.storage.KestrelStorage
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 import java.io.File
 
@@ -49,6 +50,49 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private var pendingExport: String? = null
+
+    /**
+     * The folder the user keeps their files in.
+     *
+     * Here rather than on the screen that shows it, because setup asks for the same thing and two
+     * launchers for one choice is two places for it to behave differently.
+     */
+    private val folderPicker = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val tree = result.data?.data
+        AppSettings.message.value = if (tree == null) {
+            "No folder was chosen, so nothing changed."
+        } else {
+            when (val outcome = KestrelStorage.useFolder(this, tree)) {
+                is io.github.zxaidman.kestrel.core.common.Outcome.Success -> outcome.value
+                is io.github.zxaidman.kestrel.core.common.Outcome.Failure -> outcome.error.message
+            }.also { AppSettings.reload(this) }
+        }
+    }
+
+    private fun chooseFolder() {
+        runCatching { folderPicker.launch(KestrelStorage.folderPicker()) }
+            .onFailure { AppSettings.message.value = "Could not open the folder picker." }
+    }
+
+    private fun askForNotifications() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    /** Sends the user to the one screen that can grant drawing over other applications. */
+    private fun askForOverlay() {
+        runCatching {
+            startActivity(
+                Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:$packageName"),
+                )
+            )
+        }
+    }
 
     /** Lets the user choose where the report lands, rather than hiding it somewhere they cannot reach. */
     private val saveLauncher = registerForActivityResult(
@@ -107,12 +151,9 @@ class MainActivity : ComponentActivity() {
         // setting the same things up again and an uninstall lost them for good.
         AppSettings.ensureLoaded(this)
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
+        // Nothing is demanded on launch any more. Setup asks, in one place, for everything that is
+        // missing — and a permission dialog fired before the user has seen the application is a
+        // dialog answered without knowing what it is for.
 
         // Bind early where possible, so the session controls are usable without a separate step.
         ShizukuCapability.bind(this) { }
@@ -130,6 +171,12 @@ class MainActivity : ComponentActivity() {
                         Text(
                             text = androidx.compose.ui.res.stringResource(id = R.string.app_name),
                             style = MaterialTheme.typography.headlineSmall,
+                        )
+                        io.github.zxaidman.kestrel.diagnostics.SetupScreen(
+                            context = this@MainActivity,
+                            onNotifications = ::askForNotifications,
+                            onOverlay = ::askForOverlay,
+                            onFolder = ::chooseFolder,
                         )
                         InputPreviewScreen(
                             state = preview,

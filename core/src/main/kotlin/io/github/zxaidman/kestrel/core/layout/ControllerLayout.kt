@@ -324,3 +324,57 @@ public object ControllerLayoutReader {
         return Placement.of(anchor, offsetX, offsetY, width, height, rotation, path)
     }
 }
+
+/**
+ * Turns a layout back into a document.
+ *
+ * The property that matters is that **what was read comes back out**: a layout imported, opened in
+ * the editor and exported again must still be the same layout, including the fields this build has
+ * never heard of. Unknown fields are written back exactly where they were found, which is the
+ * forward-compatibility promise `docs/CONFIGURATION_SCHEMA.md` makes being kept rather than
+ * described.
+ *
+ * Optional fields are written only when they carry something. A file full of `"label": null` and
+ * `"rotation": 0` is harder to read and harder to hand-edit, and hand-editing is a thing this
+ * project's own owner does.
+ */
+public object ControllerLayoutWriter {
+
+    public fun write(layout: ControllerLayout): ConfigNode {
+        val fields = LinkedHashMap<String, ConfigNode>()
+        fields["schemaVersion"] = ConfigNode.Num(layout.header.schemaVersion.toDouble())
+        fields["type"] = ConfigNode.Text(DocumentType.CONTROLLER_LAYOUT.wireName)
+        fields["id"] = ConfigNode.Text(layout.header.id.value)
+        fields["name"] = ConfigNode.Text(layout.header.name)
+        fields["orientation"] = ConfigNode.Text(layout.orientation.wireName)
+        fields["elements"] = ConfigNode.Arr(layout.elements.map { element(it) })
+        // Carried, not dropped: a document written by a newer build must survive a round trip
+        // through this one.
+        fields += layout.unknownFields
+        return ConfigNode.Obj(fields)
+    }
+
+    private fun element(element: LayoutElement): ConfigNode {
+        val fields = LinkedHashMap<String, ConfigNode>()
+        fields["id"] = ConfigNode.Text(element.id)
+        fields["kind"] = ConfigNode.Text(element.kind.wireName)
+        element.binds?.let { fields["binds"] = ConfigNode.Text(it.wireName) }
+        element.label?.let { fields["label"] = ConfigNode.Text(it) }
+
+        val placement = element.placement
+        fields["anchor"] = ConfigNode.Text(placement.anchor.wireName)
+        fields["offsetX"] = ConfigNode.Num(placement.offsetX)
+        fields["offsetY"] = ConfigNode.Num(placement.offsetY)
+        fields["width"] = ConfigNode.Num(placement.width)
+        // Written only when it differs, because height defaults to width and a round control
+        // stating its size twice is noise in a file people edit by hand.
+        if (placement.height != placement.width) {
+            fields["height"] = ConfigNode.Num(placement.height)
+        }
+        if (placement.rotationDegrees != 0.0) {
+            fields["rotation"] = ConfigNode.Num(placement.rotationDegrees)
+        }
+        fields += element.unknownFields
+        return ConfigNode.Obj(fields)
+    }
+}

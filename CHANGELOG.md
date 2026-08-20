@@ -521,6 +521,97 @@ person and a build for anyone: a release key that is **not** in this repository,
 say `ADR-INPUT-001` is scoped to one device, and a compatibility document reflecting what was tested
 rather than what is expected to work.
 
+### Phase 2 — The Overlay Draws The Document
+
+The controls are no longer a Kotlin file. `ControllerOverlay` reads a `ControllerLayout`, resolves
+every element against this screen, and turns the result into windows. Every position, size and
+binding on screen now comes from `builtin.xbox.default.json`, and editing that file changes the pad.
+
+**Which controls share a window is derived, not declared.** Two measured facts pull against each
+other: a finger cannot move between windows, so sliding a thumb from one control to the next only
+works inside one; and a window is dead everywhere its controls are not, so every spare pixel of
+window is a pixel nothing can be touched through. One window for everything gives perfect sliding
+and covers the screen; one window per control covers nothing and makes sliding impossible.
+
+`core/layout/Clustering` splits the difference: **controls close enough to slide between share a
+window, controls far enough apart to be deliberate get their own.** It is derived from the layout,
+so a user who drags two buttons together in the editor gets sliding between them without knowing the
+concept exists. Grouping is transitive, because a row of buttons is one row, and distance is
+measured between inscribed circles rather than bounding boxes — four round face buttons in a diamond
+have overlapping boxes and touch nowhere, so boxes would collapse every layout into one window.
+
+Tests hold it to the arrangement people have actually played with: a stick shares its window with
+its own press, the face buttons share theirs, the pad stays alone, no cluster covers a quarter of
+the screen, and the windows together cover under 35% of it.
+
+**One touch model for every kind of control**, in one view, because the interesting behaviour is
+between controls rather than inside them. A stick or a pad belongs to one finger until it lifts. A
+button follows its finger onto another button, which is what makes rolling across a diamond press
+each in turn. **A button does not release when its finger slides onto nothing or onto a stick** —
+that is how a thumb holds `L3` and then moves the stick, and it also means a press is not lost by
+drifting a few pixels. Lifting is what releases.
+
+**Scaling shrinks the arrangement towards its anchors**, offsets and sizes together. Scaling only
+the controls would leave a smaller pad sitting further from the corner rather than nearer it, which
+is the opposite of what someone reaching for a smaller control wants.
+
+`platform/input/GamepadCodes` is now the only place a control's name becomes a number. The overlay
+used to carry `304` and `ABS_BRAKE` in its own tables — kernel constants in the layer furthest from
+the kernel, and the reason a second backend could never have mapped them differently.
+
+### Phase 2 — A Layout Repository, And Immutability That Cannot Be Bypassed
+
+`core/layout/LayoutRepository` reads a layout by id from wherever that id lives: built-ins from what
+Kestrel ships, user layouts from the user's own folder, both through the same reader and the same
+rules.
+
+**Built-in immutability is enforced here rather than by a disabled button.** `save` and `delete`
+refuse a `builtin.` id outright, so there is no code path that overwrites a shipped layout and no
+interface can accidentally offer one. `duplicate` is the only way to get an editable copy, which
+makes Built-in → Duplicate → User copy → Edit the only path there is instead of the path people are
+asked to follow. A duplicate takes a new identity and keeps everything else, because an id
+travelling with a copy would leave two documents claiming to be the same thing.
+
+**A layout that cannot be loaded falls back to the default and says why.** Leaving someone with no
+controls at all is a worse answer than the wrong pad, and a corrupt file, a deleted layout and a
+forgotten folder all reach the same place.
+
+`ControllerLayoutWriter` completes the round trip, and the property that matters is that **what was
+read comes back out** — including fields this build has never heard of, written back where they were
+found. Optional fields that carry nothing are left out, because a file full of `"label": null` is
+harder to hand-edit, and hand-editing is a thing this project's own owner does.
+
+### Setup Asks Once, Every Time It Needs To
+
+There is no single moment when setup happens. A fresh install has nothing; clearing data is back to
+nothing with the application still installed; a permission revoked in system settings takes one
+thing away and leaves the rest. Asking at first launch handles only the first of those.
+
+So Kestrel asks **whenever the state is incomplete**: notifications, drawing over other
+applications, a data folder, and Shizuku, each with what it is for and one button that does it.
+Skipping is a real answer and lasts until the process ends — not persisted, deliberately, because
+what it hides is a fact about the phone that the user can undo from outside Kestrel at any time, and
+remembering the dismissal is the one way to guarantee they never see it again.
+
+Nothing blocks. The rest of the screen stays usable, because a wizard that will not let you past it
+traps anyone whose phone answers a question differently from how it was expected to.
+
+The permission request that used to fire on launch is gone with it: a dialog shown before the user
+has seen the application is a dialog answered without knowing what it is for.
+
+### Kestrel Makes Its Own Folder
+
+Choosing a folder now puts Kestrel's files in a `Kestrel` folder **inside** whatever was picked,
+creating it if it is not there and using it directly if the user picked one already called that. The
+picker also opens at the top level of internal storage rather than wherever it was last. Someone who
+selects the whole of Documents has not agreed to have `settings.json` dropped among their documents.
+
+**Kestrel cannot create that folder at the top of storage by itself**, and the reason is worth
+recording rather than rediscovering: making a directory there needs `MANAGE_EXTERNAL_STORAGE`, which
+is access to every file on the phone — and declaring a permission of that class is exactly what got
+Kestrel blocked by Play Protect when the accessibility service was declared (`ADR-006`). One tap in
+the picker is the price of not paying that again.
+
 ### Phase 2 — A Layout Is A Document Now
 
 The arrangement of controls lived in a Kotlin file, and that one fact was blocking three phases of
