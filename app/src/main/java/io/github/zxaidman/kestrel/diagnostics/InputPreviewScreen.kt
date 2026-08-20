@@ -48,7 +48,6 @@ import io.github.zxaidman.kestrel.core.profile.TargetDescriptor
 import io.github.zxaidman.kestrel.core.profile.matchProfile
 import io.github.zxaidman.kestrel.platform.session.ControllerSessionService
 import io.github.zxaidman.kestrel.platform.session.SessionState
-import io.github.zxaidman.kestrel.platform.input.fallback.ProbeState
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
 import kotlinx.coroutines.delay
 import kotlin.math.min
@@ -390,8 +389,6 @@ public fun InputPreviewScreen(
             )
         }
 
-        FallbackProbeSection(context)
-
         Section("Capability") {
             Mono(
                 "State:        ${capability.name}\n" +
@@ -620,145 +617,4 @@ private fun Mono(text: String) {
 @Composable
 private fun Labelled(label: String, value: Float, onChange: (Float) -> Unit) {
     Mono("$label  %.2f".format(value))
-}
-
-/**
- * The fallback under measurement (`ADR-006`), and the three ways it might be turned on.
- *
- * Separate from everything above it because it measures a **different** backend. The session, the
- * overlay and the controller on this screen are the privileged path; none of this touches them, and
- * a good result here would not make that path any better or any worse.
- */
-@Composable
-private fun FallbackProbeSection(context: android.content.Context) {
-    var status by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf(FallbackProbe.last) }
-    var tick by remember { mutableStateOf(0) }
-
-    // The platform's own list can change from outside this screen — from settings, or from a shell
-    // — so it is read again rather than remembered.
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(1000)
-            tick += 1
-        }
-    }
-    @Suppress("UNUSED_EXPRESSION") tick
-    val enabled = FallbackProbe.enabledInSettings(context)
-    val connected = ProbeState.connected
-    val holdsPermission = FallbackProbe.holdsWriteSecureSettings(context)
-
-    Section("Fallback probe — ADR-006, untested") {
-        Mono(
-            "In the setting list:  ${if (enabled) "yes" else "no"}\n" +
-                "Service connected:    ${if (connected) "yes" else "no"}\n" +
-                "Can inject:           ${if (ProbeState.canPerformGestures) "yes" else "no"}" +
-                (if (connected) "  (capabilities 0x%x)".format(ProbeState.capabilities) else "") +
-                "\nWRITE_SECURE_SETTINGS: ${if (holdsPermission) "held" else "not held"}\n" +
-                "Service says:         ${ProbeState.note}"
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Button(
-                onClick = {
-                    val shell = ShizukuCapability.shell()
-                    status = if (shell == null) {
-                        "No privileged shell. Bind Shizuku above first."
-                    } else {
-                        FallbackProbe.enableViaShell(context, shell)
-                    }
-                },
-            ) { Text("Enable via Shizuku") }
-            Button(
-                onClick = {
-                    val shell = ShizukuCapability.shell()
-                    status = if (shell == null) {
-                        "No privileged shell. Bind Shizuku above first."
-                    } else {
-                        FallbackProbe.grantWriteSecureSettings(context, shell)
-                    }
-                },
-            ) { Text("Grant permission") }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // The question this whole row exists for: with the permission held, can the fallback be
-            // turned on later with Shizuku not running at all?
-            Button(onClick = { status = FallbackProbe.enableWithOwnPermission(context) }) {
-                Text("Enable without shell")
-            }
-            Button(
-                onClick = {
-                    // Prefers the shell, because undoing must work even when the grant did not.
-                    val shell = ShizukuCapability.shell()
-                    status = if (shell != null) {
-                        FallbackProbe.disableViaShell(context, shell)
-                    } else {
-                        FallbackProbe.disableWithOwnPermission(context)
-                    }
-                },
-            ) { Text("Disable") }
-            Button(
-                onClick = {
-                    context.startActivity(
-                        android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                },
-            ) { Text("A11y") }
-            // Where the restricted-settings block is lifted, if that is what is refusing the
-            // writes: App info, overflow menu, Allow restricted settings. Worth its own button
-            // because it is three taps deep and nobody finds it by looking.
-            Button(
-                onClick = {
-                    context.startActivity(
-                        android.content.Intent(
-                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            android.net.Uri.parse("package:" + context.packageName),
-                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                },
-            ) { Text("App info") }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Button(
-                enabled = connected && !FallbackProbe.running,
-                onClick = {
-                    status = "Measuring. A box appears in the middle of the screen — do not touch it."
-                    FallbackProbe.measure(context) { measured ->
-                        result = measured
-                        status = "Measured."
-                    }
-                },
-            ) { Text("Measure") }
-        }
-        if (status.isNotBlank()) Mono("\n" + status)
-        Mono("\n" + describe(result))
-        Mono(
-            "\nWhat a good result here means: a target's own on-screen controls can be driven by " +
-                "Kestrel. What it does not mean: that a controller exists. Nothing in this section " +
-                "creates a device, so a target that reads only controller input sees nothing from " +
-                "it however well this measures."
-        )
-    }
-}
-
-private fun describe(result: FallbackProbe.Result?): String = when {
-    result == null -> "Not measured yet."
-    result.samples.isEmpty() -> result.note
-    else -> "landed:   ${result.samples.size} of ${result.samples.size + result.missed}\n" +
-        "latency:  best ${result.best} ms, median ${result.median} ms, worst ${result.worst} ms\n" +
-        "gestures: ${result.accepted} completed, ${result.cancelled} cancelled\n" +
-        "drag:     ${if (result.dragAccepted) "completed" else "cancelled"}, " +
-        "${result.dragMoves} movements over ${result.dragSpanMillis} ms" +
-        (if (result.dragSpanMillis > 0) " (%.0f a second)".format(
-            result.dragMoves * 1000.0 / result.dragSpanMillis
-        ) else "")
 }

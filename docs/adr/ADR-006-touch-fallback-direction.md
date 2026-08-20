@@ -2,11 +2,16 @@
 
 ## Status
 
-**Accepted as direction — implementation deferred.**
+**Rejected — measured, and rejected on product grounds rather than technical ones.**
 
-This record fixes *what the fallback will be* so that Phase 1 has something concrete to design
-against. It does not claim the mechanism works: nothing in it has been tested, and none of it may
-be described as anything but an intention until it has been.
+The mechanism was built as a probe and measured on the reference device
+(`docs/FALLBACK_PROBE.md` §6a). **It works, and it works better than this record predicted.** It is
+rejected anyway, and the distinction matters: this is not a record of something that failed, it is
+a record of something that succeeded at the wrong thing.
+
+The evidence, the reasoning, and what would reopen the question are in *Outcome* below. The rest of
+the record is left as it was written, because the value of it now is showing which of its
+predictions the measurements confirmed and which they beat.
 
 ## Context
 
@@ -97,3 +102,91 @@ status may be claimed from this record.
 - **Root as the fallback.** Rejected — a smaller audience than Shizuku, not a fallback.
 - **A companion application on a computer.** Rejected — the product is a phone that behaves like a
   handheld; requiring a computer defeats it.
+
+---
+
+## Outcome
+
+Measured on the reference device — Redmi Note 13 5G, HyperOS 3.0.3, Android 15, Kestrel
+`0.0.17-dev`. Every question this record listed under *What must be measured* now has an answer.
+
+### It works
+
+| Measured | Result |
+| --- | --- |
+| Gesture dispatch reaches a window | **12 of 12 taps landed, 0 cancelled** |
+| Latency, Shizuku running | best 3 ms, **median 4 ms**, worst 7 ms |
+| Latency, Shizuku not running | best 3 ms, **median 5 ms**, worst 20 ms |
+| Drag resolution | **~242 movements a second**, both runs |
+| Works with Kestrel's overlay on screen | **Yes** — the target measured against *was* an overlay window |
+| `WRITE_SECURE_SETTINGS` granted through the shell | **Yes**, and visible to Kestrel without a restart |
+| Kestrel enabling the service itself, Shizuku stopped | **Yes** |
+
+Two of those beat what this record predicted.
+
+- It said *"No analog sticks or analog triggers. A gesture has a position, not a magnitude. Sticks
+  and triggers degrade to digital regions at best."* **That was too pessimistic.** A drag delivers
+  around 242 movements a second, which is above display refresh — a simulated stick would be smooth,
+  not digital.
+- It said latency *"will be worse, by an unmeasured amount"*. A median of 4 ms is not worse in any
+  way a hand could detect.
+
+One thing it did not anticipate: the platform's **restricted settings** block. On a sideloaded
+installation the accessibility toggle is greyed out and both programmatic routes write nothing while
+reporting success — which is the failure mode that looks most like working code. The gate is App
+info → Allow restricted settings, it is manual, and no permission substitutes for it. **After it is
+lifted once**, everything above holds, including Kestrel enabling the service itself with Shizuku
+not running.
+
+### Why it is rejected anyway
+
+**The ceiling, which no measurement raises.** An accessibility service dispatches **touches**. It
+cannot create a device, and it has no key-injection API — `performGlobalAction` reaches back, home
+and recents, and `AccessibilityNodeInfo` actions need accessibility nodes, which a game rendering to
+a surface does not have. So the product this enables is not "Kestrel without Shizuku". It is
+**Kestrel's controls puppeting the target's own on-screen controls**: a press on our A button
+becomes a tap at the coordinates of *their* A button.
+
+That product carries costs this record understated:
+
+- **The target must draw touch controls, keep them visible, and keep them still.** A target
+  configured for a controller, or a streaming client, offers nothing to press.
+- **Every target needs its own coordinate map**, per layout and per screen size, and something has
+  to produce and maintain it. This record said only that such targets are "candidates"; it did not
+  price the calibration.
+- **A user could already touch those controls directly.** What Kestrel adds is its own positions and
+  skin over someone else's buttons — real, but a different and much smaller product than the one
+  `ADR-INPUT-001` delivers.
+
+**And a cost paid by everyone, including everyone who never uses it.** Declaring the accessibility
+service in the manifest changed how Kestrel installs: `0.0.14-dev` sideloaded with the ordinary
+unknown-source warning, and `0.0.15-dev` — which added the service and nothing else relevant — is
+**blocked by Play Protect**, requiring the user to switch that protection off. A manifest
+declaration is visible at install time whether the code ever runs or not, so the whole audience pays
+it for a capability a subset would use. This is exactly the *distribution-policy implication* that
+`ARCHITECTURE.md` §16 required to be evaluated, arriving as a measurement.
+
+Weighed together: a working mechanism, delivering a weaker product, with per-target calibration
+Kestrel would have to own, paid for by every user's install. **Not worth shipping.**
+
+### What this changes
+
+- **Kestrel is Shizuku-only for input.** `ADR-003` still holds — Shizuku is not required for the
+  *application*, only for a session. Without it Kestrel is a launcher, a layout editor and a skin
+  manager that says plainly what it cannot do (`docs/DEGRADED_STATE.md`).
+- The **Reduced** capability state is removed. Three states remain: Full, Ready, Configure only.
+- `platform/input/fallback/` stays empty and reserved. `ADR-002`'s backend interface is unaffected —
+  it exists so that a second backend *can* arrive, and none does.
+- The probe's code is deleted rather than left dormant. Its design and its numbers are in
+  `docs/FALLBACK_PROBE.md`, and the implementation is in this repository's history at
+  `0.0.17-dev` if the question is ever reopened.
+
+### What would reopen it
+
+- A target family that draws touch controls at **stable, discoverable** coordinates, making the
+  calibration cheap rather than per-user.
+- A distribution channel where the accessibility declaration costs nothing at install time.
+- A platform capability that delivers controller input without a privileged shell. None exists
+  today.
+
+Any of those is a new record, not an amendment to this one.

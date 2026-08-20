@@ -665,6 +665,16 @@ Fallback
 
 The final ordering depends on Phase 0 results.
 
+**Settled, by measurement.** The preferred backend is `ADR-INPUT-001`, proven on the reference
+device. Touch mapping was built as a probe, measured, and **rejected** — not because it failed, but
+because what it succeeds at is a different product: it can press a target's own on-screen buttons
+and can never create a controller (`ADR-006`, Outcome). System-level event injection needs a
+signature permission and is not reachable.
+
+So the list has one entry that is real. **Kestrel's input requires Shizuku**, and the ordering above
+is kept as written because `ADR-002`'s interface exists precisely so a second backend can arrive
+without the rest of the system noticing — not because one is expected.
+
 ---
 
 # 16. Accessibility Consideration
@@ -682,6 +692,22 @@ The project must evaluate:
 The Android documentation explicitly describes accessibility services as specialized assistive tools, not a general-purpose automation mechanism.
 
 Therefore the architecture must allow accessibility to be removed without affecting the rest of the system.
+
+**Evaluated and removed.** Each item on that list now has an answer, and one of them decided it.
+
+- *Technical suitability* — **adequate.** Median 4 ms injected touch, ~242 drag movements a second.
+- *Android behavior* — **a hard gate.** Restricted settings block a sideloaded application's
+  accessibility service, and both programmatic enable routes write nothing while reporting success
+  until the user lifts it by hand.
+- *Device compatibility* — measured on one device only.
+- *User disclosure* — soluble; the probe's service could inject and could not read the screen.
+- **Distribution-policy implications — decisive.** Declaring the service made Play Protect block
+  Kestrel's install outright, where the same application without it produced only the ordinary
+  unknown-source warning. That cost falls on every user at install time, whether or not the code
+  ever runs.
+
+The requirement that accessibility be removable without affecting the rest of the system was
+honoured literally: it was removed, and nothing else changed. `ADR-006` carries the evidence.
 
 ---
 

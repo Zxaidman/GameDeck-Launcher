@@ -405,6 +405,64 @@ the evidence trail must show why a run produced nothing.
 The lesson is recorded rather than merely fixed: a harness that reports success without confirming
 it is worse than one that reports nothing, because it converts a null result into a false one.
 
+### Fallback — Measured, Works, Rejected
+
+`ADR-006` is decided. The mechanism was built, measured on the reference device, and **rejected on
+product grounds rather than technical ones** — this is not a record of something that failed, it is
+a record of something that succeeded at the wrong thing.
+
+**The gate was restricted settings, and it is manual.** With **Allow restricted settings** off, the
+accessibility toggle was greyed out and both programmatic enable routes wrote nothing while
+reporting success. With it on, the Shizuku route worked immediately — so the setting had never been
+the obstacle. No permission substitutes for that one manual step. The first enable needs a hand;
+everything after it does not.
+
+**Then everything measured, and it is good.**
+
+| | Shizuku running | Shizuku stopped |
+| --- | --- | --- |
+| Taps landed | 12 of 12 | 12 of 12 |
+| Latency (best / median / worst) | 3 / **4** / 7 ms | 3 / **5** / 20 ms |
+| Drag | 97 movements in 400 ms — **243 a second** | 96 in 398 ms — **241 a second** |
+
+Kestrel enabled the service itself with Shizuku stopped, using the `WRITE_SECURE_SETTINGS` grant.
+Every number was taken against an overlay window of Kestrel's, so injection and the overlay
+demonstrably coexist.
+
+Two of those **beat what `ADR-006` predicted**. It expected sticks to "degrade to digital regions at
+best" — 242 movements a second is above display refresh, so a simulated stick would have been
+smooth. It expected latency to be "worse by an unmeasured amount" — 4 ms is below a frame.
+
+**Rejected anyway, and the reasons are not in the numbers.** An accessibility service dispatches
+touches. It cannot create a device and has no key-injection API. So the product is not "Kestrel
+without Shizuku" — it is Kestrel's controls **puppeting a target's own on-screen buttons**: our A
+becomes a tap at the coordinates of theirs. That needs the target to draw touch controls, keep them
+visible and still, and be calibrated per layout and per screen size — and a user could already touch
+those buttons directly. On top of which, declaring the service **made Play Protect block Kestrel's
+install for every user**, including everyone who would never enable it, because a manifest
+declaration is visible at install time whether the code runs or not.
+
+A working mechanism, a weaker product, per-target calibration Kestrel would own, paid for by every
+install. Not worth shipping.
+
+**What changed as a result.**
+
+- **Kestrel is Shizuku-only for input.** `ADR-003` still holds: Shizuku is not required for the
+  application, only for a session.
+- The **Reduced** capability state is gone from `docs/DEGRADED_STATE.md`. Three remain — Full,
+  Ready, Configure only — and the document says why the fourth was removed, because "we dropped the
+  fallback" otherwise invites the assumption that it did not work.
+- `ARCHITECTURE.md` §15 records that the backend ordering now has one real entry, and §16's
+  evaluation checklist is answered item by item with the distribution-policy line marked decisive.
+- The probe's code is **deleted rather than left dormant**, and the manifest declarations with it,
+  which restores the ordinary sideload path. Its design is `docs/FALLBACK_PROBE.md` and its
+  implementation is in history at `0.0.17-dev`.
+- `ADR-006` records what would reopen the question. Any of it would be a new record, not an
+  amendment.
+
+No JSON was captured for the final run; the numbers are transcribed from the screen and are marked
+as weaker evidence than an export, though the conclusion does not turn on a millisecond.
+
 ### Fallback — First Results, And A Cost That Is Not About The Fallback
 
 Reference device, `0.0.16-dev`. Three measurements, one of them about how Kestrel installs rather

@@ -1,7 +1,7 @@
 # Kestrel — Fallback Probe
 
 **Document:** `docs/FALLBACK_PROBE.md`  
-**Status:** Active — procedure for the experiment that decides `ADR-006`  
+**Status:** Complete — the experiment ran, and `ADR-006` is decided (Rejected)  
 **Subject:** `ADR-006` — touch fallback via an accessibility service and an overlay,
 **Accepted as direction, untested**  
 
@@ -144,6 +144,21 @@ changed from *untested* to whatever the evidence supports, with the numbers quot
 summarised. If the answer is that the direction does not work, that is a result and it is recorded
 as one — `CHANGELOG.md` says a failed experiment is still valuable documentation.
 
+## 0. Result
+
+**The mechanism works. It is not being shipped.** Median 4 ms injected touch, ~242 drag movements a
+second, 12 of 12 taps landed, and Kestrel can enable the service itself with Shizuku not running —
+once the user lifts the platform's restricted-settings gate by hand.
+
+It is rejected because what it does well is the wrong thing: it presses a *target's own* on-screen
+buttons and can never create a controller, it needs per-target coordinate calibration, and declaring
+the service made Play Protect block Kestrel's install for every user. `ADR-006` Outcome carries the
+reasoning; §6b below carries the numbers.
+
+The probe's code was deleted with the decision. It is in this repository's history at `0.0.17-dev`,
+and this document is the design, so it can be rebuilt if any of the conditions in `ADR-006`'s
+*What would reopen it* ever hold.
+
 ## 6a. First results — reference device, 2026-08-20
 
 Redmi Note 13 5G, HyperOS 3.0.3, Android 15, Kestrel `0.0.16-dev`.
@@ -224,3 +239,59 @@ layout can press an emulator's own on-screen buttons* — a puppet layer over co
 already draws, requiring those controls to be visible and to stay where they are. A stick would be a
 drag aimed at the emulator's stick; a d-pad, taps on its d-pad. Whether that is worth having is a
 product judgement, and it is a different product from the one `ADR-INPUT-001` delivers.
+
+---
+
+## 6b. Second results — the gate found, and everything measured
+
+Same device, Kestrel `0.0.17-dev`.
+
+**The block was restricted settings, and it is manual.** In App info, **Allow restricted settings**
+was present. With it off, the accessibility toggle was greyed out and both programmatic routes wrote
+nothing while reporting success. With it on, the toggle became editable — and from that point the
+Shizuku route worked, so the setting had never been the obstacle. **No permission substitutes for
+that one manual step**, which answers question 1 with a qualification rather than a yes: the
+*first* enable needs a hand, and everything after it does not.
+
+**With Shizuku running**
+
+```text
+landed:   12 of 12
+latency:  best 3 ms, median 4 ms, worst 7 ms
+gestures: 12 completed, 0 cancelled
+drag:     completed, 97 movements over 400 ms (243 a second)
+```
+
+**With Shizuku stopped, enabled by Kestrel's own permission**
+
+```text
+landed:   12 of 12
+latency:  best 3 ms, median 5 ms, worst 20 ms
+gestures: 12 completed, 0 cancelled
+drag:     completed, 96 movements over 398 ms (241 a second)
+```
+
+The platform granted capability `0x20` — `CAPABILITY_CAN_PERFORM_GESTURES` — and nothing else, which
+is what the configuration asked for.
+
+Every number is taken against an overlay window of Kestrel's, so question 4 is answered by the
+method: **injection and Kestrel's overlay coexist.**
+
+### Reading the numbers
+
+- **Latency is not a problem.** 4 ms is below a display frame at any refresh rate.
+- **Resolution is not a problem either, and this is where the prediction was wrong.** `ADR-006`
+  expected sticks to "degrade to digital regions at best". 242 movements a second is above display
+  refresh — a simulated stick would have been smooth.
+- **Stopping Shizuku costs almost nothing.** The median moves 4 ms → 5 ms and the worst case 7 ms →
+  20 ms, on a single run of twelve; treat the tail as noise rather than as a finding.
+
+No JSON was captured for this run. The numbers above are transcribed from the screen, which is
+weaker evidence than an export and is marked as such — though the conclusion does not turn on a
+millisecond.
+
+### The result did not decide the question
+
+Worth being explicit, because a table of good numbers reads like a recommendation. Everything above
+says the *mechanism* is sound. What decided `ADR-006` is what the mechanism can be used for, and no
+measurement here bears on that. See `ADR-006` Outcome.

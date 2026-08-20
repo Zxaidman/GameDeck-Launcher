@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kestrel</string>
-    <string name="fallback_probe_description">Measures whether Kestrel can drive a target\'s own on-screen controls when a virtual controller is unavailable. It dispatches touches and reads nothing from the screen. Enable it only while testing.</string>
 </resources>

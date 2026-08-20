@@ -3,7 +3,6 @@ package io.github.zxaidman.kestrel.diagnostics
 import android.content.Context
 import android.os.Build
 import android.view.InputDevice
-import io.github.zxaidman.kestrel.platform.input.fallback.ProbeState
 import io.github.zxaidman.kestrel.platform.input.virtual.VirtualControllerBackend
 import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
@@ -96,39 +95,6 @@ public object DiagnosticReport {
                 put("lastButton", state.lastButton)
                 put("rawX", state.rawX)
                 put("rawY", state.rawY)
-            },
-        )
-
-        // The fallback under measurement. Reported whether or not it has been used, because "the
-        // service was not even enabled" is an answer a reader needs to be able to distinguish from
-        // "it was enabled and produced nothing".
-        report.put(
-            "fallbackProbe",
-            JSONObject().apply {
-                put("enabledInSettings", FallbackProbe.enabledInSettings(context))
-                put("serviceConnected", ProbeState.connected)
-                put("canPerformGestures", ProbeState.canPerformGestures)
-                put("capabilitiesRaw", ProbeState.capabilities)
-                put("holdsWriteSecureSettings", FallbackProbe.holdsWriteSecureSettings(context))
-                put("serviceNote", ProbeState.note)
-                val measured = FallbackProbe.last
-                if (measured == null) {
-                    put("measured", false)
-                } else {
-                    put("measured", measured.samples.isNotEmpty())
-                    put("note", measured.note)
-                    put("landed", measured.samples.size)
-                    put("missed", measured.missed)
-                    put("gesturesCompleted", measured.accepted)
-                    put("gesturesCancelled", measured.cancelled)
-                    put("latencyBestMs", measured.best)
-                    put("latencyMedianMs", measured.median)
-                    put("latencyWorstMs", measured.worst)
-                    put("latencyAllMs", JSONArray().apply { measured.samples.forEach { put(it) } })
-                    put("dragAccepted", measured.dragAccepted)
-                    put("dragMovements", measured.dragMoves)
-                    put("dragSpanMs", measured.dragSpanMillis)
-                }
             },
         )
 

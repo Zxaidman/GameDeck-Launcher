@@ -12,20 +12,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Declared so it can be granted, never held by default. WRITE_SECURE_SETTINGS is
-         signature|privileged|development, and the development flag is what lets `pm grant` hand it
-         over from a shell — but only to an application that has *asked* for it. Without this line
-         the grant has nothing to grant and the permission can never read as held, which is exactly
-         what the first probe run showed: `pm grant` exited zero and the permission stayed absent.
-
-         Declaring it costs nothing while it is ungranted: the platform does not give it to an
-         ordinary installation, so Kestrel runs without it unless someone deliberately grants it.
-         What it buys is the fallback being enabled later with Shizuku not running at all
-         (docs/FALLBACK_PROBE.md §4). -->
-    <uses-permission
-        android:name="android.permission.WRITE_SECURE_SETTINGS"
-        tools:ignore="ProtectedPermissions" />
-
     <!-- The controls must be drawn over the target, in a window that never takes focus: the
          platform delivers a controller's events to the focused window, so controls inside an
          ordinary activity send their input back to Kestrel. Measured — see
@@ -58,22 +44,6 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Holds a virtual controller open for a gaming session, and keeps it
                     visible and stoppable while it exists." />
-        </service>
-
-        <!-- The fallback under measurement (ADR-006), not a backend. It is declared so it can be
-             enabled by hand for a test and does nothing until it is; no product code refers to it.
-             ARCHITECTURE.md §16 requires that accessibility be removable without affecting the rest
-             of the system, and nothing depends on this. -->
-        <service
-            android:name=".platform.input.fallback.TouchInjectionService"
-            android:exported="false"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/fallback_probe_service" />
         </service>
 
         <!-- Lets Share hand over the report as an actual file. Not exported: nothing can pull a

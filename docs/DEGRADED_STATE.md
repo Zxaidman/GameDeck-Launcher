@@ -23,7 +23,7 @@ The rule underneath all of them: **the user always knows what they have, before 
 
 ## 2. Capability states
 
-Four, and they are separate facts rather than points on a line. `ARCHITECTURE.md` §14 already
+Three, and they are separate facts rather than points on a line. `ARCHITECTURE.md` §14 already
 requires Shizuku's state to be reported as separate facts for the same reason: none of them implies
 another.
 
@@ -31,8 +31,23 @@ another.
 | --- | --- | --- |
 | **Full** | Preferred backend active — virtual controller open | Everything |
 | **Ready** | Preferred backend available but no session open | Everything, once started |
-| **Reduced** | Preferred backend unavailable; fallback available | Fallback capabilities only (`ADR-006`) |
 | **Configure only** | No input backend available | Everything except playing |
+
+### There was a fourth, and it was removed by measurement
+
+A **Reduced** state sat between Ready and Configure only: preferred backend gone, touch fallback
+available. It is gone because the fallback is (`ADR-006`, Rejected).
+
+Worth stating why, because "we dropped the fallback" invites the assumption that it did not work.
+**It worked** — a median 4 ms injected touch and around 242 movements a second on a drag, measured.
+What it could never do is create a controller. The product it enabled was Kestrel's controls
+puppeting a *target's own* on-screen buttons, which needs the target to draw them, keep them still,
+and be calibrated per layout — and declaring the service made Play Protect block Kestrel's install
+for every user, including everyone who would never use it.
+
+So the honest shape of the product is: **input needs Shizuku, and everything else does not.** There
+is no half-tier, and inventing one would have meant promising a capability by a name that did not
+describe it.
 
 **Configure only is a fully usable state, not a locked door.** The launcher opens, targets are
 detected and can be added by hand, layouts and skins can be created and edited, settings are
