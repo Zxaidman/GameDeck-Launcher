@@ -10,23 +10,29 @@ package io.github.zxaidman.kestrel.core.settings
  */
 public enum class AppOrientation(public val wireName: String) {
 
-    /** Follow the phone, including upside down. */
+    /** Whatever the phone's own rotation setting says, including its rotation lock. */
     AUTO("auto"),
 
     /** Landscape, and stay there whichever way the phone is turned. */
     LANDSCAPE("landscape"),
 
-    /** Portrait, and stay there. */
-    PORTRAIT("portrait"),
+    /** Landscape the other way up, for a phone whose camera or cable is on the wrong side. */
+    REVERSE_LANDSCAPE("reverse-landscape"),
 
     /** Landscape, but flip when the phone is turned over. */
     SENSOR_LANDSCAPE("sensor-landscape"),
 
-    /** Portrait, but flip when the phone is turned over. */
-    SENSOR_PORTRAIT("sensor-portrait"),
+    /** Portrait, and stay there. */
+    PORTRAIT("portrait"),
 
-    /** Whatever the phone's own rotation lock says. */
-    SYSTEM("system"),
+    /**
+     * Portrait, flipping when the phone is turned over — where the phone allows it.
+     *
+     * Most do not. Reverse portrait is unsupported on a great many devices, so this often behaves
+     * exactly like [PORTRAIT]; that is the platform's answer rather than Kestrel's, and there is no
+     * separate reverse-portrait option because it would be an option that does nothing.
+     */
+    SENSOR_PORTRAIT("sensor-portrait"),
     ;
 
     public companion object {

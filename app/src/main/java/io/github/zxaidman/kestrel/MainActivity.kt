@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
@@ -175,7 +176,19 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            // The padding follows the display settings, so turning them on
+                            // changes what Kestrel's own screen does and not only the overlay.
+                            // Padding for bars that are hidden leaves a band of screen nobody can
+                            // use, which is exactly what full screen was turned on to avoid.
+                            .windowInsetsPadding(
+                                when {
+                                    !AppSettings.current.value.display.fullScreen ->
+                                        WindowInsets.safeDrawing
+                                    AppSettings.current.value.display.drawUnderCutout ->
+                                        WindowInsets.Companion.let { WindowInsets(0, 0, 0, 0) }
+                                    else -> WindowInsets.displayCutout
+                                }
+                            )
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -198,6 +211,15 @@ class MainActivity : ComponentActivity() {
                         }
                         @Suppress("UNUSED_EXPRESSION") tick
 
+                        // Which page is in front. One value, because there are two pages: a
+                        // navigation graph for two destinations would be scaffolding around a
+                        // decision that has not been made yet.
+                        var editing by androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf<
+                                io.github.zxaidman.kestrel.core.layout.ControllerLayout?
+                                >(null)
+                        }
+
                         // Setup is a page, not a banner: on a fresh install everything below it
                         // is unusable anyway, and a screen that cannot do its job is a worse thing
                         // to show than the list of reasons why.
@@ -211,11 +233,22 @@ class MainActivity : ComponentActivity() {
                                 onOverlay = ::askForOverlay,
                                 onFolder = ::chooseFolder,
                             )
+                        } else if (editing != null) {
+                            // A page of its own, and the whole screen while it is open. Arranging
+                            // a pad is a spatial job, and a preview squeezed above a diagnostics
+                            // list would be a preview of a different shape from the thing being
+                            // arranged.
+                            io.github.zxaidman.kestrel.feature.editor.LayoutEditorScreen(
+                                layout = editing!!,
+                                onSave = ::saveEditedLayout,
+                                onClose = { editing = null },
+                            )
                         } else {
                             InputPreviewScreen(
                                 state = preview,
                                 onSave = ::saveReport,
                                 onShare = ::shareReport,
+                                onEditLayout = { editing = openLayoutForEditing() },
                             )
                         }
                     }
@@ -223,6 +256,48 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun layoutRepository() = io.github.zxaidman.kestrel.core.layout.LayoutRepository(
+        io.github.zxaidman.kestrel.platform.storage.KestrelStorage.current(this)
+    )
+
+    /**
+     * Opens the layout in use, duplicating it first when it is one Kestrel ships.
+     *
+     * The duplication happens rather than being demanded. Somebody who presses Edit wants to change
+     * how their pad looks, not to be told why they cannot — and the rule that a built-in is
+     * immutable is kept exactly as strictly either way.
+     */
+    private fun openLayoutForEditing(): io.github.zxaidman.kestrel.core.layout.ControllerLayout? {
+        val repository = layoutRepository()
+        val current = AppSettings.current.value.layoutId
+        val loaded = repository.loadOrDefault(current).layout ?: return null
+
+        val editable = io.github.zxaidman.kestrel.feature.editor.openForEditing(loaded) { built ->
+            repository.duplicate(built, "xbox", built.header.name + " (my copy)")
+        }
+        return when (editable) {
+            is io.github.zxaidman.kestrel.core.common.Outcome.Failure -> null
+            is io.github.zxaidman.kestrel.core.common.Outcome.Success -> {
+                if (editable.value.header.id.value != current) {
+                    AppSettings.update { it.copy(layoutId = editable.value.header.id.value) }
+                    AppSettings.persist(this)
+                }
+                editable.value
+            }
+        }
+    }
+
+    /** Writes the edited layout, and hands it straight to the controls if they are on screen. */
+    private fun saveEditedLayout(layout: io.github.zxaidman.kestrel.core.layout.ControllerLayout): String =
+        when (val saved = layoutRepository().save(layout)) {
+            is io.github.zxaidman.kestrel.core.common.Outcome.Failure ->
+                "Not saved: ${saved.error.message}"
+            is io.github.zxaidman.kestrel.core.common.Outcome.Success -> {
+                io.github.zxaidman.kestrel.platform.session.SessionState.overlay?.apply(layout)
+                "Saved to layouts/${layout.header.id.value}.json."
+            }
+        }
 
     /**
      * Puts Kestrel in the shape the settings ask for: how much screen, and which way up.
@@ -246,12 +321,14 @@ class MainActivity : ComponentActivity() {
         val display = AppSettings.current.value.display
 
         requestedOrientation = when (display.orientation) {
-            AppOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            // USER rather than FULL_USER: it honours the phone's rotation lock, which is what
+            // somebody who set that lock is asking for.
+            AppOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_USER
             AppOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            AppOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            AppOrientation.REVERSE_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
             AppOrientation.SENSOR_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            AppOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             AppOrientation.SENSOR_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-            AppOrientation.SYSTEM -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

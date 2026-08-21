@@ -13,6 +13,56 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### Phase 3 — A Layout Editor, On Its Own Page
+
+Editing a layout by moving it rather than by typing numbers into a file. Requested first of the
+three remaining pieces, and it earns being first: nobody can picture `offsetX: 0.22` on a phone they
+are holding, which is the confusion the project owner reported in exactly those words.
+
+**The file stays the truth.** The editor writes the same document a text editor would, and
+everything it can do can still be done by hand. What it adds is the one thing a text editor cannot —
+seeing where a control is while deciding where it should be.
+
+Three rules it keeps because they are the schema's rather than the screen's:
+
+- **A built-in is never edited.** Pressing Edit on one duplicates it and edits the copy. The rule is
+  kept by doing the duplication rather than by refusing the request — somebody who presses Edit
+  wants to change their pad, not to learn why they cannot.
+- **Nothing is saved until it is saved.** Dragging changes what is on screen; the file changes when
+  the button is pressed. An editor that wrote every frame of a drag is an editor with no way to
+  change your mind.
+- **Dragging moves the control the way the finger went.** An offset is measured inwards from its
+  anchor, so a control pinned bottom-right moves left as its offset grows. The sign is flipped
+  inside the editor rather than being made the author's problem.
+
+It takes the whole screen, because arranging a pad is a spatial job and a preview squeezed above a
+list is a preview of the wrong shape. Select a control, drag it, then size, height, shape and anchor
+from the bar underneath. The centre anchor is deliberately not offered: a control anchored to the
+middle of the screen is one no thumb can reach while holding a phone.
+
+### A Guide Written Beside The Layouts
+
+`HOW-TO-EDIT.md` is written into `Kestrel/layouts/` whenever a layout is copied there, because JSON
+cannot carry a comment and a schema document in the repository does not help somebody holding a
+phone with a file manager open.
+
+It answers the thing that was actually confusing — **offsets are measured inwards from an anchor, as
+a fraction of the screen's shorter side** — and then every field, what `group` really decides (which
+controls a thumb can slide between), and the rules the reader will refuse a file for.
+
+### Kestrel's Own Screen Uses The Space It Asked For
+
+Full screen and the cutout were being applied to the window and then given straight back: the
+content was still padded for the bars it had just hidden, leaving a band of screen nobody could use
+— visible in the screenshots as a white strip above the interface and the title behind the overlay.
+The padding follows the settings now, so turning them on changes Kestrel's own screen and not only
+the overlay.
+
+**Orientation, narrowed to the answers that work.** Reverse landscape added, at the project owner's
+request; `auto` now honours the phone's rotation lock rather than overriding it. There is no
+reverse-portrait option because most phones do not support the orientation at all, and an option
+that does nothing on the device in front of you is worse than one that is absent.
+
 ### Phase 2 — A Chosen Folder That Went Away, And Three Smaller Faults
 
 **Deleting the chosen folder left Kestrel claiming to use it while every write failed.** The store
