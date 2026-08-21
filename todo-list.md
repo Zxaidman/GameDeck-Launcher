@@ -3,7 +3,7 @@
 **Document:** `todo-list.md`  
 **Status:** Active — the single work queue. Nothing is started that is not on it.  
 **Owner of priority:** the project owner. This document orders and describes; it does not decide.  
-**Last updated:** build `0.0.25-dev`
+**Last updated:** build `0.0.25-dev`, second round of owner input
 
 ---
 
@@ -106,6 +106,37 @@ one action once the contents are agreed — and once `CRIT-1` is done.
 
 ---
 
+### `CRIT-5` — The editor must draw the phone, not the page
+
+**Kind:** critical. Named first by the project owner, ahead of everything else on this list.  
+**Found by:** Reported, build `0.0.25-dev`.
+
+**The fault.** The editing canvas takes the shape of whatever room the screen gives it, which on the
+device it was tested on is close to ultrawide. The layout inside it is therefore drawn at an aspect
+ratio no phone has. Controls appear to overlap that do not overlap on the device, and — worse in the
+other direction — controls that do overlap can look clear. An editor that lies about overlap is
+worse than editing numbers in a file, because it invites trust it has not earned.
+
+**What is wanted.**
+
+- A blank canvas with a drawn border, in the **device's own aspect ratio**, standing for the screen.
+  The pad is arranged inside that rectangle and nowhere else.
+- The rectangle **scaled to fit whole, with no scrolling**, in either orientation of the editor.
+- The canvas **docked and fixed to one side** of the screen; the other side a **scrollable panel**
+  carrying every editing tool.
+- **Both orientations designed for**, not one adapted: in landscape the panel sits beside the
+  canvas, in portrait above or below it. The canvas keeps the device ratio in both.
+
+**One decision needed from the project owner:** which ratio the canvas uses. The default proposed
+here is *the current device's usable surface* — the same `LayoutSurface` the overlay is placed into,
+insets already subtracted — because that is the only ratio Kestrel can measure rather than assume. A
+chooser for other ratios is a later addition, not part of this.
+
+**Blocks:** `FEAT-10`, `FEAT-11`, `FEAT-12` and `BUG-9` all happen on this canvas. Doing them first
+would mean building each one twice.
+
+---
+
 ## 2. Errors and bugs
 
 ### `BUG-1` — The overlay does not draw into the cutout area
@@ -192,6 +223,64 @@ both directions. One tap in the picker, once, versus every user's install.
 
 **Status: accepted limitation.** Reopen only if the project owner decides the Play Protect cost is
 worth paying, which would be a measured experiment rather than a code change.
+
+---
+
+### `BUG-7` — The trigger's clockwise border sweep should go
+
+**Found by:** Reported, build `0.0.25-dev`.
+
+On a rectangle or a square the trigger shows a bar filling from the bottom up, and the project owner
+reports it reads correctly. On a circle there is **also** a sweep running clockwise around the
+border, which is a second reading of the same number and does not match the bar.
+
+**Wanted:** remove the clockwise border sweep for every shape. Keep the bottom-to-top fill alone.
+
+Small and isolated — the trigger drawing in `ControllerOverlay.kt`. No schema change, no other
+control affected.
+
+---
+
+### `BUG-8` — A trigger takes too long to register
+
+**Found by:** Reported, build `0.0.25-dev`.
+
+A trigger ramps to full over 0.5s. That number was chosen deliberately and for a measured reason: a
+trigger that jumps straight to full felt broken to the hand. But it also means the press is not
+*registered* quickly, which is what the project owner is now hitting.
+
+**The project owner's proposal:** fill the first half fast and the second half at normal speed. The
+press registers almost at once; a full pull still takes a moment and still feels like a trigger.
+
+**Assessment — Reasoned, not measured.** Nothing downstream reads the *shape* of the ramp; the
+backend is sent an axis value each frame, so a two-rate curve costs nothing structurally. The only
+real risk is a target that treats the axis as a switch above some threshold — a fast first half
+would then make it *more* responsive, not less. So the proposal looks safe, and it will be measured
+on the device rather than asserted.
+
+**Fallback if it does break something:** 0.35s, linear.
+
+**Either way it becomes configurable** — a field in the layout document (which means a schema
+version bump and a `docs/CONFIGURATION_SCHEMA.md` update) and a control in settings.
+
+**Do not** reintroduce a per-frame ramp. This was already wrong once: a fixed step per frame gave
+0.31s on a 120Hz panel and 0.5s on a 60Hz one. The ramp is measured in time.
+
+---
+
+### `BUG-9` — A square draws as a rectangle, in the editor only
+
+**Found by:** Reported, build `0.0.25-dev`. Reproducible values given: `width 0.24`, `height 0.12`,
+shape `square`.
+
+In the editor preview that control draws as a rectangle. Saved and run, the overlay draws it as a
+proper square. So the **overlay is right and the editor is wrong** — the preview is drawing the
+placement box as given instead of applying the square rule the renderer applies, where a square
+takes the smaller of the two extents for both.
+
+Circle and rectangle are unaffected and were checked.
+
+Same drawing path as `CRIT-5`, so it is fixed there rather than separately.
 
 ---
 
@@ -287,6 +376,64 @@ there is one implementation than when there are two.
 ### `FEAT-9` — Community system
 
 `PRD.md` Phase 7. Not started, and correctly last: it distributes what the earlier phases produce.
+
+---
+
+### `FEAT-10` — A window editor, on the same screen
+
+**Asked for:** build `0.0.25-dev` round.
+
+A toggle on the editor page switching between **editing controls** and **editing windows**, with
+whichever is not active greyed out rather than hidden, so it is always visible that the other mode
+exists.
+
+**What it actually edits:** each element's `group` — which controls share one window on screen.
+Today that is editable only by opening the file in a text editor, and it is the single setting with
+the largest effect on how much of the screen the pad takes away from the target.
+
+**Why it matters** is recorded in full as the answer to the project owner's question 2 in §6: a
+window is the enclosing rectangle of everything in its group, and every pixel of that rectangle that
+is not a control is dead to whatever is underneath. Two controls in one group at opposite corners
+produce one window covering the screen.
+
+**Should show:** each window's rectangle drawn on the canvas, its area as a percentage of the
+screen, and a warning past some fraction. The shipped layout's tests already assert no window
+exceeds a quarter of the screen; the editor should make a user's layout answerable to the same
+question rather than letting them discover it in a game.
+
+---
+
+### `FEAT-11` — A grid, and snapping
+
+**Asked for:** build `0.0.25-dev` round.
+
+- A drop-down for grid size: **32px, 64px, 128px, 256px**.
+- A checkbox: **snap to the grid**.
+- A checkbox: **snap to gamepad edges** — align a control with the edges of the controls already
+  placed.
+
+**One honest caveat to show in the interface.** The document stores fractions of the screen's
+shorter side, not pixels, and rounds them to two decimals so the file stays readable. A pixel grid
+is therefore a *screen-space aid*: snapping happens in pixels, converts back to a fraction, and the
+rounding can leave the control a pixel off the line on a different screen. That is the right
+trade — a readable file is worth more than an exact grid — but the user should be told rather than
+finding it.
+
+---
+
+### `FEAT-12` — Type the numbers
+
+**Asked for:** build `0.0.25-dev` round.
+
+A three-dot menu on the selected control, giving direct entry of **offset X, offset Y, width,
+height**. Dragging is for arranging; typing is for the moment someone knows the number they want.
+
+Validation already exists and already names the field at fault (`Placement.of`), so a bad entry
+reports which value was wrong and why rather than being silently clamped.
+
+This is also the right place to state **what each number means**, which the project owner reported
+as confusing in the previous round: an offset runs from the anchor to the control's **centre**,
+inwards, measured in fractions of the screen's shorter side.
 
 ---
 
@@ -408,28 +555,106 @@ original wording kept alongside so nothing is lost in the paraphrase.
 - **Order for what follows:** layout editor *(done)* → test ground (`FEAT-3`) → home screen
   (`CRIT-2`) and modules (`CRIT-3`).
 
+
+### Round `0.0.25-dev` — second message: questions, features, bugs
+
+**Two questions asked, and answered from the code rather than from memory.**
+
+**Q1 — Is an offset measured to the control's centre, or to its corner?**
+
+**To the centre.** `Placement.resolve` in `core/layout/Geometry.kt` computes
+`centerX = origin + offsetX × shortSide × inward`. The offset runs from the anchor point to the
+**centre** of the control, inwards, in fractions of the screen's **shorter side** — the same unit
+`width` and `height` use, which is what lets a control and its offsets scale together. A corner-edge
+offset would have made the size setting move controls as it resized them.
+
+*Consequence worth knowing:* the distance from the screen edge to the *edge* of a control is
+`offset − width/2`. A control with `width 0.24` and `offsetX 0.10` hangs off the screen, and the
+editor is allowed to show that rather than refuse it.
+
+**Q2 — Left stick bottom-left, `L3` top-right, anchors unchanged. What happens to the window?**
+
+**It becomes one window covering nearly the whole screen, and that area stops working for the
+target.** Neither of the two outcomes guessed at happens: the control is not discarded, and it does
+not join the right-hand window.
+
+Why, precisely:
+
+1. **Windows are decided by the declared `group`, never by distance.** `stick.left` and
+   `stick.left.press` both carry `group: "left-stick"`, so they stay together wherever they are put.
+   The right-hand window is `group: "right-top"` and never takes in a stranger. Proximity grouping
+   was tried and abandoned — the gap that had to mean "together" and the gap that had to mean
+   "apart" were fifteen pixels apart, so the answer flipped with the size setting.
+2. **A window is the enclosing rectangle of its group.** `Clustering.enclosing` takes the smallest
+   box containing both, which for opposite corners is the screen.
+3. **The gap inside that box is dead.** A touch landing in it is refused by the overlay, and —
+   measured on the reference device — a refused touch is **not** handed to the application below. So
+   yes: swipes and taps across that whole rectangle stop reaching the target.
+
+Nothing prevents this today. It is exactly why `FEAT-10` exists, and why the window editor has to
+show the rectangle and its share of the screen rather than only the `group` name.
+
+**Added from this message**
+
+| Item | Kind | Wording it came from |
+| --- | --- | --- |
+| `CRIT-5` | critical, first | device-ratio canvas, docked panel, no scrolling, both orientations |
+| `FEAT-10` | feature | window editor on the same screen, toggle greys out the other |
+| `FEAT-11` | feature | grid 32→256px, snap to grid, snap to gamepad edges |
+| `FEAT-12` | feature | three-dot direct entry of offset and size |
+| `BUG-7` | bug | remove the clockwise border fill, keep the bottom-to-top bar |
+| `BUG-8` | bug | trigger registers too slowly; fast first half, or 0.35s, configurable |
+| `BUG-9` | bug | square draws as a rectangle in the editor, correct once saved |
+
+
 ### Awaiting
 
-- The project owner's own list of issues and features, to be added here and sorted.
-- A decision on which entry is worked first.
+- Anything further the project owner sends; it is added here and sorted into §1–§3 by kind.
+- Confirmation of the order below, and of the one open decision in `CRIT-5` (which aspect ratio the
+  canvas uses).
 
 ---
 
-## Proposed order, for the project owner to accept or change
+## Order of work
 
-Not a decision — a recommendation, with the reasoning visible.
+The project owner named `CRIT-5` first. Everything else below is a recommendation, with the
+reasoning visible, and can be reordered.
 
-1. **`BUG-1` + `BUG-2`** — one fault, small, and it makes a shipped setting honest.
-2. **`BUG-3`, `BUG-4`** — both small, both reported this round.
-3. **`FEAT-3` test ground** — the project owner's stated next priority, and it makes every later
-   change checkable in one place.
-4. **`FEAT-1` face cluster** — asked for, self-contained, and it exercises the editor.
-5. **`CRIT-2` + `CRIT-3`** — home screen and modules together, because doing either first means
-   moving the same code twice.
-6. **`FEAT-5` discovery and launch** — the gap between here and the MVP flow, and the bulk of
-   `CRIT-4`.
-7. **`CRIT-1` release key** — last in build order, first in importance, and it needs the project
-   owner rather than the agent.
+**1 — The editor becomes truthful, then gains tools.** One block, because all of it is the same
+canvas and splitting it means drawing that canvas three times.
 
-`FEAT-2`, `FEAT-4`, `FEAT-6`, `FEAT-7`, `FEAT-8`, `FEAT-9` and `BUG-5` sit after `v0.1.0` unless the
-project owner pulls one forward.
+| # | Item | Why here |
+| --- | --- | --- |
+| 1 | `CRIT-5` device-ratio canvas | Named first by the project owner. Everything else in this block is drawn on it. |
+| 2 | `BUG-9` square draws as a rectangle | Same drawing path. Fixed while it is open, not after. |
+| 3 | `FEAT-11` grid and snapping | Cheapest of the three tools, and the one that makes dragging accurate. |
+| 4 | `FEAT-12` type the numbers | Small once the canvas exists, and it answers the offset confusion directly. |
+| 5 | `FEAT-10` window editor | Largest of the three, and the one with the most to explain on screen. Last in the block for that reason. |
+
+**2 — The triggers.** Both small, both reported, neither touching the editor.
+
+| # | Item | Why here |
+| --- | --- | --- |
+| 6 | `BUG-7` remove the clockwise sweep | Drawing only. No schema, no measurement needed. |
+| 7 | `BUG-8` trigger response | Needs a device measurement and a schema field, so it follows rather than leads. |
+
+**3 — The overlay and the screen it is given.**
+
+| # | Item | Why here |
+| --- | --- | --- |
+| 8 | `BUG-1` + `BUG-2` cutout | One fault in two places. Makes a setting that already ships honest. |
+| 9 | `BUG-3` `HOW-TO-EDIT.md`, `BUG-4` drop sensor-portrait | Both small, both reported. |
+
+**4 — New ground.**
+
+| # | Item | Why here |
+| --- | --- | --- |
+| 10 | `FEAT-3` test ground | The project owner's stated next priority, and it makes every later change checkable in one place. |
+| 11 | `FEAT-1` face buttons as one plate | Asked for, self-contained, and it exercises the new window editor. |
+| 12 | `CRIT-2` + `CRIT-3` home screen and modules | Together, because doing either first means moving the same code twice. |
+| 13 | `FEAT-5` discovery and launch | The gap between here and the MVP flow, and the bulk of `CRIT-4`. |
+| 14 | `CRIT-1` release signing key | Last in build order, first in importance, and it needs the project owner rather than the agent. |
+
+**After `v0.1.0` unless pulled forward:** `FEAT-2` eight-way face pad, `FEAT-4` skins, `FEAT-6`
+profiles, `FEAT-7` haptics, `FEAT-8` backend interface, `FEAT-9` community, `BUG-5` the unexplained
+`"shape": "round"`, `BUG-6` Kestrel creating its own folder.

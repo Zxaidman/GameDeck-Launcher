@@ -13,6 +13,34 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### Backlog: A Second Round, And Two Answers From The Code
+
+`todo-list.md` grew by seven items and gained the two answers the project owner asked for. Both were
+read out of the source rather than recalled, because both decide what gets built next.
+
+**An offset runs to a control's centre**, inwards from its anchor, in fractions of the screen's
+shorter side — the same unit as width and height, which is what lets a control and its offsets
+scale together instead of drifting apart as the size setting moves.
+
+**A window is the enclosing rectangle of a declared group, and its empty space is dead.** Put a
+stick in one corner and its press in the other, and they stay in one window because grouping is
+declared rather than inferred — a window covering the screen, with every pixel that is not a control
+refusing touches that the platform then does not pass to the game underneath. That answer is the
+whole argument for a window editor, and it is why the editor has to show the rectangle rather than
+just the group name.
+
+Added: a device-ratio editing canvas as the next thing built (`CRIT-5`), a window editor, a grid
+with snapping, and direct numeric entry (`FEAT-10`–`FEAT-12`); three bugs from this round — a
+trigger drawing its value twice, a trigger too slow to register, and a square that draws as a
+rectangle in the editor but correctly once saved (`BUG-7`–`BUG-9`).
+
+The recommended order was rewritten around the canvas: the editor becomes truthful first, then gains
+tools, because all three tools draw on the same surface and doing them first means building it
+three times.
+
+No code changed. Nothing is implemented until the order is confirmed.
+
+
 ### A Single Backlog, In The Repository
 
 `todo-list.md` at the repository root. Requested by the project owner, and it changes how work is
