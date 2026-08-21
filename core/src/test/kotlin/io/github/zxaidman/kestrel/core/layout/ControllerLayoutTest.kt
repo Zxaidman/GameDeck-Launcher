@@ -300,10 +300,27 @@ class ControlShapeTest {
     }
 
     @Test
-    fun `the default is not written, so a file says only what it means`() {
+    fun `every editable field is written, including the ones at their default`() {
+        // The opposite was tried first — omit anything default, so the file says only what it
+        // means — and it failed the one job this file has. A layout is written so a person can open
+        // it and change it, and a field that is absent is a field they do not know exists: the
+        // project owner copied a layout, looked for `shape`, and found nothing to edit.
         val layout = (ControllerLayoutReader.read(documentWith(null)) as Outcome.Success).value
         val written = ControllerLayoutWriter.write(layout) as ConfigNode.Obj
         val element = (written.fields["elements"] as ConfigNode.Arr).items.single() as ConfigNode.Obj
-        assertTrue("shape" !in element.fields, "a circle wrote itself out for no reason")
+
+        listOf("id", "kind", "binds", "label", "group", "shape", "anchor", "offsetX", "offsetY", "width", "height", "rotation")
+            .forEach { field -> assertTrue(field in element.fields, "'$field' was not written") }
+        assertEquals(ConfigNode.Text("circle"), element.fields["shape"])
+    }
+
+    @Test
+    fun `an optional field with nothing in it is written as null rather than left out`() {
+        // So the shape of every element is identical and what is missing is visible as missing.
+        val layout = (ControllerLayoutReader.read(documentWith(null)) as Outcome.Success).value
+        val written = ControllerLayoutWriter.write(layout) as ConfigNode.Obj
+        val element = (written.fields["elements"] as ConfigNode.Arr).items.single() as ConfigNode.Obj
+        assertEquals(ConfigNode.Null, element.fields["label"])
+        assertEquals(ConfigNode.Null, element.fields["group"])
     }
 }

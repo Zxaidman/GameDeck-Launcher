@@ -36,6 +36,9 @@ public data class KestrelSettings(
     /** Which layout the overlay draws. */
     public val layoutId: String = DEFAULT_LAYOUT_ID,
 
+    /** How much of the screen Kestrel takes, and which way up it sits. */
+    public val display: DisplayPreferences = DisplayPreferences(),
+
     /** Carried through so a newer build's settings survive being read by an older one. */
     public val unknownFields: Map<String, ConfigNode> = emptyMap(),
 ) {
@@ -69,6 +72,7 @@ public object SettingsDocument {
     private val KNOWN_FIELDS = setOf(
         "schemaVersion", "type", "id", "name",
         "controlScale", "layoutId", "stick",
+        "display",
     )
     private val KNOWN_STICK_FIELDS = setOf(
         "deadzone", "outerLimit", "curve", "sensitivity", "invertX", "invertY", "deadzoneShape",
@@ -134,11 +138,17 @@ public object SettingsDocument {
             is Outcome.Success -> v.value
         }
 
+        val display = when (val v = readDisplay(obj, defaults.display)) {
+            is Outcome.Failure -> return v
+            is Outcome.Success -> v.value
+        }
+
         return Outcome.Success(
             KestrelSettings(
                 controlScale = scale,
                 stickProfile = stick,
                 layoutId = layoutId,
+                display = display,
                 unknownFields = obj.unknownFields(KNOWN_FIELDS),
             )
         )
@@ -153,6 +163,13 @@ public object SettingsDocument {
             "name" to ConfigNode.Text("Kestrel settings"),
             "controlScale" to ConfigNode.Num(settings.controlScale),
             "layoutId" to ConfigNode.Text(settings.layoutId),
+            "display" to ConfigNode.Obj(
+                linkedMapOf(
+                    "fullScreen" to ConfigNode.Bool(settings.display.fullScreen),
+                    "drawUnderCutout" to ConfigNode.Bool(settings.display.drawUnderCutout),
+                    "orientation" to ConfigNode.Text(settings.display.orientation.wireName),
+                )
+            ),
             "stick" to ConfigNode.Obj(
                 linkedMapOf(
                     "deadzone" to ConfigNode.Num(stick.deadzone),
@@ -169,6 +186,53 @@ public object SettingsDocument {
         // file does not silently delete what it did not understand.
         settings.unknownFields.forEach { (key, value) -> fields.putIfAbsent(key, value) }
         return ConfigNode.Obj(fields)
+    }
+
+    private fun readDisplay(
+        obj: ConfigNode.Obj,
+        defaults: DisplayPreferences,
+    ): Outcome<DisplayPreferences> {
+        val display = when (val node = obj["display"]) {
+            null, ConfigNode.Null -> return Outcome.Success(defaults)
+            else -> when (val o = ConfigReader.asObject(node, "display")) {
+                is Outcome.Failure -> return o
+                is Outcome.Success -> o.value
+            }
+        }
+
+        val orientation = if (!display.has("orientation")) {
+            defaults.orientation
+        } else {
+            when (
+                val v = ConfigReader.enum(
+                    display, "orientation", AppOrientation.entries.toTypedArray(),
+                    { it.wireName }, "display",
+                )
+            ) {
+                is Outcome.Failure -> return v
+                is Outcome.Success -> v.value
+            }
+        }
+
+        return Outcome.Success(
+            DisplayPreferences(
+                fullScreen = when (
+                    val v = ConfigReader.boolean(display, "fullScreen", defaults.fullScreen, "display")
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+                drawUnderCutout = when (
+                    val v = ConfigReader.boolean(
+                        display, "drawUnderCutout", defaults.drawUnderCutout, "display",
+                    )
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+                orientation = orientation,
+            )
+        )
     }
 
     private fun readStick(obj: ConfigNode.Obj, defaults: AnalogProfile): Outcome<AnalogProfile> {

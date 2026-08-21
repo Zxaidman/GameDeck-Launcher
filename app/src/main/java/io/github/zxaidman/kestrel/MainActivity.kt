@@ -1,7 +1,14 @@
 package io.github.zxaidman.kestrel
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
+import io.github.zxaidman.kestrel.core.settings.AppOrientation
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowCompat
+import android.view.WindowManager
+import android.content.pm.ActivityInfo
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
@@ -160,6 +167,8 @@ class MainActivity : ComponentActivity() {
         // Bind early where possible, so the session controls are usable without a separate step.
         ShizukuCapability.bind(this) { }
 
+        applyDisplayPreferences()
+
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -212,6 +221,57 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Puts Kestrel in the shape the settings ask for: how much screen, and which way up.
+     *
+     * Called on creation and again whenever a setting changes, because all three are things a user
+     * turns on to see what they do.
+     *
+     * **Full screen** hides the system bars. A pad drawn under a status bar loses the space to it,
+     * and a notification sliding in over a control mid-play is worse than not seeing the time. The
+     * bars stay reachable by swiping — `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` — because hiding
+     * something is not the same as taking it away.
+     *
+     * **Drawing under the cutout** is what makes a phone with a notch the same shape as a phone
+     * without. Refuse, and the platform letterboxes the whole application below the notch, which on
+     * a wide screen is a black band and less room for controls.
+     *
+     * **Landscape by default**, because a handheld is held one way — and a setting, because a phone
+     * is not a handheld and somebody arranging a layout on a sofa should not have to turn the room.
+     */
+    public fun applyDisplayPreferences() {
+        val display = AppSettings.current.value.display
+
+        requestedOrientation = when (display.orientation) {
+            AppOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            AppOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            AppOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            AppOrientation.SENSOR_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            AppOrientation.SENSOR_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            AppOrientation.SYSTEM -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = if (display.drawUnderCutout) {
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                } else {
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+                }
+            }
+        }
+
+        WindowCompat.setDecorFitsSystemWindows(window, !display.fullScreen)
+        val bars = WindowCompat.getInsetsController(window, window.decorView)
+        if (display.fullScreen) {
+            bars.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            bars.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            bars.show(WindowInsetsCompat.Type.systemBars())
         }
     }
 

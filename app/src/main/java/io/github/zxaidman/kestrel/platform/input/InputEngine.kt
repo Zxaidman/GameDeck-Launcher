@@ -42,6 +42,10 @@ public class InputEngine(private val shell: IPrivilegedShell) {
     @Volatile public var lastError: String = ""
         private set
 
+    /** Whether the privileged service went away. Once true, nothing this engine sends can arrive. */
+    @Volatile public var lost: Boolean = false
+        private set
+
     /**
      * What was sent, in order.
      *
@@ -195,6 +199,14 @@ public class InputEngine(private val shell: IPrivilegedShell) {
             } else {
                 lastError = "The stream is not open. Start a session first."
             }
+        } catch (e: android.os.DeadObjectException) {
+            // The privileged service's process is gone — Shizuku stopped, or the platform killed
+            // it. Nothing that follows can succeed, and reporting each failed write separately
+            // would bury the one fact that matters under hundreds of copies of itself.
+            lost = true
+            running = false
+            lastError = "The privileged service stopped, so the controller is no longer being " +
+                "driven. Start Shizuku and open the session again."
         } catch (e: Throwable) {
             lastError = "Write failed: ${e.javaClass.simpleName}"
         }

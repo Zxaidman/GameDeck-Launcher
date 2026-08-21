@@ -13,6 +13,57 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### Phase 2 — A Chosen Folder That Went Away, And Three Smaller Faults
+
+**Deleting the chosen folder left Kestrel claiming to use it while every write failed.** The store
+was resolved once and remembered forever, so a grant that outlived the folder it pointed at kept
+being reported as working. It is re-checked now — at most every few seconds, because the check is an
+inter-process call — and when the folder has gone Kestrel falls back to its own directory and
+**says so**, naming what happened and what it costs. It cannot recreate the folder: the grant was
+for that document, and it died with it.
+
+**A dead privileged service is a lost session, not a log line.** `DeadObjectException` was reported
+as one failed write among hundreds, which buried the only fact that mattered. It now stops the
+engine and says that Shizuku went away and the session has to be opened again.
+
+**The progress ring on a rectangular trigger was a circle.** The fill had been made shape-aware and
+the ring around it had not, so a rounded rectangle wore the outline of a control that was not there.
+A non-circular trigger now fills its own edge from the bottom, the same reading in the right shape.
+
+**Every editable field is written to a layout, including the ones at their default.** The opposite
+was tried first — omit anything default, so the file says only what it means — and it failed the one
+job the file has. The project owner copied a layout, went looking for `shape`, and found nothing:
+the control was a circle, so it had not been written. **A field that is absent is a field nobody
+knows exists.** `null` is written rather than omitted for optional fields, so every element has the
+same shape and what is missing is visible as missing.
+
+And a wart found by a test rather than a person: `DocumentHeader` treated everything outside its own
+four fields as unknown, so a layout's header carried a second and wrong copy of the whole body —
+enough to stop a document comparing equal to itself after a round trip. The layout keeps the
+document's unknown fields; the header keeps none.
+
+### Phase 1 — Kestrel Takes The Whole Screen, And Faces The Right Way
+
+Three settings, all of them defaulting on, all of them applied the moment they change rather than at
+the next launch.
+
+**Full screen.** A pad drawn under a status bar loses the space to it, and a notification sliding in
+over a control mid-play is worse than not seeing the time. The bars stay reachable by swiping,
+because hiding something is not the same as taking it away.
+
+**Drawing under the cutout.** This is what makes a phone with a notch the same shape as a phone
+without: refuse it and the platform letterboxes the whole application below the notch, which on a
+wide screen is a black band and less room for controls. Some people would rather have the band than
+a control beside the camera, so it can be turned off.
+
+**Orientation**, with six answers: auto, landscape, portrait, sensor landscape, sensor portrait, and
+whatever the phone's own rotation lock says. Landscape is the default because a handheld is held one
+way — and it is a setting because a phone is not a handheld, and somebody arranging a layout on a
+sofa should not have to turn the room.
+
+All three live in `settings.json` under `display`, so they travel with the folder like everything
+else.
+
 ### Phase 2 — Positioned The Way The Window Manager Thinks
 
 The overlay computed absolute screen coordinates from the display and handed them to the window

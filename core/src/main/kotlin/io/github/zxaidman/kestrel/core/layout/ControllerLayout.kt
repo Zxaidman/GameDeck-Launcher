@@ -175,7 +175,12 @@ public object ControllerLayoutReader {
 
         return Outcome.Success(
             ControllerLayout(
-                header = header,
+                // The header's own idea of "unknown" is everything in the document that is not one
+                // of its four fields — which means the whole body, elements included. That is a
+                // second and wrong copy of what the layout already holds below, and it made a
+                // document fail to compare equal to itself after a round trip. The layout keeps the
+                // document's unknown fields; the header keeps none.
+                header = header.copy(unknownFields = emptyMap()),
                 orientation = orientation,
                 elements = elements,
                 unknownFields = obj.unknownFields(KNOWN_DOCUMENT_FIELDS),
@@ -424,26 +429,28 @@ public object ControllerLayoutWriter {
         fields["id"] = ConfigNode.Text(element.id)
         fields["kind"] = ConfigNode.Text(element.kind.wireName)
         element.binds?.let { fields["binds"] = ConfigNode.Text(it.wireName) }
-        element.label?.let { fields["label"] = ConfigNode.Text(it) }
-        element.group?.let { fields["group"] = ConfigNode.Text(it) }
-        // Written only when it is not the default, so a file stays as short as what it says.
-        if (element.shape != ControlShape.CIRCLE) {
-            fields["shape"] = ConfigNode.Text(element.shape.wireName)
-        }
+        // **Every editable field is written, including the ones at their default.**
+        //
+        // The opposite was tried first — omit anything default, so the file says only what it
+        // means — and it fails the one job this file has. A layout is written so a person can open
+        // it and change it, and a field that is absent is a field they do not know exists: the
+        // project owner copied a layout, looked for `shape`, and found nothing to edit. A document
+        // that has to be read alongside a schema to be edited is a document that has not replaced
+        // the schema.
+        //
+        // `null` is written rather than omitted for the optional ones, so the shape of every
+        // element is identical and what is missing is visible as missing.
+        fields["label"] = element.label?.let { ConfigNode.Text(it) } ?: ConfigNode.Null
+        fields["group"] = element.group?.let { ConfigNode.Text(it) } ?: ConfigNode.Null
+        fields["shape"] = ConfigNode.Text(element.shape.wireName)
 
         val placement = element.placement
         fields["anchor"] = ConfigNode.Text(placement.anchor.wireName)
         fields["offsetX"] = ConfigNode.Num(round(placement.offsetX))
         fields["offsetY"] = ConfigNode.Num(round(placement.offsetY))
         fields["width"] = ConfigNode.Num(round(placement.width))
-        // Written only when it differs, because height defaults to width and a round control
-        // stating its size twice is noise in a file people edit by hand.
-        if (placement.height != placement.width) {
-            fields["height"] = ConfigNode.Num(round(placement.height))
-        }
-        if (placement.rotationDegrees != 0.0) {
-            fields["rotation"] = ConfigNode.Num(round(placement.rotationDegrees))
-        }
+        fields["height"] = ConfigNode.Num(round(placement.height))
+        fields["rotation"] = ConfigNode.Num(round(placement.rotationDegrees))
         fields += element.unknownFields
         return ConfigNode.Obj(fields)
     }

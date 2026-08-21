@@ -752,11 +752,29 @@ private class ClusterView(
             canvas.clipRect(cx - control.extentX, top, cx + control.extentX, cy + control.extentY)
             outline(canvas, control, glow)
             canvas.restore()
-            // And again as a ring closing clockwise, drawn just inside the edge: a fill inside a
-            // small control is exactly the part of it a thumb is covering.
-            val ringRadius = r - ring.strokeWidth * 0.6f
-            arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
-            canvas.drawArc(arc, -90f, 360f * value, false, ring)
+            // And again around the edge, because a fill inside a small control is exactly the part
+            // of it a thumb is covering. Drawn as the control's own shape: a circular ring around a
+            // rectangle was the outline of a control that is not there.
+            val inset = ring.strokeWidth * 0.6f
+            if (control.shape == ControlShape.CIRCLE) {
+                val ringRadius = r - inset
+                arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
+                canvas.drawArc(arc, -90f, 360f * value, false, ring)
+            } else {
+                // A rounded rectangle has no sweep to animate, so the edge fills from the bottom
+                // like the face does — the same reading, in the shape the control actually has.
+                canvas.save()
+                val top = cy + control.extentY - 2f * control.extentY * value
+                canvas.clipRect(cx - control.extentX, top, cx + control.extentX, cy + control.extentY)
+                arc.set(
+                    cx - control.extentX + inset,
+                    cy - control.extentY + inset,
+                    cx + control.extentX - inset,
+                    cy + control.extentY - inset,
+                )
+                canvas.drawRoundRect(arc, control.corner, control.corner, ring)
+                canvas.restore()
+            }
         } else if (!analog && pressed[control.id] == true) {
             outline(canvas, control, glow)
         }

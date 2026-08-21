@@ -182,15 +182,17 @@ class LayoutRepositoryTest {
     }
 
     @Test
-    fun `an optional field that carries nothing is not written`() {
-        // A file full of nulls and zeroes is harder to hand-edit, and hand-editing is a thing this
-        // project's own owner does.
+    fun `a copy states every field a person could edit`() {
+        // Hand-editing is a thing this project's owner does, and the first version wrote only
+        // non-defaults on the grounds that a file should say only what it means. That failed the
+        // one job the file has: they copied a layout, looked for `shape`, and found nothing —
+        // because it was a circle, so it had not been written. A field that is absent is a field
+        // nobody knows exists.
         val copy = value(repository.duplicate(builtIn(), "mine", "Mine"))
         val text = value(store.read(StoreFolder.LAYOUTS, "user.mine.json"))
 
-        assertTrue(!text.contains("\"label\""), "a null label was written")
-        assertTrue(!text.contains("\"rotation\""), "a zero rotation was written")
-        assertTrue(text.contains("\"binds\""), "bindings should be written")
+        listOf("label", "group", "shape", "anchor", "offsetX", "offsetY", "width", "height", "rotation", "binds")
+            .forEach { field -> assertTrue(text.contains("\"$field\""), "'$field' was not written") }
         assertTrue(copy.elements.isNotEmpty())
     }
 }

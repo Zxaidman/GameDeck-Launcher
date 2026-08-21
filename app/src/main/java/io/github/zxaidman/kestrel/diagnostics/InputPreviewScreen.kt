@@ -468,6 +468,51 @@ public fun InputPreviewScreen(
             )
         }
 
+        Section("Display") {
+            val display = AppSettings.current.value.display
+
+            fun set(update: (io.github.zxaidman.kestrel.core.settings.DisplayPreferences) ->
+                io.github.zxaidman.kestrel.core.settings.DisplayPreferences,
+            ) {
+                AppSettings.update { it.copy(display = update(it.display)) }
+                AppSettings.persist(context)
+                // Applied at once rather than on the next launch: all three are settings somebody
+                // turns on to see what they do.
+                (context as? io.github.zxaidman.kestrel.MainActivity)?.applyDisplayPreferences()
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Switch(
+                    checked = display.fullScreen,
+                    onCheckedChange = { on -> set { it.copy(fullScreen = on) } },
+                )
+                Text("Full screen", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = display.drawUnderCutout,
+                    onCheckedChange = { on -> set { it.copy(drawUnderCutout = on) } },
+                )
+                Text("Use the notch area")
+            }
+
+            Mono("\norientation")
+            io.github.zxaidman.kestrel.core.settings.AppOrientation.entries.chunked(3).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    row.forEach { option ->
+                        Button(
+                            onClick = { set { it.copy(orientation = option) } },
+                            enabled = display.orientation != option,
+                        ) { Text(option.wireName) }
+                    }
+                }
+            }
+        }
+
         Section("Shaping") {
             // Written when a drag ends rather than on every frame of it: a slider produces a value
             // per frame, and sixty writes for one decision is sixty writes to the user's storage.

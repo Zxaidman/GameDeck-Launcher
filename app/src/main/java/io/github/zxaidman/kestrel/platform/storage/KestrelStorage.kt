@@ -54,15 +54,52 @@ public object KestrelStorage {
     @Volatile
     private var store: DocumentStore? = null
 
-    /** The store to use, chosen folder if there is one and the private directory otherwise. */
+    /**
+     * Why the chosen folder is not being used, when it was chosen and then stopped working.
+     *
+     * Empty when there is nothing to say. A folder that has been deleted or whose grant was revoked
+     * is not an error to throw — the application keeps working from its own directory — but it is
+     * something the user has to be told, because everything they write from then on is somewhere
+     * they did not choose.
+     */
+    @Volatile
+    public var problem: String = ""
+        private set
+
+    private const val RECHECK_MILLIS = 3_000L
+
+    @Volatile
+    private var checkedAt = 0L
+
+    /**
+     * The store to use, chosen folder if there is one and the private directory otherwise.
+     *
+     * **Re-checked rather than remembered.** A grant survives in preferences long after the folder
+     * it points at has been deleted, and the first version cached the store forever — so deleting
+     * the folder left Kestrel reporting it was still using it while every write failed silently.
+     * The check costs an inter-process call, so it is repeated at most every few seconds rather than
+     * on every read.
+     */
     public fun current(context: Context): DocumentStore {
-        store?.let { return it }
+        val now = android.os.SystemClock.elapsedRealtime()
+        val cached = store
+        if (cached != null && now - checkedAt < RECHECK_MILLIS) return cached
+
         synchronized(this) {
-            store?.let { return it }
-            val opened = savedTree(context)?.let { uri -> openTree(context, uri) }
-                ?: PrivateDocumentStore(context)
-            store = opened
-            return opened
+            val saved = savedTree(context)
+            val opened = saved?.let { uri -> openTree(context, uri) }
+            problem = when {
+                saved == null -> ""
+                opened == null ->
+                    "The folder you chose is no longer reachable — it may have been deleted, or " +
+                        "its permission withdrawn. Kestrel is using its own directory, which is " +
+                        "removed when Kestrel is uninstalled. Choose a folder again to fix it."
+                else -> ""
+            }
+            val store = opened ?: PrivateDocumentStore(context)
+            this.store = store
+            checkedAt = now
+            return store
         }
     }
 
