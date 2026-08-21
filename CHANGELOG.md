@@ -13,6 +13,32 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### A Single Backlog, In The Repository
+
+`todo-list.md` at the repository root. Requested by the project owner, and it changes how work is
+chosen here: nothing is built next because it was the last thing discussed — it is built because it
+sits highest in a written list that both sides can see.
+
+Six sections, in the order asked for: **critical** work that blocks a release, **errors and bugs**
+found by testing, **features** not yet started, **what works now** with the evidence that says so,
+**pending scope** from the phase plan, and the project owner's own list as it arrives.
+
+Two conventions the list carries, because a backlog without them rots:
+
+- **Every item is graded by evidence** — Measured, Reported, Reasoned, Unverified. A bug someone hit
+  on a device and a bug inferred from reading the code are not the same item, and the list says
+  which is which rather than letting both read as fact.
+- **Every item is dated and stays.** Items are closed by being marked done, not by disappearing, so
+  the file records what was decided against as well as what was built.
+
+The round of testing that produced it is recorded in full: the notch is still not used by the pad
+itself, `HOW-TO-EDIT.md` was not written where the project owner looked for it, sensor-portrait is
+being dropped as useless, and everything else tested passed unchanged.
+
+No code changed with this entry. Nothing is being implemented until the list is complete and an
+order is agreed.
+
+
 ### Phase 3 — A Layout Editor, On Its Own Page
 
 Editing a layout by moving it rather than by typing numbers into a file. Requested first of the
