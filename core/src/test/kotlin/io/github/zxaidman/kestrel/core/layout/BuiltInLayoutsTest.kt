@@ -82,7 +82,15 @@ class BuiltInLayoutsTest {
      * looked correct in the one orientation and at the one size they were checked at.
      */
     private fun everyScreen(): List<Pair<LayoutSurface, Double>> {
-        val surfaces = listOf(LayoutSurface(2400.0, 1080.0), LayoutSurface(1080.0, 2400.0))
+        val surfaces = listOf(
+            LayoutSurface(2400.0, 1080.0),
+            LayoutSurface(1080.0, 2400.0),
+            // The same phone with the system bars taking their share. An overlay is placed inside
+            // what is left after them, and a layout that only fits the whole display is a layout
+            // that overlaps itself the moment a status bar appears — which is what happened.
+            LayoutSurface(2296.0, 980.0),
+            LayoutSurface(1080.0, 2216.0),
+        )
         val scales = listOf(
             KestrelSettings.MIN_CONTROL_SCALE,
             0.60,

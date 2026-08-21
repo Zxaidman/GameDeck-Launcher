@@ -50,6 +50,9 @@ public data class LayoutElement(
     /** What to draw on it, or `null` to use the control's own default. */
     public val label: String?,
 
+    /** The outline it is drawn and pressed as. Circular unless the layout says otherwise. */
+    public val shape: ControlShape = ControlShape.CIRCLE,
+
     /**
      * Which controls this one shares a window with, or `null` to have one to itself.
      *
@@ -125,7 +128,7 @@ public object ControllerLayoutReader {
     private val KNOWN_DOCUMENT_FIELDS =
         setOf("schemaVersion", "type", "id", "name", "orientation", "elements")
     private val KNOWN_ELEMENT_FIELDS = setOf(
-        "id", "kind", "binds", "label", "group",
+        "id", "kind", "binds", "label", "group", "shape",
         "anchor", "offsetX", "offsetY", "width", "height", "rotation",
     )
 
@@ -245,6 +248,19 @@ public object ControllerLayoutReader {
             )
         }
 
+        val shape = if (!obj.has("shape")) {
+            ControlShape.CIRCLE
+        } else {
+            when (
+                val sh = ConfigReader.enum(
+                    obj, "shape", ControlShape.entries.toTypedArray(), { it.wireName }, path,
+                )
+            ) {
+                is Outcome.Failure -> return sh
+                is Outcome.Success -> sh.value
+            }
+        }
+
         val placement = when (val p = readPlacement(obj, path)) {
             is Outcome.Failure -> return p
             is Outcome.Success -> p.value
@@ -256,6 +272,7 @@ public object ControllerLayoutReader {
                 kind = kind,
                 binds = binds,
                 label = label,
+                shape = shape,
                 group = group,
                 placement = placement,
                 unknownFields = obj.unknownFields(KNOWN_ELEMENT_FIELDS),
@@ -409,6 +426,10 @@ public object ControllerLayoutWriter {
         element.binds?.let { fields["binds"] = ConfigNode.Text(it.wireName) }
         element.label?.let { fields["label"] = ConfigNode.Text(it) }
         element.group?.let { fields["group"] = ConfigNode.Text(it) }
+        // Written only when it is not the default, so a file stays as short as what it says.
+        if (element.shape != ControlShape.CIRCLE) {
+            fields["shape"] = ConfigNode.Text(element.shape.wireName)
+        }
 
         val placement = element.placement
         fields["anchor"] = ConfigNode.Text(placement.anchor.wireName)

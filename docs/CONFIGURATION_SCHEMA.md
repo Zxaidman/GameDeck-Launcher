@@ -103,6 +103,8 @@ May define:
 
 - id
 - control
+- group
+- shape
 - x/y
 - width/height
 - rotation
@@ -128,6 +130,46 @@ same reason — a user may choose a digital trigger, and it then works where an 
 the product never performs that substitution on their behalf.
 
 Coordinates should use a device-independent or normalized representation rather than one phone's raw pixels as the canonical source.
+
+### `group` — which controls share a window
+
+Optional. Elements naming the same group are drawn in **one window**; an element with no group gets
+one to itself.
+
+It is not decoration, and it is not a category. **It decides whether a thumb can slide from one
+control to another**, because a finger belongs to the window that received its touch-down for the
+life of the gesture. Rolling across face buttons and pressing each in turn works only if they share
+a window; so does holding a stick press and then moving the stick.
+
+It is **declared rather than inferred**, and that was learned the hard way. Deriving it from how
+close two controls were drawn failed on the shipped layout: the gap that had to mean *together* and
+the gap that had to mean *apart* were fifteen pixels apart, so the answer flipped with rounding and
+with the size setting. A gesture that works at one size and not another is worse than one that never
+worked.
+
+The cost is real and bounds how groups should be used: a window is dead to whatever is underneath
+everywhere its controls are not, so a group should be controls a thumb would genuinely travel
+between rather than everything on one side of the screen.
+
+### `shape` — what a control is drawn and pressed as
+
+Optional, one of `circle` (the default), `square`, `rectangle`.
+
+Separate from the kind, and the separation matters: a kind says what a control **does**, a shape
+says what it **looks like**. A shoulder button is a rectangle on most pads and a circle on some, and
+nothing about which one it is changes what it sends.
+
+- `circle` — drawn and pressed as a circle of `min(width, height) / 2`.
+- `square` — a rounded square of the shorter side. Stated rather than left to equal width and height,
+  so a control stays square when a hand-edited file makes them slightly uneven.
+- `rectangle` — a rounded rectangle using `width` and `height` as given.
+
+**The shape decides where the control can be pressed, not only how it is drawn.** A rectangle
+hit-tested as a circle would have corners that look pressable and are not, which is a fault a player
+feels and cannot describe.
+
+A stick and a d-pad are drawn round whatever the shape says. Deflection is a distance from a centre,
+and a rectangular stick would reach further along its diagonal than along its sides.
 
 ### How position and size are normalised, and why differently
 

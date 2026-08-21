@@ -238,3 +238,72 @@ class ControllerLayoutTest {
         assertEquals(text("#ff0000"), layout.elements.single().unknownFields["glowColour"])
     }
 }
+
+/** Shapes: what a control is drawn and pressed as, which is not what it does. */
+class ControlShapeTest {
+
+    private fun obj(vararg fields: Pair<String, ConfigNode>) = ConfigNode.Obj(fields.toMap())
+
+    private fun documentWith(shape: String?): ConfigNode {
+        val element = mutableMapOf<String, ConfigNode>(
+            "id" to ConfigNode.Text("l1"),
+            "kind" to ConfigNode.Text("button"),
+            "binds" to ConfigNode.Text("left-bumper"),
+            "anchor" to ConfigNode.Text("top-left"),
+            "offsetX" to ConfigNode.Num(0.1),
+            "offsetY" to ConfigNode.Num(0.1),
+            "width" to ConfigNode.Num(0.2),
+            "height" to ConfigNode.Num(0.08),
+        )
+        if (shape != null) element["shape"] = ConfigNode.Text(shape)
+        return obj(
+            "schemaVersion" to ConfigNode.Num(1.0),
+            "type" to ConfigNode.Text("controller-layout"),
+            "id" to ConfigNode.Text("builtin.test.layout"),
+            "name" to ConfigNode.Text("Shapes"),
+            "orientation" to ConfigNode.Text("landscape"),
+            "elements" to ConfigNode.Arr(listOf(ConfigNode.Obj(element))),
+        )
+    }
+
+    private fun read(shape: String?) =
+        (ControllerLayoutReader.read(documentWith(shape)) as Outcome.Success).value.elements.single()
+
+    @Test
+    fun `a control with no shape is a circle, which is what every control was before`() {
+        assertEquals(ControlShape.CIRCLE, read(null).shape)
+    }
+
+    @Test
+    fun `each shape is read by name`() {
+        assertEquals(ControlShape.CIRCLE, read("circle").shape)
+        assertEquals(ControlShape.SQUARE, read("square").shape)
+        assertEquals(ControlShape.RECTANGLE, read("rectangle").shape)
+    }
+
+    @Test
+    fun `an unknown shape is refused with the alternatives listed`() {
+        val outcome = ControllerLayoutReader.read(documentWith("blob"))
+        assertTrue(outcome is Outcome.Failure, "'blob' was accepted")
+        val error = (outcome as Outcome.Failure).error as ConfigurationError.UnknownValue
+        assertEquals(setOf("circle", "square", "rectangle"), error.allowed)
+    }
+
+    @Test
+    fun `a shape survives being written and read again`() {
+        listOf(ControlShape.CIRCLE, ControlShape.SQUARE, ControlShape.RECTANGLE).forEach { shape ->
+            val layout = (ControllerLayoutReader.read(documentWith(shape.wireName)) as Outcome.Success).value
+            val again = ControllerLayoutReader.read(ControllerLayoutWriter.write(layout))
+            assertTrue(again is Outcome.Success, "$shape did not survive: $again")
+            assertEquals(shape, (again as Outcome.Success).value.elements.single().shape)
+        }
+    }
+
+    @Test
+    fun `the default is not written, so a file says only what it means`() {
+        val layout = (ControllerLayoutReader.read(documentWith(null)) as Outcome.Success).value
+        val written = ControllerLayoutWriter.write(layout) as ConfigNode.Obj
+        val element = (written.fields["elements"] as ConfigNode.Arr).items.single() as ConfigNode.Obj
+        assertTrue("shape" !in element.fields, "a circle wrote itself out for no reason")
+    }
+}

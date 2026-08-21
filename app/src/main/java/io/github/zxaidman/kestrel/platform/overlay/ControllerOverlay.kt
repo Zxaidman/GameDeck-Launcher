@@ -17,9 +17,11 @@ import android.view.View
 import android.view.WindowManager
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
 import io.github.zxaidman.kestrel.core.input.GamepadControl
+import io.github.zxaidman.kestrel.core.layout.Anchor
 import io.github.zxaidman.kestrel.core.layout.Cluster
 import io.github.zxaidman.kestrel.core.layout.Clustering
 import io.github.zxaidman.kestrel.core.layout.ControlKind
+import io.github.zxaidman.kestrel.core.layout.ControlShape
 import io.github.zxaidman.kestrel.core.layout.ControllerLayout
 import io.github.zxaidman.kestrel.core.layout.LayoutElement
 import io.github.zxaidman.kestrel.core.layout.LayoutSurface
@@ -78,7 +80,32 @@ public class ControllerOverlay(
             return min(metrics.widthPixels, metrics.heightPixels)
         }
 
+    /**
+     * The area the controls actually have, which is not the size of the display.
+     *
+     * The window manager places an overlay inside what is left after the system bars, so a layout
+     * resolved against the whole display lands somewhere else — every control pushed down by the
+     * height of the status bar, the bottom row running off the screen, and the pad overlapping
+     * itself. Measured on the reference device: it happened whenever the status bar was showing.
+     *
+     * **The bars are subtracted whether or not they are showing**, via
+     * `getInsetsIgnoringVisibility`. A status bar can appear at any moment — a notification, a swipe
+     * — and controls that move when it does are controls a thumb has to find again mid-play.
+     */
     private fun surface(): LayoutSurface {
+        val manager = windows
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && manager != null) {
+            val metrics = manager.currentWindowMetrics
+            val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
+                android.view.WindowInsets.Type.systemBars() or
+                    android.view.WindowInsets.Type.displayCutout()
+            )
+            val width = metrics.bounds.width() - insets.left - insets.right
+            val height = metrics.bounds.height() - insets.top - insets.bottom
+            if (width > 0 && height > 0) {
+                return LayoutSurface(width.toDouble(), height.toDouble())
+            }
+        }
         val metrics = context.resources.displayMetrics
         return LayoutSurface(metrics.widthPixels.toDouble(), metrics.heightPixels.toDouble())
     }
@@ -183,21 +210,31 @@ public class ControllerOverlay(
             runCatching {
                 windows?.updateViewLayout(
                     view,
-                    params(
-                        piece.bounds.width.toInt(),
-                        piece.bounds.height.toInt(),
-                        Gravity.TOP or Gravity.START,
-                        piece.bounds.left.toInt(),
-                        piece.bounds.top.toInt(),
-                    ),
+                    params(piece.width, piece.height, piece.gravity, piece.marginX, piece.marginY),
                 )
             }
         }
         return true
     }
 
-    /** One window's worth of the layout, resolved for the screen and size as they are now. */
-    private class Piece(val bounds: PixelRect, val members: List<PlacedControl>)
+    /**
+     * One window's worth of the layout, positioned the way the window manager thinks.
+     *
+     * **Anchored to an edge rather than placed at a coordinate**, and that is a bug fix rather than
+     * a preference. Absolute positions were computed against the display and then handed to the
+     * window manager, which places within the area left after the system bars — so with a status
+     * bar showing, every control moved down by its height, bottom-anchored ones ran off the screen,
+     * and the pad overlapped itself. Gravity and a margin from the nearest edge mean the same thing
+     * in both coordinate spaces, which is what an anchor was always supposed to say.
+     */
+    private class Piece(
+        val gravity: Int,
+        val marginX: Int,
+        val marginY: Int,
+        val width: Int,
+        val height: Int,
+        val members: List<PlacedControl>,
+    )
 
     private fun plan(): List<Piece>? {
         val surface = surface()
@@ -211,6 +248,7 @@ public class ControllerOverlay(
         val rects = placed.toMap()
         return Clustering.group(layout, placed).mapNotNull { cluster ->
             val bounds = padded(cluster)
+            val anchor = byId[cluster.elementIds.first()]?.placement?.anchor ?: Anchor.TOP_LEFT
             val members = cluster.elementIds.mapNotNull { id ->
                 val element = byId[id] ?: return@mapNotNull null
                 val rect = rects[id] ?: return@mapNotNull null
@@ -219,10 +257,34 @@ public class ControllerOverlay(
                     element = element,
                     centerX = (rect.centerX - bounds.left).toFloat(),
                     centerY = (rect.centerY - bounds.top).toFloat(),
-                    radius = (min(rect.width, rect.height) / 2).toFloat(),
+                    halfWidth = (rect.width / 2).toFloat(),
+                    halfHeight = (rect.height / 2).toFloat(),
                 )
             }
-            if (members.isEmpty()) null else Piece(bounds, members)
+            if (members.isEmpty()) {
+                null
+            } else {
+                // Which edge this window hangs from, taken from the anchor its controls were
+                // authored against. A layout that says "bottom right" means it at any screen size.
+                val horizontal = when (anchor.originX) {
+                    0.0 -> Gravity.START to bounds.left
+                    1.0 -> Gravity.END to (surface.usableWidth - bounds.right)
+                    else -> Gravity.START to bounds.left
+                }
+                val vertical = when (anchor.originY) {
+                    0.0 -> Gravity.TOP to bounds.top
+                    1.0 -> Gravity.BOTTOM to (surface.usableHeight - bounds.bottom)
+                    else -> Gravity.TOP to bounds.top
+                }
+                Piece(
+                    gravity = horizontal.first or vertical.first,
+                    marginX = horizontal.second.toInt().coerceAtLeast(0),
+                    marginY = vertical.second.toInt().coerceAtLeast(0),
+                    width = bounds.width.toInt(),
+                    height = bounds.height.toInt(),
+                    members = members,
+                )
+            }
         }
     }
 
@@ -247,13 +309,7 @@ public class ControllerOverlay(
             runCatching {
                 windows?.addView(
                     view,
-                    params(
-                        piece.bounds.width.toInt(),
-                        piece.bounds.height.toInt(),
-                        Gravity.TOP or Gravity.START,
-                        piece.bounds.left.toInt(),
-                        piece.bounds.top.toInt(),
-                    ),
+                    params(piece.width, piece.height, piece.gravity, piece.marginX, piece.marginY),
                 )
                 added += view
                 true
@@ -337,12 +393,47 @@ private class PlacedControl(
     val element: LayoutElement,
     val centerX: Float,
     val centerY: Float,
-    val radius: Float,
+    val halfWidth: Float,
+    val halfHeight: Float,
 ) {
     val id: String get() = element.id
     val kind: ControlKind get() = element.kind
     val binds: GamepadControl? get() = element.binds
     val label: String get() = element.label ?: element.binds?.defaultLabel ?: ""
+
+    val shape: ControlShape get() = when (element.shape) {
+        // A stick and a pad are round things. A layout is free to say otherwise for a button, but
+        // a circular stick is what the maths behind it assumes: deflection is a distance from a
+        // centre, and a rectangular one would deflect further along its diagonal than its sides.
+        ControlShape.CIRCLE -> ControlShape.CIRCLE
+        else -> if (kind == ControlKind.STICK || kind == ControlKind.DPAD) {
+            ControlShape.CIRCLE
+        } else {
+            element.shape
+        }
+    }
+
+    /** The radius a round control is drawn at, and the reach every control is measured against. */
+    val radius: Float get() = min(halfWidth, halfHeight)
+
+    /** Half-extent in each axis, after the shape has had its say about squareness. */
+    val extentX: Float get() = if (shape == ControlShape.RECTANGLE) halfWidth else radius
+    val extentY: Float get() = if (shape == ControlShape.RECTANGLE) halfHeight else radius
+
+    /** How round the corners are. Enough to look drawn rather than cut. */
+    val corner: Float get() = min(extentX, extentY) * 0.35f
+
+    /**
+     * Whether a touch is on this control.
+     *
+     * The shape decides, not the bounding box. A rectangle hit-tested as a circle would have corners
+     * that look pressable and are not — a fault a player feels and cannot describe.
+     */
+    fun contains(x: Float, y: Float, reach: Float): Boolean = when (shape) {
+        ControlShape.CIRCLE -> hypot(x - centerX, y - centerY) <= radius * reach
+        else -> kotlin.math.abs(x - centerX) <= extentX * reach &&
+            kotlin.math.abs(y - centerY) <= extentY * reach
+    }
 }
 
 /**
@@ -627,6 +718,21 @@ private class ClusterView(
         arrowPaths[control.id]?.forEach { canvas.drawPath(it, arrow) }
     }
 
+    /** Draws a control's outline, whichever outline the layout gave it. */
+    private fun outline(canvas: Canvas, control: PlacedControl, paint: Paint) {
+        if (control.shape == ControlShape.CIRCLE) {
+            canvas.drawCircle(control.centerX, control.centerY, control.radius, paint)
+        } else {
+            arc.set(
+                control.centerX - control.extentX,
+                control.centerY - control.extentY,
+                control.centerX + control.extentX,
+                control.centerY + control.extentY,
+            )
+            canvas.drawRoundRect(arc, control.corner, control.corner, paint)
+        }
+    }
+
     private fun drawButton(canvas: Canvas, control: PlacedControl) {
         val r = control.radius
         rim.strokeWidth = max(2f, r * 0.09f)
@@ -634,7 +740,7 @@ private class ClusterView(
         val cx = control.centerX
         val cy = control.centerY
 
-        canvas.drawCircle(cx, cy, r, body)
+        outline(canvas, control, body)
 
         val analog = control.kind == ControlKind.ANALOG_TRIGGER
         val value = level[control.id] ?: 0f
@@ -642,19 +748,20 @@ private class ClusterView(
             canvas.save()
             // Fills from the bottom upward, in proportion to the value being sent — the same number
             // the target receives, shown where the thumb is.
-            canvas.clipRect(cx - r, cy + r - 2f * r * value, cx + r, cy + r)
-            canvas.drawCircle(cx, cy, r, glow)
+            val top = cy + control.extentY - 2f * control.extentY * value
+            canvas.clipRect(cx - control.extentX, top, cx + control.extentX, cy + control.extentY)
+            outline(canvas, control, glow)
             canvas.restore()
             // And again as a ring closing clockwise, drawn just inside the edge: a fill inside a
-            // small circle is exactly the part of the control a thumb is covering.
+            // small control is exactly the part of it a thumb is covering.
             val ringRadius = r - ring.strokeWidth * 0.6f
             arc.set(cx - ringRadius, cy - ringRadius, cx + ringRadius, cy + ringRadius)
             canvas.drawArc(arc, -90f, 360f * value, false, ring)
         } else if (!analog && pressed[control.id] == true) {
-            canvas.drawCircle(cx, cy, r, glow)
+            outline(canvas, control, glow)
         }
 
-        canvas.drawCircle(cx, cy, r, rim)
+        outline(canvas, control, rim)
         val size = r * when {
             control.label.length > 2 -> 0.66f
             control.label.length > 1 -> 0.78f
@@ -779,8 +886,7 @@ private class ClusterView(
 
     /** The last one wins, so a control drawn on top of another is the one a touch reaches. */
     private fun controlAt(x: Float, y: Float): PlacedControl? = controls.lastOrNull { control ->
-        control.kind != ControlKind.DECORATION &&
-            hypot(x - control.centerX, y - control.centerY) <= control.radius * REACH
+        control.kind != ControlKind.DECORATION && control.contains(x, y, REACH)
     }
 
     // --- sending ------------------------------------------------------------------------------

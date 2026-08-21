@@ -13,6 +13,49 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### Phase 2 — Positioned The Way The Window Manager Thinks
+
+The overlay computed absolute screen coordinates from the display and handed them to the window
+manager, which places an overlay inside **what is left after the system bars**. With a status bar
+showing, every control moved down by its height — the bottom row ran off the screen and the pad
+overlapped itself. Reported from the device, and visible in a screenshot with the bar up.
+
+Two changes, and each fixes half of it.
+
+**Clusters hang from an edge rather than sitting at a coordinate.** Gravity and a margin from the
+nearest edge mean the same thing in both coordinate spaces, which is what an anchor was always
+supposed to say: a layout that says *bottom right* means it whatever the usable area turns out to
+be.
+
+**The surface is the area the controls actually have.** `currentWindowMetrics` minus the system
+bars, taken with `getInsetsIgnoringVisibility` — **whether or not the bars are showing**. A status
+bar can appear at any moment, and controls that move when it does are controls a thumb has to find
+again mid-play.
+
+The layout tests now include the same phone with the bars taking their share, alongside the full
+display, at every size and both orientations. A layout that only fits the whole screen is a layout
+that overlaps itself the moment a notification arrives.
+
+### Phase 2 — Controls Have Shapes
+
+`shape` on a layout element: `circle`, `square` or `rectangle`. Asked for by the project owner, and
+the pad had been round-only because nothing had ever said otherwise.
+
+Separate from the kind, and the separation is the point: a kind says what a control **does**, a shape
+says what it **looks like**. A shoulder button is a rectangle on most pads and a circle on some, and
+nothing about which changes what it sends.
+
+**The shape decides where the control can be pressed, not only how it is drawn.** A rectangle
+hit-tested as a circle would have corners that look pressable and are not — a fault a player feels
+and cannot describe. `square` is stated rather than left to equal width and height, so a control
+stays square when a hand-edited file makes them slightly uneven.
+
+Sticks and d-pads stay round whatever the shape says. Deflection is a distance from a centre, and a
+rectangular stick would reach further along its diagonal than along its sides.
+
+The shipped layout is unchanged — every control is still a circle, because that is the arrangement
+that was tested and approved. The option is there for the copy in the user's own folder.
+
 ### Phase 2 — The Pad Is A File You Can Edit
 
 Four faults from the first data-driven build, and one of them was the point of the exercise.
