@@ -29,15 +29,44 @@ Six sections, in the order the project owner asked for them.
 - **Reasoned** — follows from documented platform behaviour; not observed.
 - **Unverified** — believed, with nothing behind it.
 
+**Every entry carries a phase**, so the state of the queue is readable without asking:
+
+| Phase | Meaning |
+| --- | --- |
+| `pending` | Not started. |
+| `building` | Being written now. |
+| `testing` | Built and in a build the project owner can install; waiting on a device result. |
+| `done` | Confirmed on the device, and copied into `done-list.md` with what was done. |
+
+An item leaves this file only by reaching `done`, and it is described in `done-list.md` when it
+does. Nothing is deleted to make the list look shorter.
+
+**Anything new is recorded here first.** A requirement, a bug, an idea — it gets an ID in this file
+before it is built, argued about, or written into any other document. Standing instruction from the
+project owner, and it is what keeps this list the queue rather than a summary of one.
+
 **Reference device for every "measured" claim:** Redmi Note 13 5G, HyperOS 3.0.3, Android 15,
 Shizuku shell (uid 2000), no root. One device, one firmware. Nothing here is a claim about other
 hardware.
 
 ---
 
+## State of the queue — build `0.0.26-dev`
+
+| Phase | Items |
+| --- | --- |
+| `testing` | `CRIT-5`, `BUG-9`, `FEAT-11`, `FEAT-12`, `FEAT-10` — block 1, built this round |
+| `building` | — |
+| `pending` | `CRIT-1`, `CRIT-2`, `CRIT-3`, `CRIT-4`, `BUG-1`–`BUG-8`, `FEAT-1`–`FEAT-9` |
+| `done` | — nothing has been confirmed on the device yet; see `done-list.md` for the work that closed before this list existed |
+
+---
+
 ## 1. Critical — blocks `v0.1.0`
 
 ### `CRIT-1` — A release signing key that is not in this repository
+
+**Phase:** `pending`
 
 **Why it blocks.** The key currently signing every build is committed, and its password is public.
 Anyone can sign an APK with it, and the platform will install that APK straight over a user's
@@ -58,6 +87,8 @@ lost no future version can ever update an installed Kestrel.
 
 ### `CRIT-2` — A home screen, and navigation
 
+**Phase:** `pending`
+
 **Why it blocks.** What opens today is a diagnostics harness: every developer control, every raw
 number, one long scroll. It was the right thing while the question was "does any of this work". It
 cannot be the first thing a user sees.
@@ -74,6 +105,8 @@ build … hide unnecessary options from the homepage and good navigation setting
 ---
 
 ### `CRIT-3` — Modular architecture, as `PROJECT_STRUCTURE.md` already describes it
+
+**Phase:** `pending`
 
 **Why it blocks.** Every line of product code lives in `:app`. `PROJECT_STRUCTURE.md` has described
 `feature/`, `platform/` and `data/` modules since before any of it was written, and the gap between
@@ -94,6 +127,8 @@ the same code twice.
 
 ### `CRIT-4` — Decide what `v0.1.0` contains
 
+**Phase:** `pending`
+
 **Stated by the project owner:** release and tag `v0.1.0` once **overlay, controller editor, gaming
 session and Shizuku** are complete, then push to `main`.
 
@@ -107,6 +142,8 @@ one action once the contents are agreed — and once `CRIT-1` is done.
 ---
 
 ### `CRIT-5` — The editor must draw the phone, not the page
+
+**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Kind:** critical. Named first by the project owner, ahead of everything else on this list.  
 **Found by:** Reported, build `0.0.25-dev`.
@@ -141,6 +178,8 @@ would mean building each one twice.
 
 ### `BUG-1` — The overlay does not draw into the cutout area
 
+**Phase:** `pending`
+
 **Reported**, `0.0.25-dev`, with a screenshot. Kestrel's own screen now uses the notch area
 correctly; **the controller overlay does not**. On the reference device the left-hand controls stop
 short of the notch, wasting the space the setting was turned on to claim.
@@ -156,6 +195,8 @@ whether or not the user asked it to.
 
 ### `BUG-2` — The "use the notch area" setting does not reach the overlay
 
+**Phase:** `pending`
+
 **Reported**, `0.0.25-dev`: *"yes, except for gamepad"*. Toggling the setting changes Kestrel's own
 screen and leaves the controls where they were. A setting that works in one place and silently does
 nothing in another is worse than one that is absent, because it teaches the user it did nothing at
@@ -167,6 +208,8 @@ cutout mode and insets accordingly.
 ---
 
 ### `BUG-3` — `HOW-TO-EDIT.md` is not written
+
+**Phase:** `pending`
 
 **Reported**, `0.0.25-dev`: *"no, `HOW-TO-EDIT.md` found"* — meaning it was not found.
 
@@ -182,6 +225,8 @@ succeeded.
 
 ### `BUG-4` — `sensor-portrait` does nothing and should go
 
+**Phase:** `pending`
+
 **Reported**, `0.0.25-dev`: *"sensor portrait is useless just like reverse portrait discard it"*.
 
 Most phones do not support reverse portrait at all, so `sensor-portrait` behaves exactly like
@@ -195,6 +240,8 @@ back rather than being refused.
 ---
 
 ### `BUG-5` — A `"shape": "round"` was seen somewhere
+
+**Phase:** `pending`
 
 **Reported**, `0.0.24-dev`, and **not reproduced**. Kestrel only ever writes `circle`, `square` or
 `rectangle`, and the reader refuses anything else with the allowed values listed. The only
@@ -213,6 +260,8 @@ not something to shrug at.
 
 ### `BUG-6` — Kestrel cannot create its own data folder
 
+**Phase:** `pending`
+
 **Measured** and **not fixable within the current permission set**, recorded so it is not raised as
 a bug repeatedly.
 
@@ -228,6 +277,8 @@ worth paying, which would be a measured experiment rather than a code change.
 
 ### `BUG-7` — The trigger's clockwise border sweep should go
 
+**Phase:** `pending`
+
 **Found by:** Reported, build `0.0.25-dev`.
 
 On a rectangle or a square the trigger shows a bar filling from the bottom up, and the project owner
@@ -242,6 +293,8 @@ control affected.
 ---
 
 ### `BUG-8` — A trigger takes too long to register
+
+**Phase:** `pending`
 
 **Found by:** Reported, build `0.0.25-dev`.
 
@@ -270,6 +323,8 @@ version bump and a `docs/CONFIGURATION_SCHEMA.md` update) and a control in setti
 
 ### `BUG-9` — A square draws as a rectangle, in the editor only
 
+**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+
 **Found by:** Reported, build `0.0.25-dev`. Reproducible values given: `width 0.24`, `height 0.12`,
 shape `square`.
 
@@ -288,6 +343,8 @@ Same drawing path as `CRIT-5`, so it is fixed there rather than separately.
 
 ### `FEAT-1` — Face buttons as one cluster, like the d-pad
 
+**Phase:** `pending`
+
 **Requested**, with a reference image: four face buttons on a **shared round plate**, read as one
 group rather than four independent circles.
 
@@ -305,6 +362,8 @@ the choice rather than a replacement.
 
 ### `FEAT-2` — An eight-way face pad
 
+**Phase:** `pending`
+
 **Requested as a nice-to-have.** A single face control read like the cross: one thumb, eight
 directions, a diagonal pressing two buttons at once.
 
@@ -317,6 +376,8 @@ addition and its own editing. Not a variation on an existing kind.
 ---
 
 ### `FEAT-3` — A test ground for every control
+
+**Phase:** `pending`
 
 **Requested, and the project owner's stated next priority**, with a reference image: a screen
 showing the whole pad with every control lighting as it is pressed, every axis printing its value
@@ -333,6 +394,8 @@ analog value, the pad's eight directions, and what the platform reports back.
 
 ### `FEAT-4` — Skins
 
+**Phase:** `pending`
+
 Artwork licensed and cleared (**CC0**, *Xelu's Free Controller Prompts*), 233 files assessed, format
 not started. `docs/SKIN_ASSETS.md` carries the assessment and the open questions.
 
@@ -345,12 +408,16 @@ packs against what it needed — not from the shape of the pack that happens to 
 
 ### `FEAT-5` — Target discovery and launching
 
+**Phase:** `pending`
+
 Phase 1 and Phase 4 of `PRD.md`, and the largest single gap between what exists and the MVP flow.
 Kestrel cannot list an installed target, add one by hand, or launch one.
 
 ---
 
 ### `FEAT-6` — Profiles: a layout per target
+
+**Phase:** `pending`
 
 A gaming profile selects a layout, a controller definition and a display mode for a named target.
 `core/profile/ProfileMatching.kt` exists and nothing uses it.
@@ -359,12 +426,16 @@ A gaming profile selects a layout, a controller definition and a display mode fo
 
 ### `FEAT-7` — Haptics
 
+**Phase:** `pending`
+
 Listed in `PRD.md` Phase 2 and never started. Small, and worth doing while the controller engine is
 still fresh.
 
 ---
 
 ### `FEAT-8` — The input backend behind an interface
+
+**Phase:** `pending`
 
 `ADR-002` requires it and `ADR-006`'s rejection removed the only second backend that was planned. So
 there is exactly one implementation and no interface, which is honest — but the interface is what
@@ -375,11 +446,15 @@ there is one implementation than when there are two.
 
 ### `FEAT-9` — Community system
 
+**Phase:** `pending`
+
 `PRD.md` Phase 7. Not started, and correctly last: it distributes what the earlier phases produce.
 
 ---
 
 ### `FEAT-10` — A window editor, on the same screen
+
+**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -405,6 +480,8 @@ question rather than letting them discover it in a game.
 
 ### `FEAT-11` — A grid, and snapping
 
+**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+
 **Asked for:** build `0.0.25-dev` round.
 
 - A drop-down for grid size: **32px, 64px, 128px, 256px**.
@@ -422,6 +499,8 @@ finding it.
 ---
 
 ### `FEAT-12` — Type the numbers
+
+**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -625,11 +704,11 @@ canvas and splitting it means drawing that canvas three times.
 
 | # | Item | Why here |
 | --- | --- | --- |
-| 1 | `CRIT-5` device-ratio canvas | Named first by the project owner. Everything else in this block is drawn on it. |
-| 2 | `BUG-9` square draws as a rectangle | Same drawing path. Fixed while it is open, not after. |
-| 3 | `FEAT-11` grid and snapping | Cheapest of the three tools, and the one that makes dragging accurate. |
-| 4 | `FEAT-12` type the numbers | Small once the canvas exists, and it answers the offset confusion directly. |
-| 5 | `FEAT-10` window editor | Largest of the three, and the one with the most to explain on screen. Last in the block for that reason. |
+| 1 | `CRIT-5` device-ratio canvas | Named first by the project owner. Everything else in this block is drawn on it. **`testing` in `0.0.26-dev`.** |
+| 2 | `BUG-9` square draws as a rectangle | Same drawing path. Fixed while it is open, not after. **`testing` in `0.0.26-dev`.** |
+| 3 | `FEAT-11` grid and snapping | Cheapest of the three tools, and the one that makes dragging accurate. **`testing` in `0.0.26-dev`.** |
+| 4 | `FEAT-12` type the numbers | Small once the canvas exists, and it answers the offset confusion directly. **`testing` in `0.0.26-dev`.** |
+| 5 | `FEAT-10` window editor | Largest of the three, and the one with the most to explain on screen. Last in the block for that reason. **`testing` in `0.0.26-dev`.** |
 
 **2 — The triggers.** Both small, both reported, neither touching the editor.
 

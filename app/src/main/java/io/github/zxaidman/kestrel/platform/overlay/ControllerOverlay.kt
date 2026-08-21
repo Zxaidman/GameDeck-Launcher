@@ -26,6 +26,7 @@ import io.github.zxaidman.kestrel.core.layout.ControllerLayout
 import io.github.zxaidman.kestrel.core.layout.LayoutElement
 import io.github.zxaidman.kestrel.core.layout.LayoutSurface
 import io.github.zxaidman.kestrel.core.layout.PixelRect
+import io.github.zxaidman.kestrel.core.layout.effectiveShape
 import io.github.zxaidman.kestrel.core.layout.resolve
 import io.github.zxaidman.kestrel.core.layout.scaledBy
 import io.github.zxaidman.kestrel.platform.input.GamepadCodes
@@ -92,23 +93,8 @@ public class ControllerOverlay(
      * `getInsetsIgnoringVisibility`. A status bar can appear at any moment — a notification, a swipe
      * — and controls that move when it does are controls a thumb has to find again mid-play.
      */
-    private fun surface(): LayoutSurface {
-        val manager = windows
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && manager != null) {
-            val metrics = manager.currentWindowMetrics
-            val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
-                android.view.WindowInsets.Type.systemBars() or
-                    android.view.WindowInsets.Type.displayCutout()
-            )
-            val width = metrics.bounds.width() - insets.left - insets.right
-            val height = metrics.bounds.height() - insets.top - insets.bottom
-            if (width > 0 && height > 0) {
-                return LayoutSurface(width.toDouble(), height.toDouble())
-            }
-        }
-        val metrics = context.resources.displayMetrics
-        return LayoutSurface(metrics.widthPixels.toDouble(), metrics.heightPixels.toDouble())
-    }
+    private fun surface(): LayoutSurface =
+        io.github.zxaidman.kestrel.platform.display.DeviceSurface.usable(context)
 
     /**
      * Shows the toggle, and nothing else.
@@ -401,17 +387,10 @@ private class PlacedControl(
     val binds: GamepadControl? get() = element.binds
     val label: String get() = element.label ?: element.binds?.defaultLabel ?: ""
 
-    val shape: ControlShape get() = when (element.shape) {
-        // A stick and a pad are round things. A layout is free to say otherwise for a button, but
-        // a circular stick is what the maths behind it assumes: deflection is a distance from a
-        // centre, and a rectangular one would deflect further along its diagonal than its sides.
-        ControlShape.CIRCLE -> ControlShape.CIRCLE
-        else -> if (kind == ControlKind.STICK || kind == ControlKind.DPAD) {
-            ControlShape.CIRCLE
-        } else {
-            element.shape
-        }
-    }
+    // Asked of the domain rather than decided here, so the editor's preview and the pad a player
+    // holds cannot disagree about what a shape means. A stick and a pad come back round whatever
+    // the document says, for the reason recorded there.
+    val shape: ControlShape get() = element.effectiveShape()
 
     /** The radius a round control is drawn at, and the reach every control is measured against. */
     val radius: Float get() = min(halfWidth, halfHeight)

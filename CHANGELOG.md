@@ -13,6 +13,54 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.26-dev` — The Editor Draws The Phone
+
+Block 1 of `todo-list.md`, built in the order the project owner set. Five items, one screen, and one
+idea underneath all of them: **an editor that lies about what it shows is worse than a text file**,
+because a text file never claimed to be a picture of anything.
+
+**The canvas is the device.** The layout is arranged inside a bordered rectangle with the phone's
+own aspect ratio, scaled to fit whole and never scrolled. Before this it was drawn at the shape of
+whatever room the screen gave it — close to ultrawide on the reference device — so controls appeared
+to overlap that did not, and, worse in the other direction, controls that did overlap could look
+clear. `platform/display/DeviceSurface.kt` now answers *what part of this screen can a pad be put
+on* once, and both the overlay and the editor ask it rather than each keeping a copy.
+
+**The screen is a dock and a panel.** The canvas is fixed on one side, the tools scroll on the
+other, and which side depends on the shape of the editor's own window rather than the shape of the
+phone being drawn — two different rectangles that had been conflated. A preview toggle shows the pad
+in the orientation the phone is not currently in, because one layout has to work in both and a pad
+that fits in landscape and overlaps itself in portrait has shipped here once already.
+
+**A square is a square, in one place.** The rule that a square takes the shorter of its two sides
+lived in two copies and they disagreed: the overlay applied it and the editor's preview did not.
+`PixelRect.shapedAs` and `LayoutElement.effectiveShape()` are now the single owner, the overlay's
+copy is deleted, and the editor hit-tests with the same outline it draws with.
+
+**Dragging states a position rather than accumulating deltas.** `Placement.centeredAt` is the
+inverse of `resolve`, and it exists because snapping cannot be written any other way — a snap is a
+claim about an absolute position, and a sum of small deltas drifts. A grid from 32 to 256 px and two
+snapping modes sit on top of it, with edge snapping winning over the grid per axis: lining up with
+the control next door is a statement about this layout, and landing on a grid line is a statement
+about the screen.
+
+**A window editor, because the most consequential setting was invisible.** Which controls share a
+window is what decides whether a thumb can slide between them — and every pixel of that window that
+is not a control is a pixel the game underneath stops receiving touches through. Two grouped
+controls in opposite corners make one screen-covering window. That was editable only by hand and
+could not be seen at all. It is now a mode on the same screen, with each window drawn, its share of
+the screen given as a percentage, and anything past a quarter turned orange.
+
+**Nothing here is measured yet.** The full build passes with lint, the new geometry is unit-tested,
+and neither of those is a claim about a phone. All five items sit at `testing` in `todo-list.md`
+until the project owner runs them.
+
+Two new documents. `todo-list.md` gained a phase on every entry — `pending`, `building`, `testing`,
+`done` — so the state of the queue is readable without asking. `done-list.md` is the receipt: an
+item is written there when it is confirmed on the device, with what was asked for, what was built,
+how it is known to work, and what it cost.
+
+
 ### Backlog: A Second Round, And Two Answers From The Code
 
 `todo-list.md` grew by seven items and gained the two answers the project owner asked for. Both were

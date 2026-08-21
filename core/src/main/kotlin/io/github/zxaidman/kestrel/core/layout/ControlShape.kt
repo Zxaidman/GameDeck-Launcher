@@ -33,3 +33,19 @@ public enum class ControlShape(public val wireName: String) {
         public fun of(wireName: String): ControlShape? = entries.firstOrNull { it.wireName == wireName }
     }
 }
+
+/**
+ * The shape a control is really drawn and pressed as, after its kind has had its say.
+ *
+ * A stick and a pad are round whatever the document says. That is not a presentation choice: the
+ * maths behind a stick reads deflection as a distance from a centre, so a rectangular one would
+ * deflect further along its diagonal than along its sides — a pad that feels stronger diagonally
+ * for no reason a player could name.
+ *
+ * Asked by the overlay and by the editor's preview, so the two cannot drift apart.
+ */
+public fun LayoutElement.effectiveShape(): ControlShape = when {
+    shape == ControlShape.CIRCLE -> ControlShape.CIRCLE
+    kind == ControlKind.STICK || kind == ControlKind.DPAD -> ControlShape.CIRCLE
+    else -> shape
+}

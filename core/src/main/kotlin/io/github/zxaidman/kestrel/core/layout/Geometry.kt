@@ -274,3 +274,49 @@ public fun PixelRect.isWithin(surface: LayoutSurface): Boolean =
  */
 public fun hitTest(elements: List<Pair<String, PixelRect>>, x: Double, y: Double): String? =
     elements.lastOrNull { (_, rect) -> rect.contains(x, y) }?.first
+
+/**
+ * The rectangle a control of this shape actually occupies.
+ *
+ * A [ControlShape.SQUARE] is *sized by the shorter of width and height* — it is a square, not "a
+ * rectangle that happens to be square" — and a [ControlShape.CIRCLE] is drawn and pressed at the
+ * inscribed radius. Only a [ControlShape.RECTANGLE] uses both numbers as written.
+ *
+ * This exists because the rule was written twice and the two copies disagreed. The overlay applied
+ * it and the editor's preview did not, so a square with `width 0.24` and `height 0.12` was arranged
+ * as a rectangle and then rendered as a square: the editor was lying about the thing it exists to
+ * show. Both now ask here.
+ */
+public fun PixelRect.shapedAs(shape: ControlShape): PixelRect =
+    if (shape == ControlShape.RECTANGLE) {
+        this
+    } else {
+        val side = min(width, height)
+        copy(width = side, height = side)
+    }
+
+/**
+ * The placement that puts this control's centre at a point on a surface.
+ *
+ * The inverse of [resolve], and it exists so that dragging a control can be expressed as *where the
+ * finger is* rather than as an accumulation of small deltas. Accumulating deltas drifts, and it
+ * makes snapping impossible to write: a snap is a statement about an absolute position.
+ *
+ * Size, shape and rotation are untouched — this moves a control and nothing else.
+ */
+public fun Placement.centeredAt(surface: LayoutSurface, centerX: Double, centerY: Double): Placement {
+    val unit = surface.shortSide
+    if (unit <= 0.0) return this
+
+    val originX = surface.insetLeft + anchor.originX * surface.usableWidth
+    val originY = surface.insetTop + anchor.originY * surface.usableHeight
+    val inwardX = if (anchor.originX == 1.0) -1.0 else 1.0
+    val inwardY = if (anchor.originY == 1.0) -1.0 else 1.0
+
+    return copy(
+        offsetX = ((centerX - originX) / (unit * inwardX))
+            .coerceIn(-Placement.MAX_OFFSET, Placement.MAX_OFFSET),
+        offsetY = ((centerY - originY) / (unit * inwardY))
+            .coerceIn(-Placement.MAX_OFFSET, Placement.MAX_OFFSET),
+    )
+}

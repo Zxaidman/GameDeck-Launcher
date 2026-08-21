@@ -221,3 +221,108 @@ class BoundsTest {
         assertFalse(rect.isWithin(withGestureBar))
     }
 }
+
+/**
+ * The two rules the editor and the overlay now share, rather than each keeping its own copy.
+ *
+ * Both of these were faults before they were tests. A square was arranged as a rectangle in the
+ * editor and rendered as a square by the pad, and dragging accumulated deltas instead of stating a
+ * position, which made snapping impossible to express.
+ */
+class ShapeAndPlacementTest {
+
+    private fun rect(w: Double, h: Double) = PixelRect(100.0, 200.0, w, h)
+
+    @Test
+    fun `a square takes the shorter of its two sides, for both`() {
+        val shaped = rect(240.0, 120.0).shapedAs(ControlShape.SQUARE)
+        assertEquals(120.0, shaped.width)
+        assertEquals(120.0, shaped.height)
+    }
+
+    @Test
+    fun `a circle is measured by its inscribed radius, so it agrees with what is drawn`() {
+        val shaped = rect(240.0, 120.0).shapedAs(ControlShape.CIRCLE)
+        assertEquals(120.0, shaped.width)
+        assertEquals(120.0, shaped.height)
+    }
+
+    @Test
+    fun `a rectangle keeps both numbers as written`() {
+        val shaped = rect(240.0, 120.0).shapedAs(ControlShape.RECTANGLE)
+        assertEquals(240.0, shaped.width)
+        assertEquals(120.0, shaped.height)
+    }
+
+    @Test
+    fun `shaping moves nothing`() {
+        val shaped = rect(240.0, 120.0).shapedAs(ControlShape.SQUARE)
+        assertEquals(100.0, shaped.centerX)
+        assertEquals(200.0, shaped.centerY)
+    }
+
+    @Test
+    fun `a stick is round however the document describes it`() {
+        val stick = LayoutElement(
+            id = "stick.left",
+            kind = ControlKind.STICK,
+            binds = null,
+            label = null,
+            shape = ControlShape.RECTANGLE,
+            group = null,
+            placement = Placement(Anchor.BOTTOM_LEFT, 0.2, 0.2, 0.2, 0.1),
+        )
+        assertEquals(ControlShape.CIRCLE, stick.effectiveShape())
+        assertEquals(ControlShape.RECTANGLE, stick.copy(kind = ControlKind.BUTTON).effectiveShape())
+    }
+
+    @Test
+    fun `placing a control at a point puts its centre there, from every anchor`() {
+        val surface = LayoutSurface(2400.0, 1080.0)
+        Anchor.entries.forEach { anchor ->
+            val placement = Placement(anchor, 0.2, 0.2, 0.1, 0.1)
+                .centeredAt(surface, 1234.0, 567.0)
+            val rect = placement.resolve(surface)
+            assertEquals(1234.0, rect.centerX, 1e-9, "x is wrong from $anchor")
+            assertEquals(567.0, rect.centerY, 1e-9, "y is wrong from $anchor")
+        }
+    }
+
+    @Test
+    fun `placing a control changes where it is and nothing else`() {
+        val surface = LayoutSurface(2400.0, 1080.0)
+        val before = Placement(Anchor.BOTTOM_RIGHT, 0.2, 0.2, 0.15, 0.08, rotationDegrees = 20.0)
+        val after = before.centeredAt(surface, 100.0, 100.0)
+
+        assertEquals(before.width, after.width)
+        assertEquals(before.height, after.height)
+        assertEquals(before.anchor, after.anchor)
+        assertEquals(before.rotationDegrees, after.rotationDegrees)
+    }
+
+    @Test
+    fun `resolving and then placing at the same point is a round trip`() {
+        val surface = LayoutSurface(1080.0, 2400.0)
+        val original = Placement(Anchor.BOTTOM_LEFT, 0.31, 0.27, 0.19, 0.19)
+        val rect = original.resolve(surface)
+        val again = original.centeredAt(surface, rect.centerX, rect.centerY)
+
+        assertEquals(original.offsetX, again.offsetX, 1e-9)
+        assertEquals(original.offsetY, again.offsetY, 1e-9)
+    }
+
+    @Test
+    fun `a point beyond what a layout may say is clamped rather than written`() {
+        val surface = LayoutSurface(2400.0, 1080.0)
+        val placed = Placement(Anchor.BOTTOM_LEFT, 0.0, 0.0, 0.1, 0.1)
+            .centeredAt(surface, 9_000_000.0, 9_000_000.0)
+        assertTrue(placed.offsetX <= Placement.MAX_OFFSET)
+        assertTrue(placed.offsetY <= Placement.MAX_OFFSET)
+    }
+
+    @Test
+    fun `a surface with no area is left alone rather than dividing by zero`() {
+        val original = Placement(Anchor.BOTTOM_LEFT, 0.2, 0.2, 0.1, 0.1)
+        assertEquals(original, original.centeredAt(LayoutSurface(0.0, 0.0), 10.0, 10.0))
+    }
+}
