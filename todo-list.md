@@ -51,14 +51,14 @@ hardware.
 
 ---
 
-## State of the queue — build `0.0.26-dev`
+## State of the queue — build `0.0.27-dev`
 
 | Phase | Items |
 | --- | --- |
-| `testing` | `CRIT-5`, `BUG-9`, `FEAT-11`, `FEAT-12`, `FEAT-10` — block 1, built this round |
+| `done` | `BUG-9` the square, `FEAT-10` the window editor — both confirmed on the device |
+| `testing` | `CRIT-5`, `FEAT-11`, `FEAT-12` reworked after their first test; `BUG-10`–`BUG-14`, `FEAT-13`, `FEAT-14` built this round |
 | `building` | — |
 | `pending` | `CRIT-1`, `CRIT-2`, `CRIT-3`, `CRIT-4`, `BUG-1`–`BUG-8`, `FEAT-1`–`FEAT-9` |
-| `done` | — nothing has been confirmed on the device yet; see `done-list.md` for the work that closed before this list existed |
 
 ---
 
@@ -143,7 +143,7 @@ one action once the contents are agreed — and once `CRIT-1` is done.
 
 ### `CRIT-5` — The editor must draw the phone, not the page
 
-**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Kind:** critical. Named first by the project owner, ahead of everything else on this list.  
 **Found by:** Reported, build `0.0.25-dev`.
@@ -323,7 +323,7 @@ version bump and a `docs/CONFIGURATION_SCHEMA.md` update) and a control in setti
 
 ### `BUG-9` — A square draws as a rectangle, in the editor only
 
-**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.26-dev`. Written up in `done-list.md`.
 
 **Found by:** Reported, build `0.0.25-dev`. Reproducible values given: `width 0.24`, `height 0.12`,
 shape `square`.
@@ -336,6 +336,84 @@ takes the smaller of the two extents for both.
 Circle and rectangle are unaffected and were checked.
 
 Same drawing path as `CRIT-5`, so it is fixed there rather than separately.
+
+---
+
+### `BUG-10` — The canvas is the usable area, not the phone, so the pad does not match it
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported and reproduced from the numbers, build `0.0.26-dev`.
+
+**The fault, exactly.** The canvas draws **2289 × 927** — the usable area, with the system bars and
+the cutout already subtracted. The screen is **2400 × 1080**. Those are not the same shape: 2.47 : 1
+against 2.22 : 1. So `CRIT-5` fixed the *scale* of the lie and not the lie: the canvas is still more
+elongated than the phone, and it is not "showcasing the device" as asked.
+
+**And it is why the pad still does not match** (test 12). Controls are drawn hanging over the top
+edge of the canvas — visible in the project owner's first image on both shoulder clusters. On the
+canvas they hang into nothing. On the phone the window manager will not put a window outside the
+area it laid out, so the same control is pushed back in. Editor and pad disagree, which is the exact
+failure `CRIT-5` exists to end.
+
+**The fix.** Draw the **whole screen**, and draw the bars and the cutout as marked-off bands inside
+it. `LayoutSurface` already carries insets and `resolve` already places controls inside them, so the
+arrangement lands exactly where the overlay puts it while the rectangle finally has the phone's own
+proportions. A control that leaves the usable area is then visibly leaving it, and is marked.
+
+---
+
+### `BUG-11` — `Edit layout` cannot be reached in portrait
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.26-dev`.
+
+Three buttons — *Copy layout to my folder*, *Reload layout*, *Edit layout* — sit in one row that
+does not wrap. In portrait the third is off the edge of the screen and there is nothing to scroll
+sideways. The editor is unreachable without turning the phone.
+
+---
+
+### `BUG-12` — Turning the phone inside the editor throws you back to the home page
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.26-dev`.
+
+The activity is recreated on a configuration change, so every piece of editor state — which page is
+open, which control is selected, **and every unsaved edit** — is thrown away. Losing an arrangement
+because the phone turned is worse than the navigation fault it looks like.
+
+The fix is for the activity to handle the configuration change rather than be rebuilt by it. Compose
+re-lays-out on its own, and `LocalConfiguration` still updates, so the editor re-measures the screen
+without losing a thing.
+
+---
+
+### `BUG-13` — The numbers dialog does not fit in landscape and will not scroll
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.26-dev`.
+
+Four fields stacked vertically in a dialog on a short landscape screen: **width** and **height** are
+below the fold, and the dialog body does not scroll, so they cannot be reached at all. The feature
+works and is unusable in the orientation the pad is mostly edited in.
+
+Two fields per row, and the body scrolls.
+
+---
+
+### `BUG-14` — A minus sign cannot be typed on the numeric keyboard
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.26-dev`: *"The Android keyboard only shows numbers."*
+
+The fields ask for a decimal keyboard. On this device's keyboard that appears to be digits and a
+decimal point, with no minus sign — and an offset may legitimately be negative when a control is
+meant to sit outside its anchor. Pasting works, which is a workaround and not an answer.
+
+**Not fully diagnosed.** It is not yet confirmed whether the decimal point is available or only
+digits; the project owner entered `0.24` successfully in the same round, which suggests the point is
+there and only the sign is missing. A `±` button beside each offset field removes the doubt without
+depending on which keyboard someone uses.
 
 ---
 
@@ -454,7 +532,7 @@ there is one implementation than when there are two.
 
 ### `FEAT-10` — A window editor, on the same screen
 
-**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.26-dev`. Written up in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -480,7 +558,7 @@ question rather than letting them discover it in a game.
 
 ### `FEAT-11` — A grid, and snapping
 
-**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -500,7 +578,7 @@ finding it.
 
 ### `FEAT-12` — Type the numbers
 
-**Phase:** `testing` — built in `0.0.26-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -513,6 +591,44 @@ reports which value was wrong and why rather than being silently clamped.
 This is also the right place to state **what each number means**, which the project owner reported
 as confusing in the previous round: an offset runs from the anchor to the control's **centre**,
 inwards, measured in fractions of the screen's shorter side.
+
+---
+
+### `FEAT-13` — Three parts canvas to one part tools, and the numbers button where the hand is
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"use maximum length for Canva 3 ratio for Canva area while 1 ratio for tools. And
+three dots are barely visible, I want you to make it the same and along side button edit tool + / -
+etc"*
+
+The canvas takes three quarters of the screen and the tools one quarter, in both orientations. The
+`⋮` becomes a full button in the same row as `−`, `+`, `taller` and `shorter`, at the same size —
+a text button beside a row of filled ones is a control most people never find.
+
+**One thing this does not fix, and it should be said.** Previewing *portrait* while the editor
+itself is in *landscape* leaves a tall narrow strip, because the canvas can only be as tall as the
+dock. Three quarters of the width does not help a rectangle limited by height. Editing a portrait
+pad is best done with the phone in portrait — which `BUG-12` currently makes impossible.
+
+---
+
+### `FEAT-14` — The grid measured in the layout's own unit
+
+**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"the button is 0.12 and the grid is 32px both are different scales so it is not very
+helpful. Make it both are the same scale"*
+
+Correct, and the fix is to move the grid rather than the control. Sizes in the document are
+fractions of the screen's shorter side; a grid in device pixels is a second unit that nothing else
+uses, and comparing `0.12` with `32px` requires arithmetic nobody should be doing while arranging a
+pad.
+
+The grid becomes **0.01, 0.02, 0.05, 0.10, 0.25 of the shorter side**, with the pixel equivalent for
+this phone shown beside it. A step of `0.01` is exactly the precision the file is rounded to, so a
+snapped control lands on a number the file can hold — which the pixel grid could not promise, and
+which was written up as a limitation of `FEAT-11` when it was really a symptom of the wrong unit.
+
+The selected control's size is shown in both units for the same reason.
 
 ---
 
@@ -684,6 +800,31 @@ show the rectangle and its share of the screen rather than only the `group` name
 | `BUG-7` | bug | remove the clockwise border fill, keep the bottom-to-top bar |
 | `BUG-8` | bug | trigger registers too slowly; fast first half, or 0.35s, configurable |
 | `BUG-9` | bug | square draws as a rectangle in the editor, correct once saved |
+
+
+
+### Round `0.0.26-dev` — block 1 tested
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1 | Canvas shape | **Failed.** Canvas is 2289 × 927, the phone is 2400 × 1080, and controls draw outside the rectangle → `BUG-10` |
+| 2 | Dock and panel | **Failed twice.** `Edit layout` unreachable in portrait → `BUG-11`. Turning the phone inside the editor returns to the home page → `BUG-12`. Proportions wanted 3 : 1 and the `⋮` promoted → `FEAT-13` |
+| 3 | Preview toggle | Works, but inherits `BUG-10`, and a portrait preview inside a landscape editor is too small to edit → `FEAT-13` |
+| 4 | Square bug | **Fixed** — draws as a square. Dialog does not fit or scroll in landscape → `BUG-13` |
+| 5 | Typing the numbers | Validation works. Keyboard offers digits only, no minus sign → `BUG-14` |
+| 6 | Grid sizes | Work, but px against a `0.12` control is the wrong unit → `FEAT-14` |
+| 7 | Grid snapping | **Working** |
+| 8 | Edge snapping and guides | **Working** |
+| 9 | Window mode, greying out | **Working** |
+| 10 | Changing a window | **Working** |
+| 11 | Screen-covering warning | **Working** |
+| 12 | Save and play | Values save and the pad plays, but it still does not match the editor → `BUG-10` |
+
+**Closed by this round:** `BUG-9` (the square) and `FEAT-10` (the window editor). Both are in
+`done-list.md`.
+
+**Still `testing`, because part of what they promised is not true yet:** `CRIT-5` (`BUG-10`,
+`FEAT-13`), `FEAT-11` (`FEAT-14`), `FEAT-12` (`BUG-13`, `BUG-14`).
 
 
 ### Awaiting

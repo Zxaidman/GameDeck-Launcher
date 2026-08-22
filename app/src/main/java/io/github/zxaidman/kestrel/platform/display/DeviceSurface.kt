@@ -27,7 +27,23 @@ public object DeviceSurface {
      * Falls back to the display metrics on anything older than API 30, which reports the whole
      * display rather than the usable part — less accurate, and the only thing available there.
      */
-    public fun usable(context: Context): LayoutSurface {
+    public fun usable(context: Context): LayoutSurface = screen(context).let { screen ->
+        LayoutSurface(screen.usableWidth, screen.usableHeight)
+    }
+
+    /**
+     * The **whole** screen, with the bars and the cutout carried as insets rather than subtracted.
+     *
+     * This is what the editor draws, and the difference from [usable] is the difference between
+     * showing somebody their phone and showing them a rectangle that happens to be where their pad
+     * goes. On the reference device those are 2400 × 1080 and 2289 × 927 — 2.22 : 1 against
+     * 2.47 : 1, which is visibly not the same shape.
+     *
+     * Controls resolve against this surface exactly as they do against [usable], because `resolve`
+     * places them inside the insets. What is gained is that the bands are drawn, and a control that
+     * strays into one is visibly straying into it instead of appearing to hang over an edge.
+     */
+    public fun screen(context: Context): LayoutSurface {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val manager = context.getSystemService(WindowManager::class.java)
             if (manager != null) {
@@ -36,10 +52,17 @@ public object DeviceSurface {
                     android.view.WindowInsets.Type.systemBars() or
                         android.view.WindowInsets.Type.displayCutout()
                 )
-                val width = metrics.bounds.width() - insets.left - insets.right
-                val height = metrics.bounds.height() - insets.top - insets.bottom
+                val width = metrics.bounds.width().toDouble()
+                val height = metrics.bounds.height().toDouble()
                 if (width > 0 && height > 0) {
-                    return LayoutSurface(width.toDouble(), height.toDouble())
+                    return LayoutSurface(
+                        widthPx = width,
+                        heightPx = height,
+                        insetLeft = insets.left.toDouble(),
+                        insetTop = insets.top.toDouble(),
+                        insetRight = insets.right.toDouble(),
+                        insetBottom = insets.bottom.toDouble(),
+                    )
                 }
             }
         }
@@ -47,7 +70,23 @@ public object DeviceSurface {
         return LayoutSurface(metrics.widthPixels.toDouble(), metrics.heightPixels.toDouble())
     }
 
-    /** The same area as it would be with the phone turned, which the editor previews. */
-    public fun rotated(surface: LayoutSurface): LayoutSurface =
-        LayoutSurface(surface.heightPx, surface.widthPx)
+    /**
+     * The same screen as it would be with the phone turned, which the editor previews.
+     *
+     * **An estimate, and the only estimate in this file.** The sides swap, and the inset amounts
+     * swap with them — what was taken off the top and bottom comes off the left and right. That is
+     * what a rotation does to the *amounts*; which physical edge each one lands on depends on which
+     * way the phone was turned and on where this particular phone puts its cutout, and neither can
+     * be known without actually being in that orientation. The current orientation is measured; the
+     * other one is drawn from this, and it is close enough to arrange a pad against and not close
+     * enough to make a claim about.
+     */
+    public fun rotated(surface: LayoutSurface): LayoutSurface = LayoutSurface(
+        widthPx = surface.heightPx,
+        heightPx = surface.widthPx,
+        insetLeft = surface.insetTop,
+        insetTop = surface.insetLeft,
+        insetRight = surface.insetBottom,
+        insetBottom = surface.insetRight,
+    )
 }

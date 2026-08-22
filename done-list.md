@@ -33,153 +33,162 @@ Shizuku shell (uid 2000), no root. One device, one firmware, one person testing.
 
 ## Closed items
 
-Nothing has been closed through the queue yet. `CRIT-5`, `BUG-9`, `FEAT-10`, `FEAT-11` and `FEAT-12`
-are built and sitting at `testing` in `0.0.26-dev`; they are described below under **Built, awaiting
-confirmation**, and they move up into this section when the project owner has run them.
-
----
-
-## Built, awaiting confirmation — `0.0.26-dev`
-
-### `CRIT-5` — The editor draws the phone, not the page
-
-**Asked for.** *"Layout editor editing area, look to ultrawide with control overlapping while actual
-is not, so according to device aspect ratio create one rectangle border with blank canvas showcasing
-Android device… Scale that rectangle area as such so it can appear without scrolling needed in any
-orientation. maybe make it for rectangle area is fixed dock like panel on one side of screen while
-other side work as side panel with scrollable area and editing tool for editor."*
-
-**Built.**
-
-- A new `platform/display/DeviceSurface.kt` answers one question — *what part of this phone's screen
-  can a pad be put on* — and both the overlay and the editor now ask it. The overlay's own copy of
-  that calculation is gone; it delegates. Insets are subtracted with `getInsetsIgnoringVisibility`,
-  so a status bar appearing later does not move a pad that was arranged without it.
-- The editor draws a bordered rectangle at that exact aspect ratio, filled dark, and arranges the
-  layout inside it. It is scaled to fit whole with a small margin, so it never scrolls and never
-  crops, in either orientation of the editor.
-- The screen is a dock and a panel. Wide editor window: canvas fixed on the left at 58% of the
-  width, tools scrolling on the right. Tall editor window: canvas fixed on top at 52% of the height,
-  tools scrolling underneath. The split is chosen from the shape of the *editor's* window, and the
-  canvas keeps the shape of the *phone* either way — they are two different rectangles and were
-  being conflated.
-- A **preview toggle** for landscape and portrait, so a pad can be checked in the orientation the
-  phone is not currently in. One layout has to work in both, and a pad that fits in landscape and
-  overlaps itself in portrait has shipped here once already.
-
-**How it is known.** Unverified on the device. It compiles, the full `./gradlew build` passes
-including lint, and the geometry it relies on is covered by unit tests — none of which is a claim
-about how it looks in the hand.
-
-**Cost.** The canvas uses *this* phone's ratio, because that is the only one Kestrel can measure
-rather than assume. Editing a layout meant for a differently-shaped phone is not offered and is not
-solved by this.
-
----
-
-### `BUG-9` — A square drew as a rectangle in the editor
+### `BUG-9` — A square drew as a rectangle in the editor — **closed `0.0.26-dev`**
 
 **Reported.** `width 0.24`, `height 0.12`, shape `square`: a rectangle in the editor, a correct
 square once saved and running.
 
-**Built.** The rule — *a square is sized by the shorter of its two sides, and a circle by its
-inscribed radius* — existed in two places and the two disagreed. It is now one function in the
-domain, `PixelRect.shapedAs(shape)`, with `LayoutElement.effectiveShape()` beside it for the related
-rule that a stick and a pad are round whatever the document says. The overlay's private copy was
-deleted and it calls these; the editor's preview and its hit-testing now call them too, so a control
-is *selected* by the same outline it is *drawn* with.
+**Built.** The rule — *a square is sized by the shorter of its two sides, a circle by its inscribed
+radius* — existed in two places and the two disagreed. It is now one function in the domain,
+`PixelRect.shapedAs(shape)`, with `LayoutElement.effectiveShape()` beside it for the related rule
+that a stick and a pad are round whatever the document says. The overlay's private copy was deleted
+and it calls these; the editor's preview and its hit-testing call them too, so a control is
+*selected* by the same outline it is *drawn* with.
 
-**How it is known.** Reasoned, plus unit tests for both rules, plus the fact that the overlay's
-behaviour is unchanged because it is the copy that was already right. Unverified on the device.
+**How it is known.** **Measured** on the reference device — the project owner set those exact
+numbers and the editor drew a square. Unit tests cover both rules.
 
 **Cost.** None. This removed code.
 
 ---
 
-### `FEAT-11` — A grid, and snapping
-
-**Asked for.** *"add grid with the drop-down option 32x32px to 256x256px with one checkbox snapping
-on for grid and another checkbox for gamepad edge snapping."*
-
-**Built.** A drop-down offering 32, 64, 128 and 256 px, drawn faintly on the canvas; two checkboxes,
-one for grid snapping and one for edge snapping. Both start off, so the editor behaves exactly as
-before until they are turned on.
-
-Edge snapping lines a control's **left edge, centre or right edge** up with any other control's
-left, centre or right, and with the screen's own edges and midlines — whichever is nearest, within
-about 2% of the short side. A yellow guide line shows what it caught, and disappears when the finger
-lifts.
-
-**When both could apply, edge snapping wins**, per axis. Lining up with the control next to it is a
-statement about *this layout*; landing on a grid line is a statement about *the screen*, and the
-first is nearly always what a hand dragging a control is after. A control can line up with a
-neighbour horizontally and sit on the grid vertically.
-
-**How it is known.** Unverified on the device.
-
-**Cost, and it is stated in the interface rather than hidden.** The grid is measured in this phone's
-pixels; the file stores fractions of the short side rounded to two decimals. A snapped control can
-therefore land a pixel off the line on a different screen. That trade is deliberate — a file a
-person can read and hand-edit is worth more than an exact grid — but a user should be told rather
-than discover it.
-
----
-
-### `FEAT-12` — Typing the numbers
-
-**Asked for.** *"Three dot option in layout editor where we can input offset and size value
-directly."*
-
-**Built.** A `⋮` button beside the selected control opens a dialog with the four numbers — offsetX,
-offsetY, width, height — as editable fields on a decimal keyboard. Apply validates through the same
-`Placement.of` the file reader uses, so a bad number is reported with the field that was wrong and
-the range it had to be in, rather than being silently clamped. Values are rounded to the two
-decimals the file gets, so what is typed is what is written.
-
-The dialog also **states the units**, which were reported as confusing: an offset runs from the
-named anchor to the control's **centre**, inwards, and all four numbers are fractions of the
-screen's **shorter side**.
-
-**How it is known.** Unverified on the device. The validation path is the one already under test.
-
-**Cost.** The anchor is not editable in this dialog — it is a button in the panel, and mixing a
-cycling control into a form of typed numbers made the dialog worse rather than better.
-
----
-
-### `FEAT-10` — The window editor
+### `FEAT-10` — The window editor — **closed `0.0.26-dev`**
 
 **Asked for.** *"Whatever the case i also want the controller window editor also. on same screen as
 layout editor with one toggle to greyout the buttons editor to window editor."*
 
-**Built.** A **Controls / Windows** toggle at the top of the tool panel. The tools belonging to the
-mode that is not active are **greyed out rather than hidden**, so it stays visible that the other
-mode exists and what it holds. Dragging is disabled in Windows mode; selecting still works.
+**Built.** A **Controls / Windows** toggle at the top of the tool panel. The tools of the inactive
+mode are **greyed out rather than hidden**, so it stays visible that the other mode exists. In
+Windows mode the canvas draws each window as a translucent box around its group, the selected
+control's window highlighted, and any window past a quarter of the screen drawn in orange; the panel
+lists every window with its share of the screen as a percentage. `◀` and `▶` step a control through
+*own window*, every group that exists, and a fresh `group-N` — chosen rather than typed, because
+group names follow the same rules as element ids.
 
-In Windows mode the canvas draws each window as a translucent box around its group, the selected
-control's window highlighted, and any window past a quarter of the screen drawn in orange. The panel
-lists every window with its **share of the screen as a percentage** and the controls it holds.
+**Why it needed a screen at all.** A window is the enclosing rectangle of everything sharing a
+group. A finger can slide between controls that share one — that is what makes rolling across face
+buttons work, and what lets a thumb hold `L3` and then move the stick — but **every pixel of that
+rectangle that is not a control is dead**. A touch there is refused, and, measured on the reference
+device, a refused touch is *not* passed to the application underneath. Two grouped controls in
+opposite corners make one screen-covering window and the game stops receiving touches. It was
+editable only by hand and there was no way to see it.
 
-Editing is of each control's `group`: `◀` and `▶` step through *own window*, every group that
-already exists, and a fresh `group-N`. A name is chosen rather than typed — group names follow the
-same rules as element ids, and a keyboard is a way to break that rule when all the name has to do is
-be different from the others.
+**How it is known.** **Measured** — the project owner ran tests 9, 10 and 11: greying out, changing
+a control's window, and the screen-covering warning all behaved. The platform behaviour underneath
+is measured and recorded in `Clustering.kt`.
 
-**Why this needed a screen at all**, which is the answer to the project owner's question: a window
-is the enclosing rectangle of everything sharing a group. A finger can slide between controls that
-share one — that is what makes rolling across face buttons work, and what lets a thumb hold `L3` and
-then move the stick — but **every pixel of that rectangle that is not a control is dead**. A touch
-landing there is refused, and, measured on the reference device, a refused touch is *not* passed to
-the application underneath. Two grouped controls in opposite corners therefore make one
-screen-covering window and the game stops receiving touches. It was editable only by hand, and there
-was no way to see it.
+**Cost.** The editor does not stop a user making a window that covers the screen; it shows the
+percentage and turns it orange. `ADR-007`'s spirit: say what is true, do not overrule the person.
 
-**How it is known.** The platform behaviour behind it is **Measured** on the reference device and
-recorded in `Clustering.kt`. The screen itself is Unverified.
+---
 
-**Cost.** Grouping is still declared rather than inferred, and the editor does not stop a user
-making a window that covers the screen — it shows the percentage and turns it orange. `ADR-007`'s
-spirit: say what is true, do not overrule the person.
+## Built, awaiting confirmation — `0.0.27-dev`
+
+The first test of block 1 closed two items and failed on five points. This is what was done about
+them, plus the two items from block 1 that are still not finished.
+
+### `BUG-10` — The canvas is the phone now, bands and all
+
+**The fault, as measured.** The canvas drew **2289 × 927**; the screen is **2400 × 1080**. Those are
+2.47 : 1 and 2.22 : 1 — not the same shape. `CRIT-5` had fixed the *size* of the lie and not the
+lie. And it is why the pad still did not match: controls drawn hanging over the canvas edge are, on
+the phone, pushed back inside by the window manager, because a window is laid out within the area
+the system gives it.
+
+**Built.** `DeviceSurface.screen()` returns the **whole** screen with the bars and the cutout carried
+as insets rather than subtracted. The canvas draws that rectangle, shades the band the system takes,
+outlines the usable area inside it, and arranges the pad within the band — which `LayoutSurface` and
+`resolve` already supported, so nothing about placement changed, only what is drawn. A control that
+leaves the usable area is now **outlined in orange**, and the panel says how many have, and why it
+matters: *"the phone will not put a window there, so the pad will not match this."*
+
+**How it is known.** Unverified on the device. The geometry is the same code the overlay uses.
+
+**Cost.** A layout can still put a control outside the usable area — that is a real design for a
+shoulder button, and `ADR-007`'s spirit says show it rather than forbid it. What is no longer
+possible is doing it *by accident and invisibly*.
+
+---
+
+### `BUG-11` — `Edit layout` is reachable in portrait
+
+Three buttons in one non-wrapping row put the third off the edge in portrait, with nothing to scroll
+sideways: the editor could not be opened with the phone upright. Two rows now, with `Edit layout`
+first and alone with `Reload layout`. Unverified on the device.
+
+---
+
+### `BUG-12` — Turning the phone keeps you in the editor
+
+`MainActivity` declares `configChanges` for orientation and the sizes that come with it, so a
+rotation re-lays-out instead of rebuilding the activity. What this really saves is not the
+navigation — it is **every unsaved edit**, which was being thrown away by turning the phone.
+
+Unverified on the device. **The risk worth naming:** handling a configuration change means Kestrel
+is now responsible for anything that should change with it. Compose re-reads `LocalConfiguration`
+and the editor re-measures the screen from it, which covers what this screen needs; a future screen
+that depends on configuration-specific resources will have to be checked rather than assumed.
+
+---
+
+### `BUG-13` — The numbers dialog fits and scrolls
+
+Two fields to a row, and the body scrolls. Four stacked fields in a dialog on a landscape phone put
+width and height below the fold with no way to reach them. Unverified on the device.
+
+---
+
+### `BUG-14` — A minus sign without a minus key
+
+`± offsetX` and `± offsetY` buttons in the dialog flip the sign of whatever is in the field,
+including a half-typed one. This does not depend on which keyboard someone has, which is the part
+that could not be relied on. Unverified on the device, and the underlying question — whether that
+keyboard offers a decimal point but no minus — is still not confirmed either way.
+
+---
+
+### `FEAT-13` — Three to one, and the values button where the hand is
+
+The canvas takes three quarters and the tools one quarter, in both orientations. `⋮ values` is a
+filled button in the same row as `−`, `+`, `taller`, `shorter`, `shape` and `anchor` — it was a bare
+text button beside a row of filled ones, which is what a control that looks like a label gets.
+
+Unverified on the device. **Not fixed by this:** previewing *portrait* while the editor itself is in
+*landscape* still leaves a tall narrow strip, because the canvas can only be as tall as the dock.
+Three quarters of the width does not help a rectangle limited by height. Editing a portrait pad is
+best done with the phone in portrait — which `BUG-12` now makes possible.
+
+---
+
+### `FEAT-14` — The grid in the layout's own unit
+
+*"the button is 0.12 and the grid is 32px both are different scales."* Correct, and the fix was to
+move the grid rather than the control. Steps are now **0.01, 0.02, 0.05, 0.10 and 0.25 of the
+shorter side**, labelled with the pixel equivalent for this phone — `0.05 · 46 px` — and the
+selected control's size is shown in both units for the same reason.
+
+It also removes a limitation that was written up as a property of `FEAT-11` and was really a symptom
+of the wrong unit: a step of `0.01` is exactly the precision the file stores, so a snapped control
+now lands on a number the file can hold. The pixel grid could not promise that on any screen.
+
+Unverified on the device.
+
+---
+
+### `CRIT-5` — still `testing`
+
+The canvas is now the phone (`BUG-10`) and the proportions are as asked (`FEAT-13`), but the item
+does not close until the pad on the phone matches what the editor drew. That is test 12, and it
+failed last round.
+
+### `FEAT-11` — still `testing`
+
+Grid and edge snapping both worked on the device. It stays open until the unit change (`FEAT-14`) is
+confirmed useful rather than merely different.
+
+### `FEAT-12` — still `testing`
+
+Validation worked on the device. It stays open on `BUG-13` and `BUG-14`.
 
 ---
 

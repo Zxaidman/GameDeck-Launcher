@@ -26,9 +26,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Kestrel">
 
+        <!--
+            The configuration change is handled rather than causing a rebuild. Turning the phone
+            inside the layout editor destroyed the activity, which threw away which page was open,
+            which control was selected, and every unsaved edit. Compose re-lays-out on its own and
+            LocalConfiguration still updates, so the editor re-measures the screen and loses nothing.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|uiMode"
             android:theme="@style/Theme.Kestrel">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -13,6 +13,50 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.27-dev` — The Canvas Becomes The Phone
+
+The first device test of block 1 closed two items and failed on five points. The most important
+failure is the one the previous entry claimed to have fixed.
+
+**The canvas was still not the phone.** It drew 2289 × 927 on a 2400 × 1080 screen — the *usable*
+area, bars and cutout already subtracted. Those are 2.47 : 1 and 2.22 : 1, which is visibly not the
+same shape, so `0.0.26-dev` had corrected the scale of the lie and not the lie. And it is exactly
+why the pad still did not match the editor: controls drawn hanging over the canvas edge are pushed
+back inside by the window manager on the phone, because a window is laid out within the area the
+system gives it.
+
+The canvas now draws the **whole screen** and shades the band the system takes, with the usable area
+outlined inside it. `LayoutSurface` already carried insets and `resolve` already placed controls
+inside them, so nothing about placement changed — only what is drawn. A control that leaves the
+usable area is outlined in orange and counted in the panel, with the reason: the phone will not put
+a window there, so the pad will not match.
+
+**The grid moves to the layout's own unit.** *"the button is 0.12 and the grid is 32px both are
+different scales."* Steps are now fractions of the shorter side — 0.01 to 0.25 — labelled with the
+pixels they come to on this phone, and the selected control is shown in both. It also removes a
+limitation that had been written up as a property of the grid and was really a symptom of the wrong
+unit: 0.01 is exactly the precision the file stores, so a snapped control lands on a number the file
+can hold.
+
+**Turning the phone no longer throws away the work.** The activity handles the configuration change
+instead of being rebuilt by it. What that saves is not the navigation — it is every unsaved edit,
+which a rotation was discarding.
+
+Also: the canvas takes three quarters of the screen and the tools one quarter; `⋮ values` becomes a
+filled button in the row with the rest, having been a text button nobody could see; the numbers
+dialog puts two fields to a row and scrolls, so width and height are reachable in landscape; `±`
+buttons flip the sign of an offset, because a numeric keyboard cannot be relied on to offer a minus;
+and `Edit layout` is reachable in portrait, where it had been off the edge of a row that does not
+wrap.
+
+**Closed by the device test, and written up in `done-list.md`:** the square that drew as a rectangle,
+and the window editor. Two of the five block-1 items are now `done` rather than `testing` — the
+first entries this project has closed through the queue.
+
+**Still not measured.** Everything built this round is `testing`. Build and lint pass; that is not a
+claim about a phone.
+
+
 ### `0.0.26-dev` — The Editor Draws The Phone
 
 Block 1 of `todo-list.md`, built in the order the project owner set. Five items, one screen, and one

@@ -62,6 +62,7 @@ import io.github.zxaidman.kestrel.core.layout.PixelRect
 import io.github.zxaidman.kestrel.core.layout.Placement
 import io.github.zxaidman.kestrel.core.layout.centeredAt
 import io.github.zxaidman.kestrel.core.layout.effectiveShape
+import io.github.zxaidman.kestrel.core.layout.isWithin
 import io.github.zxaidman.kestrel.core.layout.resolve
 import io.github.zxaidman.kestrel.core.layout.shapedAs
 import io.github.zxaidman.kestrel.platform.display.DeviceSurface
@@ -100,16 +101,16 @@ public fun LayoutEditorScreen(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    // Re-measured when the phone turns, because the usable area is not the same on both sides of a
-    // rotation — the cutout and the bars move with it.
-    val measured = remember(configuration) { DeviceSurface.usable(context) }
+    // The whole screen, with the bars and the cutout carried as insets rather than subtracted, so
+    // the rectangle drawn has the phone's own proportions. Re-measured when the phone turns.
+    val measured = remember(configuration) { DeviceSurface.screen(context) }
 
     var working by remember(layout.header.id) { mutableStateOf(layout) }
     var selectedId by remember(layout.header.id) { mutableStateOf<String?>(null) }
     var dirty by remember(layout.header.id) { mutableStateOf(false) }
     var mode by remember { mutableStateOf(EditorMode.CONTROLS) }
     var message by remember { mutableStateOf("") }
-    var gridPx by remember { mutableStateOf(DEFAULT_GRID) }
+    var gridUnit by remember { mutableStateOf(DEFAULT_GRID) }
     var snapToGrid by remember { mutableStateOf(false) }
     var snapToEdges by remember { mutableStateOf(false) }
     var typingNumbers by remember { mutableStateOf(false) }
@@ -154,8 +155,8 @@ public fun LayoutEditorScreen(
             // The canvas is docked and fixed; the tools scroll beside it. Which side depends on the
             // shape of the screen this editor is on, not on the shape of the phone being drawn.
             val besideEachOther = maxWidth > maxHeight
-            val dockWidth = maxWidth * DOCK_SHARE_WIDE
-            val dockHeight = maxHeight * DOCK_SHARE_TALL
+            val dockWidth = maxWidth * DOCK_SHARE
+            val dockHeight = maxHeight * DOCK_SHARE
 
             val canvas: @Composable (Modifier) -> Unit = { canvasModifier ->
                 EditorCanvas(
@@ -164,7 +165,7 @@ public fun LayoutEditorScreen(
                     layout = working,
                     mode = mode,
                     selectedId = selectedId,
-                    gridPx = gridPx,
+                    gridUnit = gridUnit,
                     snapToGrid = snapToGrid,
                     snapToEdges = snapToEdges,
                     onSelect = { selectedId = it },
@@ -184,11 +185,22 @@ public fun LayoutEditorScreen(
                 ) {
                     ModeSwitch(mode = mode, onMode = { mode = it })
 
-                    SelectionHeader(
-                        element = selected,
-                        canType = mode == EditorMode.CONTROLS,
-                        onType = { typingNumbers = true },
-                    )
+                    SelectionHeader(element = selected, device = device)
+
+                    val strays = working.elements.count { element ->
+                        !element.placement.resolve(device)
+                            .shapedAs(element.effectiveShape())
+                            .isWithin(device)
+                    }
+                    if (strays > 0) {
+                        Text(
+                            text = "$strays control${if (strays == 1) "" else "s"} outside the " +
+                                "usable screen, drawn in orange. The phone will not put a window " +
+                                "there, so the pad will not match this.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFE0603A),
+                        )
+                    }
 
                     ControlTools(
                         element = selected,
@@ -197,6 +209,7 @@ public fun LayoutEditorScreen(
                             working = working.replacing(updated)
                             dirty = true
                         },
+                        onType = { typingNumbers = true },
                     )
 
                     WindowTools(
@@ -211,8 +224,8 @@ public fun LayoutEditorScreen(
                     )
 
                     GridTools(
-                        gridPx = gridPx,
-                        onGrid = { gridPx = it },
+                        gridUnit = gridUnit,
+                        onGrid = { gridUnit = it },
                         snapToGrid = snapToGrid,
                         onSnapToGrid = { snapToGrid = it },
                         snapToEdges = snapToEdges,
@@ -268,10 +281,19 @@ public enum class EditorMode(public val label: String) {
     WINDOWS("Windows"),
 }
 
-private val GRID_SIZES = listOf(32, 64, 128, 256)
-private const val DEFAULT_GRID = 64
-private const val DOCK_SHARE_WIDE = 0.58f
-private const val DOCK_SHARE_TALL = 0.52f
+/**
+ * Grid steps, in the unit the document itself uses: a fraction of the screen's shorter side.
+ *
+ * It was pixels, and the project owner named the fault: a control is `0.12` and a grid line was
+ * `32px`, so comparing them meant doing arithmetic while arranging a pad. Moving the grid rather
+ * than the control also buys something the pixel grid could not promise — `0.01` is exactly the
+ * precision the file is rounded to, so a snapped control lands on a number the file can hold.
+ */
+private val GRID_SIZES = listOf(0.01, 0.02, 0.05, 0.10, 0.25)
+private const val DEFAULT_GRID = 0.05
+
+/** Three parts canvas to one part tools, as asked. Arranging a pad is the job; the tools serve it. */
+private const val DOCK_SHARE = 0.75f
 
 /** A step small enough to place a control with and large enough to feel like a press. */
 private const val STEP = 0.02
@@ -302,22 +324,25 @@ private fun ModeSwitch(mode: EditorMode, onMode: (EditorMode) -> Unit) {
 }
 
 @Composable
-private fun SelectionHeader(element: LayoutElement?, canType: Boolean, onType: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = element?.let {
-                "${it.id}   ${it.kind.wireName}   " +
-                    "x %.2f  y %.2f  w %.2f  h %.2f".format(
-                        it.placement.offsetX, it.placement.offsetY,
-                        it.placement.width, it.placement.height,
-                    )
-            } ?: "Nothing selected — touch a control.",
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(enabled = element != null && canType, onClick = onType) { Text("⋮") }
-    }
+private fun SelectionHeader(element: LayoutElement?, device: LayoutSurface) {
+    val unit = device.shortSide
+    Text(
+        text = element?.let {
+            "${it.id}   ${it.kind.wireName}\n" +
+                "x %.2f  y %.2f  w %.2f  h %.2f\n".format(
+                    it.placement.offsetX, it.placement.offsetY,
+                    it.placement.width, it.placement.height,
+                ) +
+                // The same control in the unit the eye is using, so the grid, the size and the
+                // screen are all being read on one scale.
+                "on this phone: %d × %d px".format(
+                    (it.placement.width * unit).roundToInt(),
+                    (it.placement.height * unit).roundToInt(),
+                )
+        } ?: "Nothing selected — touch a control.",
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = FontFamily.Monospace,
+    )
 }
 
 @Composable
@@ -325,6 +350,7 @@ private fun ControlTools(
     element: LayoutElement?,
     enabled: Boolean,
     onChange: (LayoutElement) -> Unit,
+    onType: () -> Unit,
 ) {
     val live = enabled && element != null
     Text("Control", style = MaterialTheme.typography.labelLarge)
@@ -349,6 +375,10 @@ private fun ControlTools(
         Button(enabled = live, onClick = { element?.let { onChange(it.withNextAnchor()) } }) {
             Text(element?.placement?.anchor?.wireName ?: "anchor")
         }
+        // The same size and the same row as the rest. It was a bare text button beside a row of
+        // filled ones, and the project owner reported it as barely visible — which is what a
+        // control that looks like a label gets.
+        Button(enabled = live, onClick = onType) { Text("⋮ values") }
     }
 }
 
@@ -410,13 +440,22 @@ private fun WindowTools(
     )
 }
 
+/**
+ * A grid step said in both units at once, which is the point of the change.
+ *
+ * `0.05 · 46 px` — the number the file holds, and what it is on this phone. Neither alone was
+ * enough: the fraction is what gets written and the pixels are what the eye is measuring.
+ */
+private fun gridLabel(unit: Double, device: LayoutSurface): String =
+    "%.2f · %d px".format(unit, (unit * device.shortSide).roundToInt())
+
 /** Where a window stops being a pad and starts being a lid. Matches the shipped layout's tests. */
 private const val CROWDED = 0.25
 
 @Composable
 private fun GridTools(
-    gridPx: Int,
-    onGrid: (Int) -> Unit,
+    gridUnit: Double,
+    onGrid: (Double) -> Unit,
     snapToGrid: Boolean,
     onSnapToGrid: (Boolean) -> Unit,
     snapToEdges: Boolean,
@@ -430,11 +469,11 @@ private fun GridTools(
     Text("Grid and snapping", style = MaterialTheme.typography.labelLarge)
 
     Box {
-        OutlinedButton(onClick = { open = true }) { Text("Grid  ${gridPx} × ${gridPx} px") }
+        OutlinedButton(onClick = { open = true }) { Text("Grid  " + gridLabel(gridUnit, device)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             GRID_SIZES.forEach { size ->
                 DropdownMenuItem(
-                    text = { Text("$size × $size px") },
+                    text = { Text(gridLabel(size, device)) },
                     onClick = {
                         onGrid(size)
                         open = false
@@ -458,8 +497,9 @@ private fun GridTools(
         style = MaterialTheme.typography.bodySmall,
     )
     Text(
-        text = "The grid is measured in this phone's pixels. The file stores fractions rounded to " +
-            "two decimals, so a snapped control can land a pixel off the line on another screen.",
+        text = "The grid is measured in the same unit as the controls — a fraction of the screen's " +
+            "shorter side — so a 0.12 button against a 0.05 grid means what it looks like. A step " +
+            "of 0.01 is exactly what the file stores.",
         style = MaterialTheme.typography.bodySmall,
     )
 
@@ -475,8 +515,17 @@ private fun GridTools(
         }
     }
     Text(
-        text = "Canvas is %d × %d px — this phone's usable screen, bars and cutout already taken off."
-            .format(device.widthPx.roundToInt(), device.heightPx.roundToInt()),
+        text = "The orientation you are not in is an estimate: the sides swap and the bars swap " +
+            "with them. Only the orientation the phone is actually in is measured.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Text(
+        text = ("Canvas is %d × %d px — the whole screen. The shaded band is what the system bars " +
+            "and the cutout take, leaving %d × %d for the pad.")
+            .format(
+                device.widthPx.roundToInt(), device.heightPx.roundToInt(),
+                device.usableWidth.roundToInt(), device.usableHeight.roundToInt(),
+            ),
         style = MaterialTheme.typography.bodySmall,
     )
 }
@@ -505,17 +554,34 @@ private fun NumbersDialog(
         onDismissRequest = onDismiss,
         title = { Text(element.id) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Two to a row and the body scrolls. Four fields stacked in a dialog on a landscape
+            // phone put width and height below the fold with no way to reach them, which is a
+            // feature that works and cannot be used.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(
                     text = "Offsets run from the ${element.placement.anchor.wireName} anchor to " +
                         "the control's centre, inwards. All four are fractions of the screen's " +
                         "shorter side.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                NumberField("offsetX", offsetX) { offsetX = it }
-                NumberField("offsetY", offsetY) { offsetY = it }
-                NumberField("width", width) { width = it }
-                NumberField("height", height) { height = it }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NumberField("offsetX", offsetX, Modifier.weight(1f)) { offsetX = it }
+                    NumberField("offsetY", offsetY, Modifier.weight(1f)) { offsetY = it }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NumberField("width", width, Modifier.weight(1f)) { width = it }
+                    NumberField("height", height, Modifier.weight(1f)) { height = it }
+                }
+                // A numeric keyboard does not always offer a minus sign, and an offset is allowed
+                // to be negative. Reported on the reference device as "the keyboard only shows
+                // numbers", with pasting as the only way round it.
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { offsetX = negated(offsetX) }) { Text("± offsetX") }
+                    OutlinedButton(onClick = { offsetY = negated(offsetY) }) { Text("± offsetY") }
+                }
                 if (problem.isNotBlank()) {
                     Text(
                         text = problem,
@@ -552,15 +618,30 @@ private fun NumbersDialog(
 }
 
 @Composable
-private fun NumberField(label: String, value: String, onValue: (String) -> Unit) {
+private fun NumberField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onValue: (String) -> Unit,
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValue,
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     )
+}
+
+/** Flips the sign of what is typed, including the half-typed and the nonsense. */
+private fun negated(text: String): String {
+    val trimmed = text.trim()
+    return when {
+        trimmed.startsWith("-") -> trimmed.removePrefix("-")
+        trimmed.isEmpty() -> "-"
+        else -> "-$trimmed"
+    }
 }
 
 // --- editing a control ---------------------------------------------------------------------------
@@ -634,15 +715,25 @@ private fun round(value: Double): Double = Math.round(value * 100.0) / 100.0
 
 // --- the canvas ----------------------------------------------------------------------------------
 
-/** Where the device rectangle sits inside the dock, and how far it is scaled down to get there. */
+/**
+ * Where the device rectangle sits inside the dock, and how far it is scaled down to get there.
+ *
+ * [surface] is the **whole screen** at canvas scale, insets included, so a control resolves into the
+ * usable part of it exactly as it does on the phone. [usable] is that inner rectangle, in canvas
+ * coordinates, which is what the grid is drawn over and what a control is checked against.
+ */
 private data class Fit(
     val left: Float,
     val top: Float,
     val width: Float,
     val height: Float,
     val scale: Float,
+    val surface: LayoutSurface,
 ) {
-    val surface: LayoutSurface get() = LayoutSurface(width.toDouble(), height.toDouble())
+    val usableLeft: Float get() = surface.insetLeft.toFloat()
+    val usableTop: Float get() = surface.insetTop.toFloat()
+    val usableWidth: Float get() = surface.usableWidth.toFloat()
+    val usableHeight: Float get() = surface.usableHeight.toFloat()
 }
 
 /** A line a control snapped to, drawn only while it is holding. */
@@ -663,7 +754,7 @@ private fun EditorCanvas(
     layout: ControllerLayout,
     mode: EditorMode,
     selectedId: String?,
-    gridPx: Int,
+    gridUnit: Double,
     snapToGrid: Boolean,
     snapToEdges: Boolean,
     onSelect: (String?) -> Unit,
@@ -674,7 +765,7 @@ private fun EditorCanvas(
     // so the keys stay still and the values are looked up fresh.
     val liveLayout by rememberUpdatedState(layout)
     val liveMode by rememberUpdatedState(mode)
-    val liveGrid by rememberUpdatedState(gridPx)
+    val liveGrid by rememberUpdatedState(gridUnit)
     val liveSnapGrid by rememberUpdatedState(snapToGrid)
     val liveSnapEdges by rememberUpdatedState(snapToEdges)
     val liveSelect by rememberUpdatedState(onSelect)
@@ -687,8 +778,9 @@ private fun EditorCanvas(
 
     fun fit(): Fit {
         val bounds = canvasSize
+        val empty = LayoutSurface(0.0, 0.0)
         if (bounds.width <= 0f || bounds.height <= 0f || device.widthPx <= 0 || device.heightPx <= 0) {
-            return Fit(0f, 0f, 0f, 0f, 1f)
+            return Fit(0f, 0f, 0f, 0f, 1f, empty)
         }
         val room = 0.94f
         val scale = min(
@@ -697,7 +789,17 @@ private fun EditorCanvas(
         )
         val width = device.widthPx.toFloat() * scale
         val height = device.heightPx.toFloat() * scale
-        return Fit((bounds.width - width) / 2, (bounds.height - height) / 2, width, height, scale)
+        val surface = LayoutSurface(
+            widthPx = width.toDouble(),
+            heightPx = height.toDouble(),
+            insetLeft = device.insetLeft * scale,
+            insetTop = device.insetTop * scale,
+            insetRight = device.insetRight * scale,
+            insetBottom = device.insetBottom * scale,
+        )
+        return Fit(
+            (bounds.width - width) / 2, (bounds.height - height) / 2, width, height, scale, surface,
+        )
     }
 
     fun rectOf(fit: Fit, element: LayoutElement): PixelRect =
@@ -767,7 +869,7 @@ private fun EditorCanvas(
                         fit = fitted,
                         element = element,
                         wanted = wanted,
-                        gridPx = liveGrid,
+                        gridUnit = liveGrid,
                         toGrid = liveSnapGrid,
                         toEdges = liveSnapEdges,
                     )
@@ -785,7 +887,7 @@ private fun EditorCanvas(
         val fitted = fit()
         if (fitted.width <= 0f) return@Canvas
         drawScreen(fitted)
-        drawGrid(fitted, gridPx)
+        drawGrid(fitted, gridUnit)
 
         val placed = layout.elements.map { it.id to rectOf(fitted, it) }
         if (mode == EditorMode.WINDOWS) {
@@ -827,22 +929,22 @@ private fun snap(
     fit: Fit,
     element: LayoutElement,
     wanted: Offset,
-    gridPx: Int,
+    gridUnit: Double,
     toGrid: Boolean,
     toEdges: Boolean,
 ): Snapped {
     val rect = element.placement.resolve(fit.surface).shapedAs(element.effectiveShape())
     val threshold = max(6.0, min(fit.width, fit.height) * 0.02)
-    val step = gridPx * fit.scale.toDouble()
+    val step = gridUnit * fit.surface.shortSide
 
     val others = layout.elements
         .filter { it.id != element.id }
         .map { it.placement.resolve(fit.surface).shapedAs(it.effectiveShape()) }
 
     val verticalLines = buildList {
-        add(0.0)
-        add(fit.width.toDouble() / 2)
-        add(fit.width.toDouble())
+        add(fit.surface.insetLeft)
+        add(fit.surface.insetLeft + fit.surface.usableWidth / 2)
+        add(fit.surface.insetLeft + fit.surface.usableWidth)
         others.forEach {
             add(it.left)
             add(it.centerX)
@@ -850,9 +952,9 @@ private fun snap(
         }
     }
     val horizontalLines = buildList {
-        add(0.0)
-        add(fit.height.toDouble() / 2)
-        add(fit.height.toDouble())
+        add(fit.surface.insetTop)
+        add(fit.surface.insetTop + fit.surface.usableHeight / 2)
+        add(fit.surface.insetTop + fit.surface.usableHeight)
         others.forEach {
             add(it.top)
             add(it.centerY)
@@ -911,11 +1013,24 @@ private inline fun snapAxis(
 
 // --- drawing -------------------------------------------------------------------------------------
 
+/**
+ * The phone: the whole screen, with what the system takes drawn as a band rather than cut off.
+ *
+ * Subtracting the bands instead was the previous version's fault. It gave a rectangle 2289 × 927 on
+ * a 2400 × 1080 phone — a different shape, presented as the phone — and a control placed against the
+ * top of the usable area appeared to hang over the edge of the world when in fact it was sitting
+ * against the status bar.
+ */
 private fun DrawScope.drawScreen(fit: Fit) {
     drawRect(
-        color = Color(0xFF0B0D11),
+        color = Color(0xFF15181D),
         topLeft = Offset(fit.left, fit.top),
         size = Size(fit.width, fit.height),
+    )
+    drawRect(
+        color = Color(0xFF0B0D11),
+        topLeft = Offset(fit.left + fit.usableLeft, fit.top + fit.usableTop),
+        size = Size(fit.usableWidth, fit.usableHeight),
     )
     drawRect(
         color = Color(0xFF7C8798),
@@ -923,20 +1038,30 @@ private fun DrawScope.drawScreen(fit: Fit) {
         size = Size(fit.width, fit.height),
         style = Stroke(width = 3f),
     )
+    if (fit.usableWidth < fit.width || fit.usableHeight < fit.height) {
+        drawRect(
+            color = Color(0xFF4A525E),
+            topLeft = Offset(fit.left + fit.usableLeft, fit.top + fit.usableTop),
+            size = Size(fit.usableWidth, fit.usableHeight),
+            style = Stroke(width = 1.5f),
+        )
+    }
 }
 
-private fun DrawScope.drawGrid(fit: Fit, gridPx: Int) {
-    val step = gridPx * fit.scale
+private fun DrawScope.drawGrid(fit: Fit, gridUnit: Double) {
+    val step = (gridUnit * fit.surface.shortSide).toFloat()
     if (step < 6f) return
     val colour = Color(0xFF2A3038)
+    val originX = fit.left + fit.usableLeft
+    val originY = fit.top + fit.usableTop
     var x = step
-    while (x < fit.width) {
-        drawLine(colour, Offset(fit.left + x, fit.top), Offset(fit.left + x, fit.top + fit.height), 1f)
+    while (x < fit.usableWidth) {
+        drawLine(colour, Offset(originX + x, originY), Offset(originX + x, originY + fit.usableHeight), 1f)
         x += step
     }
     var y = step
-    while (y < fit.height) {
-        drawLine(colour, Offset(fit.left, fit.top + y), Offset(fit.left + fit.width, fit.top + y), 1f)
+    while (y < fit.usableHeight) {
+        drawLine(colour, Offset(originX, originY + y), Offset(originX + fit.usableWidth, originY + y), 1f)
         y += step
     }
 }
@@ -983,9 +1108,18 @@ private fun DrawScope.drawControl(
     rect: PixelRect,
     selected: Boolean,
 ) {
+    // A control that has left the usable area is marked rather than moved. It is a real design to
+    // run a shoulder button off an edge, and `ADR-007`'s spirit applies: say what is true, do not
+    // overrule the person. What is *not* acceptable is letting it look fine here and then arrive
+    // somewhere else on the phone, which is what the window manager will do with it.
+    val outside = !rect.isWithin(fit.surface)
     val fill = Color(0xFF5C626C).copy(alpha = 0.80f)
-    val edge = if (selected) Color(0xFF60BAFF) else Color(0xFF0C0E12).copy(alpha = 0.60f)
-    val stroke = if (selected) 6f else 3f
+    val edge = when {
+        selected -> Color(0xFF60BAFF)
+        outside -> Color(0xFFE0603A)
+        else -> Color(0xFF0C0E12).copy(alpha = 0.60f)
+    }
+    val stroke = if (selected || outside) 6f else 3f
     val centre = Offset(fit.left + rect.centerX.toFloat(), fit.top + rect.centerY.toFloat())
 
     when (element.effectiveShape()) {

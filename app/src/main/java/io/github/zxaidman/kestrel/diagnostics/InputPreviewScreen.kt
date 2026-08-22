@@ -363,6 +363,18 @@ public fun InputPreviewScreen(
                 }
                 Button(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
             }
+            // Two rows rather than one. Three buttons side by side fit in landscape and run off
+            // the edge in portrait, where nothing scrolls sideways — so the editor could not be
+            // opened at all with the phone upright. The one that matters most goes first and alone.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onEditLayout) { Text("Edit layout") }
+                Button(onClick = { ExportState.message.value = reloadLayout(context) }) {
+                    Text("Reload layout")
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -373,10 +385,6 @@ public fun InputPreviewScreen(
                 Button(onClick = { ExportState.message.value = copyLayoutForEditing(context) }) {
                     Text("Copy layout to my folder")
                 }
-                Button(onClick = { ExportState.message.value = reloadLayout(context) }) {
-                    Text("Reload layout")
-                }
-                Button(onClick = onEditLayout) { Text("Edit layout") }
             }
             Mono("\ncontrol size  %.0f%%".format(SessionState.controlScale.value * 100))
             Slider(
