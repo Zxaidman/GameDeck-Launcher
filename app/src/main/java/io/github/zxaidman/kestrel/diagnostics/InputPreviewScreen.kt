@@ -529,6 +529,28 @@ public fun InputPreviewScreen(
                     }
                 }
             }
+
+            Mono("\ntheme")
+            io.github.zxaidman.kestrel.core.settings.AppTheme.entries.chunked(2).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    row.forEach { option ->
+                        Button(
+                            onClick = { set { it.copy(theme = option) } },
+                            enabled = display.theme != option,
+                        ) { Text(option.wireName) }
+                    }
+                }
+            }
+            Text(
+                text = "Three ways to be dark because they are not the same thing: grey dark is " +
+                    "the ordinary dark surface, and amoled dark is true black, so on this panel " +
+                    "those pixels are actually off. The pad keeps its own colours — it is drawn " +
+                    "over other applications and has to be legible on a white page and a black one.",
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         Section("Shaping") {

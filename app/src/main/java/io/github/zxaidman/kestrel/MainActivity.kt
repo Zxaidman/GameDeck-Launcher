@@ -171,7 +171,9 @@ class MainActivity : ComponentActivity() {
         applyDisplayPreferences()
 
         setContent {
-            MaterialTheme {
+            io.github.zxaidman.kestrel.ui.theme.KestrelTheme(
+                theme = AppSettings.current.value.display.theme
+            ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     // Which page is in front. One value, because there are two pages: a
                     // navigation graph for two destinations would be scaffolding around a
@@ -216,7 +218,10 @@ class MainActivity : ComponentActivity() {
                                     else -> WindowInsets.displayCutout
                                 }
                             )
-                            .padding(12.dp),
+                            // Horizontal only. Vertical padding on a full-screen page sits outside
+                            // the scrolling area, so it is a permanent white band rather than a
+                            // margin that scrolls away with the content.
+                            .padding(horizontal = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // Every one of these is a fact about the phone that can change from
@@ -361,8 +366,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // The bar icons have to be the opposite of what is behind them. On the light theme with
+        // the bars showing, white-on-white is a status bar with nothing readable in it.
+        val systemIsDark = resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val dark = io.github.zxaidman.kestrel.ui.theme.isDark(display.theme, systemIsDark)
+
         WindowCompat.setDecorFitsSystemWindows(window, !display.fullScreen)
         val bars = WindowCompat.getInsetsController(window, window.decorView)
+        bars.isAppearanceLightStatusBars = !dark
+        bars.isAppearanceLightNavigationBars = !dark
         if (display.fullScreen) {
             bars.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

@@ -52,15 +52,15 @@ hardware.
 
 ---
 
-## State of the queue — build `0.0.29-dev`
+## State of the queue — build `0.0.30-dev`
 
 | Phase | Items |
 | --- | --- |
-| `done` | `BUG-1`, `BUG-2`, `BUG-9`, `BUG-11`–`BUG-14`, `BUG-16`, `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`, `FEAT-17` — fourteen |
+| `done` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-9`–`BUG-17` (bar 3–8), `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`–`FEAT-18` — nineteen |
 | `superseded` | `FEAT-13` |
-| `testing` | `CRIT-5`, `BUG-10`, `BUG-15` — the "does the pad match" thread; `BUG-17`, `BUG-18`, `BUG-19`, `FEAT-18`, `FEAT-19` built this round |
+| `testing` | `BUG-18`–`BUG-22`, `FEAT-19`–`FEAT-22` |
 | `building` | — |
-| `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`; `FEAT-15` decided and queued next |
+| `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`; `FEAT-15` next |
 
 ---
 
@@ -145,7 +145,7 @@ one action once the contents are agreed — and once `CRIT-1` is done.
 
 ### `CRIT-5` — The editor must draw the phone, not the page
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.29-dev`. Written up in `done-list.md`.
 
 **Kind:** critical. Named first by the project owner, ahead of everything else on this list.  
 **Found by:** Reported, build `0.0.25-dev`.
@@ -343,7 +343,7 @@ Same drawing path as `CRIT-5`, so it is fixed there rather than separately.
 
 ### `BUG-10` — The canvas is the usable area, not the phone, so the pad does not match it
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.29-dev`. Written up in `done-list.md`.
 **Found by:** Reported and reproduced from the numbers, build `0.0.26-dev`.
 
 **The fault, exactly.** The canvas draws **2289 × 927** — the usable area, with the system bars and
@@ -421,7 +421,7 @@ depending on which keyboard someone uses.
 
 ### `BUG-15` — The pad should use the whole screen, and both sides should agree on which screen
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.29-dev`. Written up in `done-list.md`.
 **Decided by the project owner, build `0.0.27-dev`:** *"i want the gamepad and it's window to always
 use the whole screen 2400x1080."*
 
@@ -460,7 +460,7 @@ in a different row. Tools have to wrap rather than run off an edge.
 
 ### `BUG-17` — The editor drew the document; the pad draws the document at the size setting
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.29-dev`. Written up in `done-list.md`.
 **Found by:** Reported as an observation and it was the right one — *"buttons size representation in
 Canva is not aligned with actual gamepad size maybe this could be why outside warning is shown."*
 
@@ -480,7 +480,7 @@ top of it, which must not change by editing.
 
 ### `BUG-18` — The canvas is a picture of the screen and should be the size of it
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Found by:** Reported with screenshots, build `0.0.28-dev`.
 
 The canvas is fitted with a 4% margin, left over from when it shared the screen with a panel. It has
@@ -494,11 +494,48 @@ makes "does the pad match the editor" a question anyone can answer by looking.
 
 ### `BUG-19` — The home page header does not scroll
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Asked for:** *"i don't want kestrel on homescreen as freeze header across scroll."*
 
 The title sits outside the scrolling area, so it holds a band of a small screen permanently. It
 belongs in the scroll with everything else.
+
+---
+
+### `BUG-20` — The canvas border has nothing left to mark
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.29-dev`. *"there 1px maybe still shows as white."*
+
+The stroke around the canvas existed to say where the picture of the phone ended. The picture is now
+the whole screen at 1 : 1, so the only thing the border marks is the edge of the screen — which the
+screen already marks. It goes.
+
+---
+
+### `BUG-21` — A white band across the top and bottom of the home page
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.29-dev`. Sides are fine; top and bottom are not.
+
+Vertical padding on a full-screen page, applied outside the scrolling area, so it is a permanent
+band rather than a margin that scrolls away. The horizontal padding is doing a real job and stays.
+
+---
+
+### `BUG-22` — The long-press menu opens off the screen
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.29-dev`, and it made `FEAT-19`'s point 12 untestable.
+
+The menu is clamped against a **guessed** height, so a menu taller than the guess still runs off the
+bottom — and clamping is the wrong idea anyway. A menu for a control at the bottom of the screen
+should open **upwards**, and one at the right edge should open **leftwards**, rather than being
+slid back over the control it belongs to.
+
+The fix is to measure the menu rather than guess it, and to choose a side per axis from where the
+control actually is. Every control worth long-pressing is in a corner or against an edge, because
+that is where thumbs are — so this is the normal case, not the edge case.
 
 ---
 
@@ -719,7 +756,7 @@ The selected control's size is shown in both units for the same reason.
 
 ### `FEAT-15` — One layout, two orientations
 
-**Phase:** `pending` — **decision taken: (a), one document with two placement sets.** Next round, on its own, because it changes the file format.
+**Phase:** `pending` — **decided: (a).** The next thing built, on its own, because it changes the file format.
 **Asked for:** *"config should now have both orientation segregation."*
 
 Today a layout is one arrangement, and both orientations are derived from it by anchors and by
@@ -740,6 +777,10 @@ expensive to undo:
 and the format should say so. `LayoutOrientation` already exists in the schema for a document that
 declares itself landscape-only or portrait-only, so (a) extends what is there rather than
 contradicting it.
+
+**Added after the decision:** the **pad size slider is per orientation too**. A pad that is right at
+85% in landscape is not right at 85% in portrait, where there is less width and more height to reach
+across, so the setting belongs beside the arrangement rather than above both of them.
 
 Either way this is a **schema change**: a version bump, a migration for layouts already saved, tests,
 and `docs/CONFIGURATION_SCHEMA.md`. It also touches the repository (pick the arrangement for the
@@ -786,7 +827,7 @@ the display settings say.
 
 ### `FEAT-18` — Rotation as a fourth floating button
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.29-dev`. Written up in `done-list.md`.
 **Asked for:** *"add a 4th floating button next to tools for rotation orientation. and then remove it
 from the tools section. it should show rotation icon."*
 
@@ -798,7 +839,7 @@ orientation section leaves the tools entirely.
 
 ### `FEAT-19` — Long press a control for the things done to one control
 
-**Phase:** `testing` — built in `0.0.29-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Asked for:** *"Long press on the gamepad button should open the small floating menu near it with
 four options: size (direct open :value dialog), shape (showing rect., circle, square), copy (only
 size & shape) and only show paste option once copy to supported buttons."*
@@ -812,10 +853,68 @@ which cannot be pressed.
 
 - **Directional** — the sticks and the d-pad. They are the same kind of object and are sized against
   the same thumb.
-- **Buttons** — the face buttons, the shoulders, the menu buttons, the triggers.
+- **Buttons** — the face buttons, the shoulders and the menu buttons.
+- **Triggers** — their own family, decided in round `0.0.29-dev`. A trigger is a long rectangle with
+  a fill in it and nothing else on a pad is shaped like one.
 
 A face button's size means nothing on a stick, so the option is not shown rather than shown and
 refused. The menu says which family a control is in, so nobody has to guess why paste is missing.
+
+---
+
+### `FEAT-20` — A shape should look like the shape
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"instead of text use icon or shape to represent it, in both tools and popup. and
+this should be true for anything which can use visual instead of text just like rotation. (keep it
+bold & size visible)"*
+
+`circle`, `square` and `rectangle` written out are three words that all mean "look at the picture
+you are already looking at". They become the shapes themselves, drawn, at a size that can be seen.
+The same rule everywhere it applies — the rotation button already works this way and is the model.
+
+**Where it does not apply, and this is the limit worth stating:** a label is not worse than an icon
+when the icon has to be learned. `own window`, `snap to the grid` and the anchor names have no
+picture that is faster to read than the words, and a project with no icon vocabulary yet should not
+invent one control at a time.
+
+---
+
+### `FEAT-21` — The same menu in window mode
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"add similar popup dialog for window mode editor which only show options, not copy
+and paste."*
+
+Long press in window mode gives the window options at the control: which window it is in, stepped
+through the same list the sheet offers, and its own window. No copy and no paste — a group is a name
+shared between controls, and copying a name is just joining the group, which is what the list
+already does.
+
+---
+
+### `FEAT-22` — Material design, and three ways to be dark
+
+**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"Material UI design for whole app with light mode, grey dark mode, amoled dark
+mode."*
+
+Three schemes and a system setting:
+
+- **Light.**
+- **Grey dark** — the ordinary dark surface, where an unlit pixel is still grey.
+- **AMOLED dark** — true black, so the pixels are actually off. On the reference device's panel that
+  is a real difference in what the screen draws, not a style.
+- **Follow the system**, which is the default, resolving to light or grey dark.
+
+**What this is and is not.** It is a colour scheme applied through Material 3, which is what the
+application is already built from — so every screen, dialog, sheet and button follows it at once.
+It is **not** a redesign of the home page: that is `CRIT-2`, it is still a developer's diagnostics
+screen, and painting it does not make it a product.
+
+**The overlay keeps its own palette on purpose.** A pad is drawn over somebody else's application,
+so it is legible against a white page and a black one both — its colours answer to that, not to a
+theme. Making the pad follow the application's theme would make it invisible half the time.
 
 ---
 
@@ -1040,6 +1139,30 @@ show the rectangle and its share of the screen rather than only the `group` name
 | 7–12 | Unsaved exit, tools in landscape, rotation, grid, guides, regression | **All working** |
 | — | `FEAT-15` | **Decided: (a)** — one document, two placement sets |
 | — | New | Long press a control for size, shape, copy and paste → `FEAT-19` |
+
+
+
+### Round `0.0.29-dev` — the pad matches
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1–3 | The match, the warning, the sizes | **Working.** *"now both are perfectly aligned"*, *"actually same size"* → `CRIT-5`, `BUG-10`, `BUG-15`, `BUG-17` all close after four rounds |
+| 4 | Canvas edge to edge | Working, less a 1px border with nothing left to mark → `BUG-20` |
+| 5 | Size slider | **Working** |
+| 6 | Header scrolls | Working; a white band remains top and bottom → `BUG-21` |
+| 7 | Rotation button | **Working** |
+| 8, 14 | Long-press menu | Opens off screen; needs to open away from the edge it is near → `BUG-22` |
+| 9, 11, 13 | size, copy, paste, families | **Working** |
+| 10 | Shape buttons | Working; should be drawn shapes rather than words, and that rule applies wherever a picture beats a label → `FEAT-20` |
+| 12 | Wrong-family paste | Working, seen poorly because of `BUG-22` |
+| 15 | Regression | **None.** Window mode wants the same long-press menu, without copy and paste → `FEAT-21` |
+
+### Decisions taken this round
+
+- **Triggers are their own family** for copy and paste. Three families, not two.
+- **`FEAT-15` grows a requirement:** the pad size slider is per orientation as well as the
+  arrangement.
+- **New:** Material design with light, grey dark and AMOLED dark → `FEAT-22`.
 
 
 ### Awaiting

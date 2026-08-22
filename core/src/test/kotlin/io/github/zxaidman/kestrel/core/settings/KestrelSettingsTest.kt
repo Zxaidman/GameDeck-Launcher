@@ -166,4 +166,54 @@ class KestrelSettingsTest {
         val written = SettingsDocument.write(settings) as ConfigNode.Obj
         assertEquals(ConfigNode.Num(0.5), written["controlScale"])
     }
+
+    @Test
+    fun `a theme survives being written and read back`() {
+        val settings = KestrelSettings(
+            display = DisplayPreferences(theme = AppTheme.DARK_AMOLED),
+        )
+        val written = SettingsDocument.write(settings) as ConfigNode.Obj
+        val read = value(SettingsDocument.read(written))
+        assertEquals(AppTheme.DARK_AMOLED, read.display.theme)
+    }
+
+    @Test
+    fun `a settings file written before themes existed keeps the default`() {
+        // Every file already on a phone is one of these. Reading one must not fail and must not
+        // silently pick a theme the user never chose.
+        val read = value(
+            SettingsDocument.read(
+                ConfigNode.Obj(
+                    linkedMapOf(
+                        "schemaVersion" to ConfigNode.Num(1.0),
+                        "type" to ConfigNode.Text("settings"),
+                        "id" to ConfigNode.Text("user.settings"),
+                        "name" to ConfigNode.Text("S"),
+                        "display" to ConfigNode.Obj(
+                            linkedMapOf("fullScreen" to ConfigNode.Bool(true))
+                        ),
+                    )
+                )
+            )
+        )
+        assertEquals(AppTheme.SYSTEM, read.display.theme)
+    }
+
+    @Test
+    fun `a theme this build does not know is refused rather than guessed at`() {
+        val outcome = SettingsDocument.read(
+            ConfigNode.Obj(
+                linkedMapOf(
+                    "schemaVersion" to ConfigNode.Num(1.0),
+                    "type" to ConfigNode.Text("settings"),
+                    "id" to ConfigNode.Text("user.settings"),
+                    "name" to ConfigNode.Text("S"),
+                    "display" to ConfigNode.Obj(
+                        linkedMapOf("theme" to ConfigNode.Text("sepia"))
+                    ),
+                )
+            )
+        )
+        assertTrue(outcome is Outcome.Failure, "an unknown theme was accepted: $outcome")
+    }
 }

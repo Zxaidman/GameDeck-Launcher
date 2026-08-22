@@ -13,6 +13,54 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.30-dev` — Material, And Three Ways To Be Dark
+
+**The pad matches the editor.** Four entries, four rounds and three real causes stacked under one
+symptom: the canvas was the wrong shape, then the canvas and the pad were on different surfaces, and
+underneath both the two renderers were drawing at different sizes. The project owner found the third
+from a screenshot, after this side had twice declared it fixed. The rule that comes out of it is
+written into `done-list.md`: when two renderers must agree, diff the code paths, not the pictures.
+
+**Light, grey dark, AMOLED dark, and follow the system.** The application is built from Material 3
+already, so a colour scheme is the whole of the change — every screen, dialog, sheet and button
+follows at once. Three ways to be dark because they are not the same thing on this hardware: grey
+dark is the ordinary dark surface, where an unlit pixel is still a lit grey pixel, and AMOLED dark
+is true black, so those pixels are actually off.
+
+Getting AMOLED right took more than a background colour. Material draws elevation as a tint over the
+surface, so a dialog on a black page comes out grey unless the container colours are set as well —
+which would have made it "black background, grey everything" rather than an AMOLED scheme. The
+containers are near-black rather than black, because a sheet exactly the colour of the page behind it
+has no edge at all. The system bar icons follow the theme too, or a light theme with the bars showing
+is white on white.
+
+**This is theming, not a redesign.** The home page is still a developer's diagnostics screen, and
+painting it does not make it a product. That remains `CRIT-2`.
+
+**The pad keeps its own palette, deliberately.** It is drawn over somebody else's application and
+has to be legible on a white page and a black one both. A pad that followed the application's theme
+would be invisible half the time.
+
+**A shape is now drawn as itself.** `circle`, `square` and `rectangle` were three words that all
+meant "look at the picture you are already looking at". They are the shapes now, drawn rather than
+taken from a font, in the tools and the long-press menu alike. Where the rule stops is worth stating:
+`own window`, `snap to the grid` and the anchor names have no picture faster to read than the words,
+and a project with no icon vocabulary should not invent one a control at a time.
+
+Also: the long-press menu opens **away from** the edge it is near — upwards for a control at the
+bottom, leftwards for one at the right — measured rather than guessed, because every control worth
+long-pressing is against an edge; window mode gets the same menu, with no copy and no paste, since a
+group is a name and copying one is joining it; triggers become their own copy family; the canvas
+border and the home page's white band are both gone.
+
+**Nineteen items `done`.** Everything built this round is `testing`, and the theme's colours are
+Unverified in the strictest sense — the settings round-trip is tested and nobody has looked at them
+on a screen.
+
+**Next, and on its own:** a layout that holds a separate arrangement per orientation, with the size
+setting per orientation too. It changes the file format, so it gets its own round.
+
+
 ### `0.0.29-dev` — Both Renderers Draw The Same Pad
 
 The project owner found the third cause of a symptom that had been chased for three rounds, and

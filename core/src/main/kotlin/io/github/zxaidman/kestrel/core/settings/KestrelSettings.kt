@@ -168,6 +168,7 @@ public object SettingsDocument {
                     "fullScreen" to ConfigNode.Bool(settings.display.fullScreen),
                     "drawUnderCutout" to ConfigNode.Bool(settings.display.drawUnderCutout),
                     "orientation" to ConfigNode.Text(settings.display.orientation.wireName),
+                    "theme" to ConfigNode.Text(settings.display.theme.wireName),
                 )
             ),
             "stick" to ConfigNode.Obj(
@@ -214,6 +215,20 @@ public object SettingsDocument {
             }
         }
 
+        val theme = if (!display.has("theme")) {
+            defaults.theme
+        } else {
+            when (
+                val v = ConfigReader.enum(
+                    display, "theme", AppTheme.entries.toTypedArray(),
+                    { it.wireName }, "display",
+                )
+            ) {
+                is Outcome.Failure -> return v
+                is Outcome.Success -> v.value
+            }
+        }
+
         return Outcome.Success(
             DisplayPreferences(
                 fullScreen = when (
@@ -231,6 +246,7 @@ public object SettingsDocument {
                     is Outcome.Success -> v.value
                 },
                 orientation = orientation,
+                theme = theme,
             )
         )
     }

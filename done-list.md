@@ -242,85 +242,139 @@ tool, which is `FEAT-18`.
 
 ---
 
-## Built, awaiting confirmation — `0.0.29-dev`
+### `CRIT-5` + `BUG-10` + `BUG-15` + `BUG-17` — The pad matches the editor — **closed `0.0.29-dev`**
 
-### `BUG-17` — The canvas draws the pad at the size the pad is
+*"now both are perfectly aligned"*, *"actually same size"*.
 
-**Found by the project owner, from a screenshot:** *"buttons size representation in Canva is not
-aligned with actual gamepad size maybe this could be why outside warning is shown."*
+One thread, four entries, four rounds, and **three real causes stacked underneath one symptom**. It
+is the most instructive thing in this file, so it is recorded as one item:
 
-It is exactly why. The overlay resolves `placement.scaledBy(controlScale)` — 0.85 by default. The
-editor resolved `placement` and nothing else. Every control on the canvas was drawn about 17% larger
-than the pad draws it, and four controls that fit on the phone at 85% were reported as leaving the
-screen at 100%.
+1. **The canvas was the wrong shape** (`CRIT-5`). It took the shape of whatever space the screen
+   gave it — near-ultrawide — so controls appeared to overlap that did not.
+2. **The canvas and the pad were on different surfaces** (`BUG-10`, then `BUG-15`). The canvas drew
+   the display and the pad was laid out in the usable area. Settled by the project owner: the pad
+   uses the whole screen, which also closed `BUG-1` and `BUG-2`.
+3. **They were drawing at different sizes** (`BUG-17`). The overlay resolves
+   `placement.scaledBy(controlScale)` — 0.85 by default — and the editor resolved `placement` alone.
+   Every control on the canvas was about 17% larger than the pad draws it, and four controls that
+   fit at 85% were reported as leaving the screen at 100%.
 
-**Three rounds of "the pad does not match the editor" had this sitting underneath the cause that was
-found first.** `BUG-10` was real, `BUG-15` was real, and neither was the whole answer. This is the
-kind of fault a canvas exists to make visible and could not, because the canvas had it too.
+**The project owner found the third one, from a screenshot**, after this side had twice declared the
+symptom fixed. Each fix was real and each report of success was wrong, because "it looks right now"
+was accepted in place of "the two renderers agree".
 
-**Built.** The canvas resolves at the same scale the pad is showing, and dragging still writes the
-**unscaled** number to the file: the document is the pad at full size and the setting is applied on
-top of it. Editing must not fold the setting into the file, or every drag at 85% would shrink the
-layout permanently.
+**Do:** when two renderers must agree, diff the code paths rather than the pictures. `resolve`,
+`shapedAs` and `scaledBy` are now the same three calls in both, and `DeviceSurface.forPad` is the
+one answer to what they draw on.
 
-**How it is known.** Unverified on the device. This is the third attempt at the same symptom, and it
-is the first one that names a difference between the two renderers rather than a difference in what
-they are drawing on.
+**Do not:** report a match as fixed on the strength of one screenshot looking better.
 
----
-
-### `BUG-18` — The canvas is the size of the screen
-
-The 4% margin is gone. It was left over from when the canvas shared the screen with a panel, and the
-canvas has the screen to itself and the same shape as it. Previewing the orientation the phone is in,
-the canvas is now exactly 1 : 1 with the display — which makes "does the pad match the editor" a
-question that can be answered by looking rather than by measuring. Unverified on the device.
+Dragging writes the **unscaled** number to the file — the setting is applied on top of the document
+and folding it in would shrink the layout a little further with every drag. There is a unit test for
+neither of those, which is the next thing this thread needs.
 
 ---
 
-### `BUG-19` — The home page header scrolls
+### `FEAT-18` — Rotation is a fourth floating button — **closed `0.0.29-dev`**
 
-The title moved inside the scrolling column. It was holding a band of a small screen permanently,
-which is a title costing more than it says. Unverified on the device.
-
----
-
-### `FEAT-18` — Rotation is a fourth floating button
-
-`⟳` beside Tools, and the orientation section is gone from the sheet. Turning the phone is something
-done *while* arranging, not configured beforehand, so it does not belong two taps deep. Unverified
-on the device.
+`⟳` beside Tools, and the orientation section gone from the sheet. Turning the phone is done *while*
+arranging, not configured beforehand. **Measured.**
 
 ---
 
-### `FEAT-19` — Long press a control
+---
 
-A small menu opens at the control, kept on screen when the control is in a corner — which is where
-the controls a thumb reaches actually are. It holds:
+## Built, awaiting confirmation — `0.0.30-dev`
 
-- **size** — opens the four numbers directly.
-- **shape** — circle, square and rectangle as three buttons, the current one filled.
-- **copy** — takes **size and outline only**. Position is deliberately not copied: two controls in
-  the same place are two controls, one of which cannot be pressed, and a paste that did that would
-  be a way to lose a button silently.
-- **paste** — shown **only where it means something**.
+### `BUG-20` — The canvas border is gone
 
-Paste is offered within a family, which is the project owner's rule: **directional** (the sticks and
-the pad, the same kind of object sized against the same thumb) and **buttons** (face, shoulders,
-menu, triggers). A face button's size means nothing on a stick, so the option is absent rather than
-greyed out — and when the clipboard holds the wrong family the menu says so, because "where is
-paste" needs an answer and "why is this disabled" is a worse question to leave someone with.
+It marked where the picture of the phone ended. The picture is the whole screen at 1 : 1 now, so the
+only thing left for it to mark was the edge of the screen. Unverified on the device.
 
+---
+
+### `BUG-21` — No white band on the home page
+
+Vertical padding on a full-screen page sits outside the scrolling area, so it was a permanent band
+rather than a margin that scrolls away. Horizontal padding does a real job and stays. Unverified.
+
+---
+
+### `BUG-22` — The menu opens away from the edge it is near
+
+Measured rather than guessed, and it opens **upwards** for a control near the bottom and
+**leftwards** for one near the right edge, instead of being slid back over the control it belongs
+to. Every control worth long-pressing is against an edge, because that is where thumbs are — so this
+was the normal case being treated as the exception. Unverified on the device.
+
+---
+
+### `FEAT-20` — A shape is drawn as itself
+
+`circle`, `square` and `rectangle` were three words that all meant "look at the picture you are
+already looking at". They are now the shapes, drawn — in the tools and in the long-press menu, the
+same three buttons from one place, the current one filled.
+
+Deliberately drawn rather than taken from a font: a font has whatever squares and circles it happens
+to have, at whatever weight, and these have to read at button size on a dark sheet.
+
+**Where the rule stops, and this is a limit rather than an omission.** `own window`, `snap to the
+grid` and the anchor names have no picture that is faster to read than the words. A project with no
+icon vocabulary should not invent one a control at a time, and a label is not worse than an icon
+that has to be learned. Unverified on the device.
+
+---
+
+### `FEAT-21` — The same menu in window mode
+
+Long press in window mode gives the window options at the control: which window it is in, stepped
+through the same list the sheet offers, and its own window. **No copy and no paste**, as asked — and
+the reason is worth keeping: a group is a name shared between controls, so copying one is joining
+it, which is what stepping through the list already does. A clipboard here would be a second way to
+do one thing, with its own state to get out of step. Unverified on the device.
+
+---
+
+### `FEAT-19` — Triggers are their own family
+
+Three families now, not two: **directional** (the sticks and the pad), **buttons** (face, shoulders,
+menu) and **triggers**. The project owner's call and the right one — a trigger is a long rectangle
+with a fill running up it, and a face button's size on a trigger is a trigger nobody can read.
 Unverified on the device.
 
 ---
 
-### `CRIT-5`, `BUG-10`, `BUG-15` — still `testing`
+### `FEAT-22` — Material design, three ways to be dark
 
-One thread, three entries, and it does not close until the pad on the phone matches what the editor
-drew. That test has now failed three times, for three different reasons, each real: the canvas was
-the wrong shape, then the pad was on the wrong surface, and now the two were drawing at different
-sizes.
+**Light**, **grey dark**, **AMOLED dark**, and **follow the system** as the default. The application
+is built from Material 3 already, so a colour scheme is the whole of the change: every screen,
+dialog, sheet and button follows it at once. The accent is the same slate blue in all three — they
+differ in what they are painted on, not in what they are.
+
+**AMOLED is true black everywhere it shows.** Material draws elevation as a tint over the surface,
+so a dialog on a black page comes out grey unless the container colours are set too — which would
+have made it "black background, grey everything" rather than an AMOLED scheme. The containers are
+near-black rather than black, because a sheet exactly the colour of the page behind it has no edge.
+
+The system bar icons follow the theme, or a light theme with the bars showing is white on white.
+
+**What this is not:** a redesign. The home page is still a developer's diagnostics screen and
+painting it does not make it a product — that is `CRIT-2`.
+
+**The overlay keeps its own palette, deliberately.** A pad is drawn over somebody else's application
+and has to be legible on a white page and a black one both. A pad that followed the application's
+theme would be invisible half the time.
+
+**How it is known.** The settings round-trip is unit-tested, including a settings file written
+before themes existed and a theme name this build does not know. The colours themselves are
+Unverified — nobody has looked at them on a screen.
+
+---
+
+### `BUG-18`, `BUG-19` — carried
+
+Both were reported as working with a remainder: a 1px border and a white band. The remainders are
+`BUG-20` and `BUG-21`; these two close when those do.
 
 ---
 

@@ -42,6 +42,33 @@ public enum class AppOrientation(public val wireName: String) {
 }
 
 /**
+ * How Kestrel is painted.
+ *
+ * Three ways to be dark rather than one, because they are not the same thing on this hardware.
+ * [DARK_GREY] is the ordinary dark surface, where an unlit pixel is still a lit grey pixel.
+ * [DARK_AMOLED] is true black, so on an OLED panel those pixels are genuinely off — a difference in
+ * what the screen draws and what it costs to draw, not a matter of taste.
+ */
+public enum class AppTheme(public val wireName: String) {
+
+    /** Whatever the phone is set to, resolving to light or to [DARK_GREY]. The default. */
+    SYSTEM("system"),
+
+    LIGHT("light"),
+
+    /** Dark, on grey surfaces. */
+    DARK_GREY("dark-grey"),
+
+    /** Dark, on black. */
+    DARK_AMOLED("dark-amoled"),
+    ;
+
+    public companion object {
+        public fun of(wireName: String): AppTheme? = entries.firstOrNull { it.wireName == wireName }
+    }
+}
+
+/**
  * How much of the screen Kestrel takes, and what it is allowed to draw under.
  *
  * Both default to on, and both are settings rather than decisions.
@@ -58,4 +85,5 @@ public data class DisplayPreferences(
     public val fullScreen: Boolean = true,
     public val drawUnderCutout: Boolean = true,
     public val orientation: AppOrientation = AppOrientation.LANDSCAPE,
+    public val theme: AppTheme = AppTheme.SYSTEM,
 )

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -247,7 +248,19 @@ public fun LayoutEditorScreen(
         }
 
         val menuElement = working.element(menuFor ?: "")
-        if (menuElement != null && !toolsOpen) {
+        if (menuElement != null && !toolsOpen && mode == EditorMode.WINDOWS) {
+            WindowMenu(
+                layout = working,
+                element = menuElement,
+                at = menuAt,
+                within = rootSize,
+                onChange = { updated ->
+                    working = working.replacing(updated)
+                    dirty = true
+                },
+                onDismiss = { menuFor = null },
+            )
+        } else if (menuElement != null && !toolsOpen) {
             ControlMenu(
                 element = menuElement,
                 at = menuAt,
@@ -450,6 +463,73 @@ private fun ToolsSheet(
 }
 
 /**
+ * A shape drawn as itself.
+ *
+ * Three words that all mean "look at the picture you are already looking at" become the picture.
+ * Deliberately drawn rather than a glyph from a font: a font has whatever squares and circles it
+ * happens to have, at whatever weight, and these have to read at button size on a dark sheet.
+ *
+ * Where this rule stops: `own window`, `snap to the grid` and the anchor names have no picture that
+ * is faster to read than the words, and a project with no icon vocabulary should not invent one a
+ * control at a time.
+ */
+@Composable
+private fun ShapeMark(shape: ControlShape, tint: Color) {
+    Canvas(modifier = Modifier.size(22.dp)) {
+        val stroke = Stroke(width = 3.5f * density)
+        when (shape) {
+            ControlShape.CIRCLE ->
+                drawCircle(tint, radius = size.minDimension / 2 - stroke.width, style = stroke)
+
+            ControlShape.SQUARE -> {
+                val side = size.minDimension - stroke.width * 2
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset((size.width - side) / 2, (size.height - side) / 2),
+                    size = Size(side, side),
+                    cornerRadius = CornerRadius(side * 0.16f),
+                    style = stroke,
+                )
+            }
+
+            ControlShape.RECTANGLE -> {
+                val wide = size.width - stroke.width * 2
+                val tall = wide * 0.56f
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(stroke.width, (size.height - tall) / 2),
+                    size = Size(wide, tall),
+                    cornerRadius = CornerRadius(tall * 0.24f),
+                    style = stroke,
+                )
+            }
+        }
+    }
+}
+
+/** The three shapes as buttons, the current one filled. Used by the tools and by the menu alike. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ShapeChoice(current: ControlShape?, enabled: Boolean, onShape: (ControlShape) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        ControlShape.entries.forEach { shape ->
+            if (shape == current) {
+                Button(enabled = enabled, onClick = { onShape(shape) }) {
+                    ShapeMark(shape, MaterialTheme.colorScheme.onPrimary)
+                }
+            } else {
+                OutlinedButton(enabled = enabled, onClick = { onShape(shape) }) {
+                    ShapeMark(shape, MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+/**
  * What can be taken from one control and given to another: its size and its outline, and nothing
  * else.
  *
@@ -487,8 +567,17 @@ private enum class ControlFamily(val label: String) {
     /** The sticks and the pad — the same kind of object, sized against the same thumb. */
     DIRECTIONAL("directional"),
 
-    /** Face, shoulders, menu and triggers: everything pressed rather than pushed around. */
+    /** Face, shoulders and menu: everything pressed rather than pushed around. */
     BUTTONS("buttons"),
+
+    /**
+     * Triggers, on their own.
+     *
+     * Decided in round `0.0.29-dev`, and it is right: a trigger is a long rectangle with a fill
+     * running up it, and nothing else on a pad is shaped like one. A face button's size on a
+     * trigger is a trigger nobody can read.
+     */
+    TRIGGERS("triggers"),
 
     /** Anything that sends nothing. It keeps to itself. */
     OTHER("other"),
@@ -496,8 +585,8 @@ private enum class ControlFamily(val label: String) {
 
 private fun ControlKind.family(): ControlFamily = when (this) {
     ControlKind.STICK, ControlKind.DPAD -> ControlFamily.DIRECTIONAL
-    ControlKind.BUTTON, ControlKind.ANALOG_TRIGGER, ControlKind.DIGITAL_TRIGGER ->
-        ControlFamily.BUTTONS
+    ControlKind.ANALOG_TRIGGER, ControlKind.DIGITAL_TRIGGER -> ControlFamily.TRIGGERS
+    ControlKind.BUTTON -> ControlFamily.BUTTONS
     ControlKind.DECORATION -> ControlFamily.OTHER
 }
 
@@ -520,25 +609,8 @@ private fun ControlMenu(
     onPaste: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val density = LocalDensity.current
-    val width = with(density) { MENU_WIDTH.dp.toPx() }
-    val height = with(density) { MENU_HEIGHT.dp.toPx() }
-    // Kept on the screen. A menu opened on a control in the bottom-right corner would otherwise
-    // open mostly off the edge, which is where the controls a thumb reaches actually are.
-    val x = at.x.coerceIn(0f, max(0f, within.width - width))
-    val y = (at.y + 24f).coerceIn(0f, max(0f, within.height - height))
-
-    Surface(
-        modifier = Modifier
-            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
-            .width(MENU_WIDTH.dp),
-        tonalElevation = 6.dp,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+    MenuAt(at = at, within = within) {
+        run {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${element.id}  ·  ${element.kind.family().label}",
@@ -551,19 +623,7 @@ private fun ControlMenu(
 
             Button(onClick = onSize, modifier = Modifier.fillMaxWidth()) { Text("size") }
 
-            Text("shape", style = MaterialTheme.typography.labelSmall)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                ControlShape.entries.forEach { shape ->
-                    if (shape == element.shape) {
-                        Button(onClick = { onShape(shape) }) { Text(shape.wireName) }
-                    } else {
-                        OutlinedButton(onClick = { onShape(shape) }) { Text(shape.wireName) }
-                    }
-                }
-            }
+            ShapeChoice(current = element.shape, enabled = true, onShape = onShape)
 
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -587,8 +647,92 @@ private fun ControlMenu(
     }
 }
 
+/**
+ * A small menu that opens **away from** the edge the control is near.
+ *
+ * Measured rather than guessed. It used to be clamped against an assumed height, so a menu taller
+ * than the assumption still ran off the bottom — and clamping is the wrong idea anyway: sliding a
+ * menu back up puts it on top of the control it belongs to. Which side it opens on is decided by
+ * where the control is, per axis, and every control worth long-pressing is against an edge, because
+ * that is where thumbs are.
+ */
+@Composable
+private fun MenuAt(
+    at: Offset,
+    within: IntSize,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val gap = with(LocalDensity.current) { 12.dp.toPx() }
+
+    val below = at.y + gap + size.height <= within.height || at.y - gap - size.height < 0
+    val toRight = at.x + size.width <= within.width || at.x - size.width < 0
+    val rawY = if (below) at.y + gap else at.y - gap - size.height
+    val rawX = if (toRight) at.x else at.x - size.width
+    val x = rawX.coerceIn(0f, max(0f, (within.width - size.width).toFloat()))
+    val y = rawY.coerceIn(0f, max(0f, (within.height - size.height).toFloat()))
+
+    Surface(
+        modifier = Modifier
+            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+            .onSizeChanged { size = it }
+            .width(MENU_WIDTH.dp),
+        tonalElevation = 6.dp,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            content = content,
+        )
+    }
+}
+
+/**
+ * The window options, at the control, in window mode.
+ *
+ * No copy and no paste, which the project owner asked for and which is right for a reason worth
+ * writing down: a group is a name shared between controls, so "copying" one is joining it — and
+ * joining it is what stepping through the list already does. A clipboard here would be a second way
+ * to do the same thing, with its own state to get out of step.
+ */
+@Composable
+private fun WindowMenu(
+    layout: ControllerLayout,
+    element: LayoutElement,
+    at: Offset,
+    within: IntSize,
+    onChange: (LayoutElement) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = layout.windowOptions()
+    MenuAt(at = at, within = within) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = element.id,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onDismiss) { Text("×") }
+        }
+        Text(
+            text = "in: " + (element.group ?: "own window"),
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = FontFamily.Monospace,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Button(onClick = { onChange(element.withGroupStep(options, -1)) }) { Text("◀") }
+            Button(onClick = { onChange(element.withGroupStep(options, 1)) }) { Text("▶") }
+        }
+        Button(
+            onClick = { onChange(element.copy(group = null)) },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("own window") }
+    }
+}
+
 private const val MENU_WIDTH = 230
-private const val MENU_HEIGHT = 260
 
 // --- the tools -----------------------------------------------------------------------------------
 
@@ -662,14 +806,16 @@ private fun ControlTools(
         Button(enabled = live, onClick = { element?.let { onChange(it.taller(-STEP)) } }) {
             Text("shorter")
         }
-        Button(enabled = live, onClick = { element?.let { onChange(it.withNextShape()) } }) {
-            Text(element?.shape?.wireName ?: "shape")
-        }
         Button(enabled = live, onClick = { element?.let { onChange(it.withNextAnchor()) } }) {
             Text(element?.placement?.anchor?.wireName ?: "anchor")
         }
         Button(enabled = live, onClick = onType) { Text("⋮ values") }
     }
+    ShapeChoice(
+        current = element?.shape,
+        enabled = live,
+        onShape = { shape -> element?.let { onChange(it.copy(shape = shape)) } },
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -941,10 +1087,6 @@ private fun LayoutElement.taller(delta: Double): LayoutElement = copy(
     )
 )
 
-private fun LayoutElement.withNextShape(): LayoutElement {
-    val order = ControlShape.entries
-    return copy(shape = order[(order.indexOf(shape) + 1) % order.size])
-}
 
 private fun LayoutElement.withNextAnchor(): LayoutElement {
     // Only the corners and edges a control is ever pinned to. The centre is excluded on purpose:
@@ -1356,12 +1498,9 @@ private fun DrawScope.drawScreen(fit: Fit) {
             style = Stroke(width = 1.5f),
         )
     }
-    drawRect(
-        color = Color(0xFF7C8798),
-        topLeft = Offset(fit.left, fit.top),
-        size = Size(fit.width, fit.height),
-        style = Stroke(width = 3f),
-    )
+    // No border. It existed to say where the picture of the phone ended, and the picture is the
+    // whole screen at 1 : 1 now — the only thing left for it to mark is the edge of the screen,
+    // which the screen marks by being the edge of the screen.
 }
 
 private fun DrawScope.drawGrid(fit: Fit, gridUnit: Double) {
