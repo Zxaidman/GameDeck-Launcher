@@ -326,3 +326,58 @@ class ShapeAndPlacementTest {
         assertEquals(original, original.centeredAt(LayoutSurface(0.0, 0.0), 10.0, 10.0))
     }
 }
+
+/**
+ * One document, two arrangements.
+ *
+ * The rule these protect is that a layout written before the portrait arrangement existed still
+ * means exactly what it meant — and that a build which does not understand the field does not
+ * destroy it.
+ */
+class PerOrientationPlacementTest {
+
+    private fun element(portraitPlacement: Placement? = null) = LayoutElement(
+        id = "face.a",
+        kind = ControlKind.BUTTON,
+        binds = null,
+        label = null,
+        shape = ControlShape.CIRCLE,
+        group = null,
+        placement = Placement(Anchor.BOTTOM_RIGHT, 0.30, 0.20, 0.12, 0.12),
+        portraitPlacement = portraitPlacement,
+    )
+
+    @Test
+    fun `no portrait arrangement means the landscape one, in both`() {
+        val only = element()
+        assertEquals(only.placement, only.placementFor(portrait = false))
+        assertEquals(only.placement, only.placementFor(portrait = true))
+    }
+
+    @Test
+    fun `a portrait arrangement is used upright and nowhere else`() {
+        val upright = Placement(Anchor.BOTTOM_RIGHT, 0.22, 0.44, 0.16, 0.16)
+        val both = element(upright)
+        assertEquals(both.placement, both.placementFor(portrait = false))
+        assertEquals(upright, both.placementFor(portrait = true))
+    }
+
+    @Test
+    fun `editing one orientation cannot touch the other`() {
+        // The fault this prevents is the one that makes the feature pointless: arranging portrait
+        // and finding landscape has moved.
+        val start = element(Placement(Anchor.BOTTOM_RIGHT, 0.22, 0.44, 0.16, 0.16))
+        val moved = start.withPlacementFor(
+            portrait = true,
+            placement = Placement(Anchor.BOTTOM_RIGHT, 0.10, 0.10, 0.16, 0.16),
+        )
+        assertEquals(start.placement, moved.placement)
+        assertEquals(0.10, moved.placementFor(portrait = true).offsetX, 1e-9)
+    }
+
+    @Test
+    fun `giving portrait its own arrangement starts it as a copy, not as nothing`() {
+        val copied = element().let { it.copy(portraitPlacement = it.placement) }
+        assertEquals(copied.placement, copied.placementFor(portrait = true))
+    }
+}

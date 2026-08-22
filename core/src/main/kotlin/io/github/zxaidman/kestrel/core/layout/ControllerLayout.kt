@@ -74,8 +74,41 @@ public data class LayoutElement(
      */
     public val group: String?,
     public val placement: Placement,
+
+    /**
+     * Where this control sits when the phone is upright, or `null` to use [placement] in both.
+     *
+     * **One document, two arrangements**, decided by the project owner. Anchors and short-side
+     * sizing already carry a layout across orientations without it looking broken, and "not broken"
+     * is not the same as "right": in portrait the thumbs are closer together, there is less width
+     * between them and more height above, and a pad that fits a landscape grip is not simply the
+     * same pad rotated.
+     *
+     * What differs between the two is **where things are**, not what they are — so the identity of
+     * a control, what it binds, its group and its shape are stated once and cannot drift apart. A
+     * control cannot exist in one orientation and vanish in the other, which two separate documents
+     * would have allowed.
+     *
+     * `null` means "the same as landscape", which is what every layout written before this field
+     * existed means, and what a new layout means until somebody arranges the other orientation.
+     */
+    public val portraitPlacement: Placement? = null,
     public val unknownFields: Map<String, ConfigNode> = emptyMap(),
-)
+) {
+    /**
+     * Where this control sits, for the orientation being drawn.
+     *
+     * The one place that decides what "no portrait arrangement" means, so the pad and the editor
+     * cannot answer it differently — which is the fault that took four rounds to find the last time
+     * two renderers were allowed their own copy of a rule.
+     */
+    public fun placementFor(portrait: Boolean): Placement =
+        if (portrait) portraitPlacement ?: placement else placement
+
+    /** The same control with its arrangement for one orientation replaced. */
+    public fun withPlacementFor(portrait: Boolean, placement: Placement): LayoutElement =
+        if (portrait) copy(portraitPlacement = placement) else copy(placement = placement)
+}
 
 /**
  * A controller layout, as a document rather than as code.
@@ -95,6 +128,8 @@ public data class ControllerLayout(
     public val elements: List<LayoutElement>,
     public val unknownFields: Map<String, ConfigNode> = emptyMap(),
 ) {
+
+
     /** Every pad control this layout can actually drive. Decorations contribute nothing. */
     public val boundControls: Set<GamepadControl>
         get() = elements.mapNotNull { it.binds }.toSet()
@@ -130,6 +165,7 @@ public object ControllerLayoutReader {
     private val KNOWN_ELEMENT_FIELDS = setOf(
         "id", "kind", "binds", "label", "group", "shape",
         "anchor", "offsetX", "offsetY", "width", "height", "rotation",
+        "portrait",
     )
 
     public fun read(node: ConfigNode): Outcome<ControllerLayout> {
@@ -271,6 +307,24 @@ public object ControllerLayoutReader {
             is Outcome.Success -> p.value
         }
 
+        // Absent or null both mean "the same as landscape", which is what every document written
+        // before this field existed means. **The schema version is deliberately not bumped**: a
+        // build that does not know this field keeps it in `unknownFields` and writes it back
+        // untouched, so an old Kestrel opening a new file preserves the portrait arrangement it
+        // cannot use. Bumping the version would have made that file unreadable instead.
+        val portraitPlacement = when (val node = obj["portrait"]) {
+            null, ConfigNode.Null -> null
+            else -> when (val o = ConfigReader.asObject(node, path.child("portrait"))) {
+                is Outcome.Failure -> return o
+                is Outcome.Success -> when (
+                    val p = readPlacement(o.value, path.child("portrait"))
+                ) {
+                    is Outcome.Failure -> return p
+                    is Outcome.Success -> p.value
+                }
+            }
+        }
+
         return Outcome.Success(
             LayoutElement(
                 id = id,
@@ -280,6 +334,7 @@ public object ControllerLayoutReader {
                 shape = shape,
                 group = group,
                 placement = placement,
+                portraitPlacement = portraitPlacement,
                 unknownFields = obj.unknownFields(KNOWN_ELEMENT_FIELDS),
             )
         )
@@ -444,14 +499,22 @@ public object ControllerLayoutWriter {
         fields["group"] = element.group?.let { ConfigNode.Text(it) } ?: ConfigNode.Null
         fields["shape"] = ConfigNode.Text(element.shape.wireName)
 
-        val placement = element.placement
-        fields["anchor"] = ConfigNode.Text(placement.anchor.wireName)
-        fields["offsetX"] = ConfigNode.Num(round(placement.offsetX))
-        fields["offsetY"] = ConfigNode.Num(round(placement.offsetY))
-        fields["width"] = ConfigNode.Num(round(placement.width))
-        fields["height"] = ConfigNode.Num(round(placement.height))
-        fields["rotation"] = ConfigNode.Num(round(placement.rotationDegrees))
+        fields += placementFields(element.placement)
+        fields["portrait"] = element.portraitPlacement
+            ?.let { ConfigNode.Obj(placementFields(it)) }
+            ?: ConfigNode.Null
         fields += element.unknownFields
         return ConfigNode.Obj(fields)
     }
+
+    /** The same five numbers and an anchor, written the same way wherever a placement appears. */
+    private fun placementFields(placement: Placement): LinkedHashMap<String, ConfigNode> =
+        linkedMapOf(
+            "anchor" to ConfigNode.Text(placement.anchor.wireName),
+            "offsetX" to ConfigNode.Num(round(placement.offsetX)),
+            "offsetY" to ConfigNode.Num(round(placement.offsetY)),
+            "width" to ConfigNode.Num(round(placement.width)),
+            "height" to ConfigNode.Num(round(placement.height)),
+            "rotation" to ConfigNode.Num(round(placement.rotationDegrees)),
+        )
 }

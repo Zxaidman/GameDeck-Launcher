@@ -31,6 +31,19 @@ public data class KestrelSettings(
     /** How large the on-screen controls are drawn, as a fraction of the layout's own sizes. */
     public val controlScale: Double = DEFAULT_CONTROL_SCALE,
 
+    /**
+     * The same setting for portrait, because it is not the same question.
+     *
+     * A pad at 85% is right in landscape, where the thumbs are at the far corners of a wide screen.
+     * Upright there is less width between them and more height above, so the size that fits the
+     * grip is a different number — and one slider for both meant choosing which orientation to be
+     * wrong in.
+     */
+    public val controlScalePortrait: Double = DEFAULT_CONTROL_SCALE,
+
+    /** How the editor was last set up. Working state, kept because a hand should not reset it. */
+    public val editor: EditorPreferences = EditorPreferences(),
+
     /** The shaping applied to both sticks. */
     public val stickProfile: AnalogProfile = AnalogProfile.DEFAULT_STICK,
 
@@ -72,7 +85,7 @@ public object SettingsDocument {
 
     private val KNOWN_FIELDS = setOf(
         "schemaVersion", "type", "id", "name",
-        "controlScale", "layoutId", "stick",
+        "controlScale", "controlScalePortrait", "editor", "layoutId", "stick",
         "display",
     )
     private val KNOWN_STICK_FIELDS = setOf(
@@ -147,6 +160,20 @@ public object SettingsDocument {
         return Outcome.Success(
             KestrelSettings(
                 controlScale = scale,
+                controlScalePortrait = when (
+                    val v = optionalNumber(
+                        obj, "controlScalePortrait",
+                        KestrelSettings.MIN_CONTROL_SCALE, KestrelSettings.MAX_CONTROL_SCALE,
+                        defaults.controlScalePortrait,
+                    )
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+                editor = when (val v = readEditor(obj, defaults.editor)) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
                 stickProfile = stick,
                 layoutId = layoutId,
                 display = display,
@@ -163,6 +190,14 @@ public object SettingsDocument {
             "id" to ConfigNode.Text(KestrelSettings.DOCUMENT_ID),
             "name" to ConfigNode.Text("Kestrel settings"),
             "controlScale" to ConfigNode.Num(settings.controlScale),
+            "controlScalePortrait" to ConfigNode.Num(settings.controlScalePortrait),
+            "editor" to ConfigNode.Obj(
+                linkedMapOf(
+                    "gridUnit" to ConfigNode.Num(settings.editor.gridUnit),
+                    "snapToGrid" to ConfigNode.Bool(settings.editor.snapToGrid),
+                    "snapToEdges" to ConfigNode.Bool(settings.editor.snapToEdges),
+                )
+            ),
             "layoutId" to ConfigNode.Text(settings.layoutId),
             "display" to ConfigNode.Obj(
                 linkedMapOf(
@@ -256,6 +291,49 @@ public object SettingsDocument {
                 theme = theme,
                 trueBlack = when (
                     val v = ConfigReader.boolean(display, "trueBlack", trueBlackDefault, "display")
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+            )
+        )
+    }
+
+    private fun readEditor(
+        obj: ConfigNode.Obj,
+        defaults: EditorPreferences,
+    ): Outcome<EditorPreferences> {
+        val editor = when (val node = obj["editor"]) {
+            null, ConfigNode.Null -> return Outcome.Success(defaults)
+            else -> when (val o = ConfigReader.asObject(node, "editor")) {
+                is Outcome.Failure -> return o
+                is Outcome.Success -> o.value
+            }
+        }
+        return Outcome.Success(
+            EditorPreferences(
+                gridUnit = when (
+                    val v = optionalNumber(
+                        editor, "gridUnit",
+                        EditorPreferences.MIN_GRID, EditorPreferences.MAX_GRID,
+                        defaults.gridUnit, "editor",
+                    )
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+                snapToGrid = when (
+                    val v = ConfigReader.boolean(
+                        editor, "snapToGrid", defaults.snapToGrid, "editor",
+                    )
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
+                snapToEdges = when (
+                    val v = ConfigReader.boolean(
+                        editor, "snapToEdges", defaults.snapToEdges, "editor",
+                    )
                 ) {
                     is Outcome.Failure -> return v
                     is Outcome.Success -> v.value

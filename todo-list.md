@@ -52,15 +52,15 @@ hardware.
 
 ---
 
-## State of the queue — build `0.0.31-dev`
+## State of the queue — build `0.0.32-dev`
 
 | Phase | Items |
 | --- | --- |
-| `done` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-9`–`BUG-21` (bar 3–8), `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`–`FEAT-22` — twenty-seven |
+| `done` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-9`–`BUG-23` (bar 3–8), `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`–`FEAT-24`, `FEAT-26` — thirty-two |
 | `superseded` | `FEAT-13` |
-| `testing` | `BUG-22`–`BUG-25`, `FEAT-23`–`FEAT-27` |
+| `testing` | `FEAT-15` per-orientation layouts; `BUG-24`–`BUG-28`, `FEAT-25`, `FEAT-28`, `FEAT-29` |
 | `building` | — |
-| `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`; `FEAT-15` next |
+| `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`; `FEAT-30` next |
 
 ---
 
@@ -525,7 +525,7 @@ band rather than a margin that scrolls away. The horizontal padding is doing a r
 
 ### `BUG-22` — The long-press menu opens off the screen
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.31-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.29-dev`, and it made `FEAT-19`'s point 12 untestable.
 
 The menu is clamped against a **guessed** height, so a menu taller than the guess still runs off the
@@ -541,7 +541,7 @@ that is where thumbs are — so this is the normal case, not the edge case.
 
 ### `BUG-23` — The menu appears off screen and then jumps
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.31-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.30-dev`. *"it open outside of screen then suddenly popup in right
 place."*
 
@@ -554,7 +554,7 @@ then made visible, which costs a frame nobody can see instead of a frame everybo
 
 ### `BUG-24` — The close button in the menu is too small to hit
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Found by:** Reported, build `0.0.30-dev`.
 
 A `×` in a text button, which is a glyph with almost no target around it, in a menu opened by a
@@ -565,7 +565,7 @@ which is what people try first.
 
 ### `BUG-25` — The toggle sits on the camera in portrait
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Found by:** Reported, build `0.0.30-dev`.
 
 Since the pad took the whole screen, the `K` toggle in portrait sits directly over the front camera —
@@ -573,6 +573,42 @@ where the glass is a different shape and a finger is not reliably on the button.
 down by its own height, which clears the cutout without moving it anywhere anyone has to look for it.
 
 Landscape is unaffected: the cutout is on a short edge there and the toggle is not near it.
+
+---
+
+### `BUG-26` — The toggle keeps its portrait offset after turning the phone
+
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.31-dev`. *"portrait now it is clear but it also made changes in
+landscape."*
+
+`BUG-25` moves the toggle down by its own height in portrait, and the margin is decided **once**,
+when the toggle window is created. `refresh()` re-measures the control windows on rotation and never
+touched the toggle, so a toggle put up in portrait keeps its portrait offset in landscape — and one
+put up in landscape stays on the camera when the phone is turned.
+
+The toggle is repositioned with everything else.
+
+---
+
+### `BUG-27` — The close button is still too small
+
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported with a screenshot, build `0.0.31-dev`.
+
+44dp is the platform's minimum, which is a floor rather than a size. In a menu opened by a thumb and
+closed by the same thumb it should be obviously larger than the smallest thing allowed.
+
+---
+
+### `BUG-28` — The band caption is in the wrong place and across the pad
+
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported with a screenshot, build `0.0.31-dev`. *"caption is not even above floating
+button"*, and it runs the width of the screen across the controls.
+
+It was added below the buttons rather than above them, and given no width limit, so it is a bar of
+text lying over the pad it is describing. Above the buttons, and no wider than they are.
 
 ---
 
@@ -793,7 +829,7 @@ The selected control's size is shown in both units for the same reason.
 
 ### `FEAT-15` — One layout, two orientations
 
-**Phase:** `pending` — **decided: (a).** The next thing built, on its own, because it changes the file format.
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Asked for:** *"config should now have both orientation segregation."*
 
 Today a layout is one arrangement, and both orientations are derived from it by anchors and by
@@ -957,7 +993,7 @@ theme. Making the pad follow the application's theme would make it invisible hal
 
 ### `FEAT-23` — AMOLED is a property of dark, not a third theme
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.31-dev`. Written up in `done-list.md`.
 **Asked for:** *"make Amoled toggle rather than options in dark mode only. Also make all binary
 option as a Android capsule toggle design."*
 
@@ -974,7 +1010,7 @@ been.
 
 ### `FEAT-24` — The sheet is settings now, because editing moved to the control
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.31-dev`. Written up in `done-list.md`.
 **Asked for:** *"now that we can do many layout editing via long press popup, it is time we remove
 it from tools sheet and rename it settings use gear icon here. and make in landscape view reduce its
 width. and same in portrait reduce its height."*
@@ -993,23 +1029,24 @@ worse while looking cleaner.
 
 ---
 
-### `FEAT-25` — Snapping is remembered for the session
+### `FEAT-25` — Snapping is remembered, and now across restarts
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Asked for:** *"snapping setting in editor should be saved per session."*
 
 Grid size and both snapping switches survive closing and reopening the editor. Somebody who turns
 edge snapping on wants it on for the arranging they are doing, not for the next control only.
 
-**For the session, as asked — not across restarts.** It is deliberately not written to
-`settings.json`: it is a working state rather than a preference, and every field in that file is one
-more thing to version and migrate. Say the word and it becomes persistent.
+**Reopened in round `0.0.31-dev`.** The session-only version was built, worked, and the project
+owner asked for the stronger thing — so it goes in `settings.json` after all, with the version and
+the migration that implies. The argument for keeping working state out of a preference file was
+real; the request settles it.
 
 ---
 
 ### `FEAT-26` — Buttons are rounded rectangles
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.31-dev`. Written up in `done-list.md`.
 **Asked for:** *"app ui buttons should be rounded rectangle Instead of capsule like or maybe give
 option for this in settings."*
 
@@ -1025,13 +1062,77 @@ preference that costs more to keep than to add.
 
 ### `FEAT-27` — Say what the lighter band is
 
-**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `pending`
 **Asked for:** *"In the layout editor mentioned above the floating button the what lighter canva
 area represents."*
 
 A line above the floating buttons, shown only when there is a band: it is where the system bars and
 the camera cutout are, controls placed there work, and they share that strip with the system. It has
 been drawn since `0.0.28-dev` and explained only in a changelog nobody reads while holding a phone.
+
+---
+
+### `FEAT-28` — The long-press menu opens in the middle, with everything else out of the way
+
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"Long press popup should always open in the mid center with everything blurred or
+darkened behind it except the selected button… make identify header bigger, boulder and more
+noticeable… The portrait view should makes a popup horizontal and in landscape view keep it
+vertical."*
+
+Three changes and they are one idea: while the menu is open, the only two things on screen are the
+control being edited and the menu editing it.
+
+- **Centre**, always. `BUG-22` and `BUG-23` were both about a menu that follows the finger into a
+  corner; a menu that does not follow the finger has neither problem.
+- **Everything behind is darkened except the selected control**, which stays lit. The control is the
+  subject of the menu and it should be the only thing left to look at.
+- **The header is the identity of the thing being edited**, so it is set large and bold rather than
+  as the smallest line in the panel.
+- **Vertical in landscape, horizontal in portrait.** A tall menu in the middle of a landscape screen
+  leaves the sides showing; a wide one in portrait leaves the top and bottom. Either way the pad
+  stays visible around it.
+
+---
+
+### `FEAT-29` — Real icons, not glyphs from a font
+
+**Phase:** `testing` — built in `0.0.32-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"use icons from free copyright google icons, icons8 and flatcons website. don't
+hardcode it."*
+
+`⚙`, `⟳` and `×` are characters, and a character is whatever the phone's font happens to have — a
+different weight and a different shape on a different phone, and sometimes a box.
+
+Google's Material icons are used instead. They come with Material 3 through
+`material-icons-core`, which is **already on the dependency list** — Apache 2.0, no new download, no
+size added, and drawn as vectors rather than typeset.
+
+**The limit worth stating:** `material-icons-core` carries a small set. Settings, refresh, close and
+the arrows are in it. A **gamepad** icon is not, so `FEAT-30` will need a vector drawable of its own,
+and adding one is a licence question to answer at the time rather than in advance.
+
+---
+
+### `FEAT-30` — The toggle is part of the layout
+
+**Phase:** `pending` — next, and held back on purpose while `FEAT-15` changes the same file.
+**Asked for:** *"make K button editable both editor and json and customisable theme like rest of
+gamepad. use gamepad icon."*
+
+The toggle is the only thing on screen that is not in the document: its position is a constant in
+the code, its size is a fraction of the screen, and it is drawn with a letter. It should be an
+element like any other — placed, sized, shaped and moved in the editor, written to the file, drawn
+in the pad's own palette, and marked with a gamepad icon rather than a `K`.
+
+**Held back on purpose, and the reason is the schema.** `FEAT-15` is changing what a layout holds
+this round. Adding a second new thing to the same file in the same round means one migration to
+write and two ways to be wrong. It is next.
+
+**One rule it must not break:** the toggle is the way out. A user who cannot make the controls go
+away has lost their phone until they reboot it, which has happened once here. So whatever the
+document says, the toggle stays reachable — it is not scaled by the size setting, and a layout that
+puts it off the screen is a layout the editor refuses rather than warns about.
 
 ---
 
@@ -1304,6 +1405,29 @@ show the rectangle and its share of the screen rather than only the `group` name
 - **Buttons are rounded rectangles** rather than capsules → `FEAT-26`
 - **The `K` toggle clears the camera in portrait** → `BUG-25`
 - **The lighter band gets a caption** → `FEAT-27`
+
+
+
+### Round `0.0.31-dev` — the sheet became settings
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1 | The menu opens in place, no flash | **Working** → `BUG-22`, `BUG-23` close |
+| 2 | Close button | Still too small → `BUG-27`. Tapping the canvas closes it: working |
+| 3–6 | Complete menu, gear, sheet size, windows read-out | **All working** → `FEAT-24` closes |
+| 7 | Session memory | Working, and it should survive a restart → `FEAT-25` becomes persistent |
+| 8–11 | Switches, theme shape, migration, rounded buttons | **All working** → `FEAT-23`, `FEAT-26` close |
+| 12 | `K` in portrait | Clear now, but landscape changed with it → `BUG-26`. The toggle should be part of the layout → `FEAT-30` |
+| 13 | Band caption | Below the buttons and lying across the pad → `BUG-28` |
+| 14 | Regression | **None** |
+
+### Decisions this round
+
+- **Snapping becomes persistent**, not session-only → `FEAT-25` reopened.
+- **The long-press menu moves to the centre**, with everything behind it dimmed except the selected
+  control → `FEAT-28`.
+- **Icons come from Material icons**, already on the dependency list → `FEAT-29`.
+- **`FEAT-15` is started**: one document, two placement sets, and a size setting per orientation.
 
 
 ### Awaiting

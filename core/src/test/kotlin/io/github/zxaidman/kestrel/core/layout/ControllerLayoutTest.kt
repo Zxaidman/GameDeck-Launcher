@@ -3,6 +3,7 @@ package io.github.zxaidman.kestrel.core.layout
 import io.github.zxaidman.kestrel.core.common.Outcome
 import io.github.zxaidman.kestrel.core.configuration.ConfigNode
 import io.github.zxaidman.kestrel.core.configuration.ConfigurationError
+import io.github.zxaidman.kestrel.core.configuration.Json
 import io.github.zxaidman.kestrel.core.input.GamepadControl
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -322,5 +323,67 @@ class ControlShapeTest {
         val element = (written.fields["elements"] as ConfigNode.Arr).items.single() as ConfigNode.Obj
         assertEquals(ConfigNode.Null, element.fields["label"])
         assertEquals(ConfigNode.Null, element.fields["group"])
+    }
+}
+
+/** The half of `FEAT-15` that lives in the file rather than in memory. */
+class PortraitPlacementDocumentTest {
+
+    private fun read(text: String) = ControllerLayoutReader.read(
+        when (val parsed = Json.parse(text)) {
+            is Outcome.Failure -> error("the test's own JSON did not parse: ${parsed.error.message}")
+            is Outcome.Success -> parsed.value
+        }
+    )
+
+    private fun ok(text: String): ControllerLayout = when (val o = read(text)) {
+        is Outcome.Failure -> error("the layout was refused: ${o.error.message}")
+        is Outcome.Success -> o.value
+    }
+
+    private val header = """
+        "schemaVersion":1,"type":"controller-layout","id":"user.x","name":"X","orientation":"any"
+    """.trimIndent()
+
+    private fun oneElement(extra: String) = """
+        {$header,"elements":[{"id":"face.a","kind":"button","binds":"a",
+        "anchor":"bottom-right","offsetX":0.3,"offsetY":0.2,"width":0.12$extra}]}
+    """.trimIndent()
+
+    @Test
+    fun `a document written before the portrait field means the same as it did`() {
+        val layout = ok(oneElement(""))
+        val element = layout.elements.single()
+        assertNull(element.portraitPlacement)
+        assertEquals(element.placement, element.placementFor(portrait = true))
+    }
+
+    @Test
+    fun `a portrait arrangement survives being written and read back`() {
+        val original = ok(oneElement(""))
+        val upright = Placement(Anchor.BOTTOM_LEFT, 0.11, 0.42, 0.18, 0.18)
+        val edited = original.copy(
+            elements = original.elements.map { it.copy(portraitPlacement = upright) }
+        )
+
+        val text = Json.write(ControllerLayoutWriter.write(edited))
+        val again = ok(text).elements.single()
+
+        assertEquals(upright, again.portraitPlacement)
+        assertEquals(original.elements.single().placement, again.placement)
+    }
+
+    @Test
+    fun `an explicit null portrait is the same as no portrait at all`() {
+        val layout = ok(oneElement(""","portrait":null"""))
+        assertNull(layout.elements.single().portraitPlacement)
+    }
+
+    @Test
+    fun `a portrait arrangement is validated like any other, not waved through`() {
+        val outcome = read(
+            oneElement(""","portrait":{"anchor":"bottom-left","offsetX":0.1,"offsetY":0.1,"width":99}""")
+        )
+        assertTrue(outcome is Outcome.Failure, "a width of 99 was accepted upright: $outcome")
     }
 }

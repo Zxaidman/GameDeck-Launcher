@@ -108,3 +108,24 @@ public data class DisplayPreferences(
      */
     public val trueBlack: Boolean = false,
 )
+
+/**
+ * How the editor was last set up.
+ *
+ * Working state rather than taste — which is the argument that kept it out of this file for a
+ * round. The project owner asked for it to survive a restart, and they are right for a plain
+ * reason: somebody who turns edge snapping on is *working that way*, and having to say so again
+ * after every restart is the application forgetting something the person has not.
+ */
+public data class EditorPreferences(
+    /** Grid step, as a fraction of the screen's shorter side. */
+    public val gridUnit: Double = 0.04,
+    public val snapToGrid: Boolean = false,
+    public val snapToEdges: Boolean = false,
+) {
+    public companion object {
+        /** Wide enough to hold any step the editor offers, tight enough to catch nonsense. */
+        public const val MIN_GRID: Double = 0.005
+        public const val MAX_GRID: Double = 0.5
+    }
+}

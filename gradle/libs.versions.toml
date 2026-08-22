@@ -47,6 +47,10 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Google's own Material icons, drawn as vectors rather than typeset from whatever font a phone has.
+# Apache 2.0, versioned by the Compose BOM, and the "core" artifact rather than "extended": core is
+# a small hand-picked set and extended is several thousand icons and several megabytes.
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
 
 # The BOM aligns the Jupiter engine with the platform launcher. The launcher must be declared
 # explicitly: Gradle otherwise injects its own older one, which fails to run a newer engine.

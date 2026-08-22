@@ -22,13 +22,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -57,6 +64,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -79,6 +87,7 @@ import io.github.zxaidman.kestrel.core.layout.isWithin
 import io.github.zxaidman.kestrel.core.layout.resolve
 import io.github.zxaidman.kestrel.core.layout.scaledBy
 import io.github.zxaidman.kestrel.core.layout.shapedAs
+import io.github.zxaidman.kestrel.core.settings.EditorPreferences
 import io.github.zxaidman.kestrel.platform.display.DeviceSurface
 import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.settings.AppSettings
@@ -150,14 +159,19 @@ public fun LayoutEditorScreen(
     // Remembered for the session, not written to settings.json. Somebody who turns edge snapping
     // on wants it on for the arranging they are doing — but it is working state rather than a
     // preference, and every field in that file is one more thing to version and migrate.
-    var gridUnit by remember { mutableStateOf(EditorSession.gridUnit) }
-    var snapToGrid by remember { mutableStateOf(EditorSession.snapToGrid) }
-    var snapToEdges by remember { mutableStateOf(EditorSession.snapToEdges) }
+    val editorPreferences = AppSettings.current.value.editor
+    var gridUnit by remember { mutableStateOf(editorPreferences.gridUnit) }
+    var snapToGrid by remember { mutableStateOf(editorPreferences.snapToGrid) }
+    var snapToEdges by remember { mutableStateOf(editorPreferences.snapToEdges) }
+
+    fun rememberEditorSetup(update: (EditorPreferences) -> EditorPreferences) {
+        AppSettings.update { it.copy(editor = update(it.editor)) }
+        AppSettings.persist(context)
+    }
     var typingNumbers by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
     var menuFor by remember(layout.header.id) { mutableStateOf<String?>(null) }
-    var menuAt by remember { mutableStateOf(Offset.Zero) }
     var copied by remember { mutableStateOf<ControlStyle?>(null) }
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -168,7 +182,13 @@ public fun LayoutEditorScreen(
     // setting is applied on top of it — so the canvas has to apply it too, or it draws a pad 17%
     // larger than the one on the phone. Two rounds of "it does not match" had this underneath the
     // cause that was found first.
-    val controlScale = SessionState.controlScale.value
+    // Which arrangement is being edited, and which size setting applies. Both belong to the
+    // orientation the phone is in — the editor turns the phone to work on the other one rather than
+    // drawing a small picture of it, so "the orientation on screen" is always the honest answer.
+    val portrait = device.heightPx > device.widthPx
+    val controlScale = AppSettings.current.value.let {
+        if (portrait) it.controlScalePortrait else it.controlScale
+    }.toFloat()
 
     Box(modifier = Modifier.fillMaxSize().onSizeChanged { rootSize = it }) {
         EditorCanvas(
@@ -176,9 +196,11 @@ public fun LayoutEditorScreen(
             device = device,
             bars = bars,
             controlScale = controlScale,
+            portrait = portrait,
             layout = working,
             mode = mode,
             selectedId = selectedId,
+            dimExcept = menuFor,
             gridUnit = gridUnit,
             snapToGrid = snapToGrid,
             snapToEdges = snapToEdges,
@@ -186,10 +208,9 @@ public fun LayoutEditorScreen(
                 selectedId = it
                 menuFor = null
             },
-            onLongPress = { id, at ->
+            onLongPress = { id, _ ->
                 selectedId = id
                 menuFor = id
-                menuAt = at
             },
             onPlace = { updated ->
                 working = working.replacing(updated)
@@ -207,13 +228,13 @@ public fun LayoutEditorScreen(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FloatingActionButton(onClick = { toolsOpen = true }) {
-                    Text("⚙", style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
                 }
                 // Turning the phone is done *while* arranging, not configured beforehand, so it
                 // does not belong two taps deep in a sheet.
                 FloatingActionButton(
                     onClick = { onPreviewOrientation(!landscape) },
-                ) { Text("⟳", style = MaterialTheme.typography.titleLarge) }
+                ) { Icon(Icons.Filled.Refresh, contentDescription = "Turn the phone") }
                 FloatingActionButton(
                     containerColor = if (dirty) {
                         MaterialTheme.colorScheme.primary
@@ -238,15 +259,21 @@ public fun LayoutEditorScreen(
                 Caption(
                     text = "The lighter band is the system bars and the camera cutout. Controls " +
                         "there work, and share that strip with the system.",
+                    modifier = Modifier.widthIn(max = 320.dp),
                 )
             }
             Caption(
-                text = working.header.name + if (dirty) "  •  unsaved" else "",
+                text = working.header.name +
+                    (if (portrait) "  ·  portrait" else "  ·  landscape") +
+                    if (dirty) "  •  unsaved" else "",
+                modifier = Modifier.widthIn(max = 320.dp),
             )
-            selected?.let { Caption(text = it.summary(device)) }
+            selected?.let {
+                Caption(text = it.summary(device, portrait), modifier = Modifier.widthIn(max = 320.dp))
+            }
 
             val strays = working.elements.count { element ->
-                !element.placement.scaledBy(controlScale.toDouble()).resolve(device)
+                !element.placementFor(portrait).scaledBy(controlScale.toDouble()).resolve(device)
                     .shapedAs(element.effectiveShape())
                     .isWithin(device)
             }
@@ -264,8 +291,7 @@ public fun LayoutEditorScreen(
             WindowMenu(
                 layout = working,
                 element = menuElement,
-                at = menuAt,
-                within = rootSize,
+                landscape = !portrait,
                 onChange = { updated ->
                     working = working.replacing(updated)
                     dirty = true
@@ -275,8 +301,7 @@ public fun LayoutEditorScreen(
         } else if (menuElement != null && !toolsOpen) {
             ControlMenu(
                 element = menuElement,
-                at = menuAt,
-                within = rootSize,
+                landscape = !portrait,
                 copied = copied,
                 onSize = {
                     menuFor = null
@@ -290,6 +315,7 @@ public fun LayoutEditorScreen(
                     working = working.replacing(updated)
                     dirty = true
                 },
+                portrait = portrait,
                 onCopy = {
                     copied = ControlStyle.of(menuElement)
                     menuFor = null
@@ -316,24 +342,34 @@ public fun LayoutEditorScreen(
                     layout = working,
                     device = device,
                     controlScale = controlScale,
+                    portrait = portrait,
                     element = selected,
+                )
+
+                OrientationTools(
+                    portrait = portrait,
+                    layout = working,
+                    onChange = { updated ->
+                        working = updated
+                        dirty = true
+                    },
                 )
 
                 GridTools(
                     gridUnit = gridUnit,
                     onGrid = {
                         gridUnit = it
-                        EditorSession.gridUnit = it
+                        rememberEditorSetup { prefs -> prefs.copy(gridUnit = it) }
                     },
                     snapToGrid = snapToGrid,
                     onSnapToGrid = {
                         snapToGrid = it
-                        EditorSession.snapToGrid = it
+                        rememberEditorSetup { prefs -> prefs.copy(snapToGrid = it) }
                     },
                     snapToEdges = snapToEdges,
                     onSnapToEdges = {
                         snapToEdges = it
-                        EditorSession.snapToEdges = it
+                        rememberEditorSetup { prefs -> prefs.copy(snapToEdges = it) }
                     },
                     device = device,
                     wholeScreen = wholeScreen,
@@ -392,18 +428,6 @@ public enum class EditorMode(public val label: String) {
  * The extremes are gone after a round of use: `0.01` was too fine to see and `0.25` too coarse to
  * place anything with. What is left spans a fifth of a button to most of one.
  */
-/**
- * What the editor was last set to, for as long as Kestrel is running.
- *
- * Deliberately in memory rather than in `settings.json`. Grid size and snapping are how somebody is
- * working right now, not what they prefer — and a preference file is a schema with a version and a
- * migration behind every field in it.
- */
-private object EditorSession {
-    var gridUnit: Double = DEFAULT_GRID
-    var snapToGrid: Boolean = false
-    var snapToEdges: Boolean = false
-}
 
 private val GRID_SIZES = listOf(0.02, 0.04, 0.06, 0.10)
 private const val DEFAULT_GRID = 0.04
@@ -415,8 +439,13 @@ private const val STEP = 0.02
 
 /** A line of text that has to stay readable over whatever the canvas is drawing behind it. */
 @Composable
-private fun Caption(text: String, colour: Color = Color(0xFFE8EBEF)) {
+private fun Caption(
+    text: String,
+    colour: Color = Color(0xFFE8EBEF),
+    modifier: Modifier = Modifier.widthIn(max = 320.dp),
+) {
     Surface(
+        modifier = modifier,
         color = Color(0xFF0B0D11).copy(alpha = 0.82f),
         shape = MaterialTheme.shapes.small,
     ) {
@@ -623,17 +652,17 @@ private fun ControlKind.family(): ControlFamily = when (this) {
 @Composable
 private fun ControlMenu(
     element: LayoutElement,
-    at: Offset,
-    within: IntSize,
+    landscape: Boolean,
     copied: ControlStyle?,
     onSize: () -> Unit,
     onShape: (ControlShape) -> Unit,
     onStep: (LayoutElement) -> Unit,
+    portrait: Boolean,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    MenuAt(at = at, within = within) {
+    MenuAt(landscape = landscape, onDismiss = onDismiss) {
         run {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -654,13 +683,17 @@ private fun ControlMenu(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                KButton(onClick = { onStep(element.resizedBy(-STEP)) }) { Text("−") }
-                KButton(onClick = { onStep(element.resizedBy(STEP)) }) { Text("+") }
-                KButton(onClick = { onStep(element.taller(STEP)) }) { Text("taller") }
-                KButton(onClick = { onStep(element.taller(-STEP)) }) { Text("shorter") }
+                KButton(onClick = { onStep(element.resizedBy(-STEP, portrait)) }) {
+                    Text("−", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                }
+                KButton(onClick = { onStep(element.resizedBy(STEP, portrait)) }) {
+                    Text("+", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                }
+                KButton(onClick = { onStep(element.taller(STEP, portrait)) }) { Text("taller") }
+                KButton(onClick = { onStep(element.taller(-STEP, portrait)) }) { Text("shorter") }
             }
             KOutlinedButton(
-                onClick = { onStep(element.withNextAnchor()) },
+                onClick = { onStep(element.withNextAnchor(portrait)) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(element.placement.anchor.wireName) }
 
@@ -691,47 +724,47 @@ private fun ControlMenu(
 }
 
 /**
- * A small menu that opens **away from** the edge the control is near.
+ * The menu, in the middle, with everything behind it out of the way.
  *
- * Measured rather than guessed. It used to be clamped against an assumed height, so a menu taller
- * than the assumption still ran off the bottom — and clamping is the wrong idea anyway: sliding a
- * menu back up puts it on top of the control it belongs to. Which side it opens on is decided by
- * where the control is, per axis, and every control worth long-pressing is against an edge, because
- * that is where thumbs are.
+ * It used to open at the finger, which took two bug fixes — one to stop it running off the edge and
+ * one to stop it flashing there first — and neither was needed once it stopped following the
+ * finger. A menu that is always in the same place is also a menu somebody stops having to look for.
+ *
+ * **Vertical in landscape, wide in portrait.** A tall panel in the middle of a landscape screen
+ * leaves the sides showing; a wide one in portrait leaves the top and bottom. Either way the pad
+ * stays visible around it, which matters because the pad is what is being edited.
+ *
+ * The dimming behind it is drawn by the canvas rather than here, so the selected control can stay
+ * lit while everything else goes dark — see `drawDim`.
  */
 @Composable
 private fun MenuAt(
-    at: Offset,
-    within: IntSize,
+    landscape: Boolean,
+    onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    var size by remember { mutableStateOf(IntSize.Zero) }
-    val gap = with(LocalDensity.current) { 12.dp.toPx() }
-
-    val below = at.y + gap + size.height <= within.height || at.y - gap - size.height < 0
-    val toRight = at.x + size.width <= within.width || at.x - size.width < 0
-    val rawY = if (below) at.y + gap else at.y - gap - size.height
-    val rawX = if (toRight) at.x else at.x - size.width
-    val x = rawX.coerceIn(0f, max(0f, (within.width - size.width).toFloat()))
-    val y = rawY.coerceIn(0f, max(0f, (within.height - size.height).toFloat()))
-
-    Surface(
+    Box(
         modifier = Modifier
-            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
-            .onSizeChanged { size = it }
-            // Invisible until it has been measured. A thing has no size until it has been drawn
-            // once, so the first frame was drawn at the raw touch point — off the edge — and the
-            // second was right. This costs a frame nobody can see instead of one everybody can.
-            .graphicsLayer { alpha = if (size == IntSize.Zero) 0f else 1f }
-            .width(MENU_WIDTH.dp),
-        tonalElevation = 6.dp,
-        shape = MaterialTheme.shapes.medium,
+            .fillMaxSize()
+            // Touching outside the menu closes it, which is what people try first.
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            content = content,
-        )
+        Surface(
+            modifier = Modifier
+                .then(
+                    if (landscape) Modifier.width(MENU_WIDTH.dp) else Modifier.fillMaxWidth(0.92f)
+                )
+                .clickable(enabled = false, onClick = {}),
+            tonalElevation = 8.dp,
+            shape = MaterialTheme.shapes.large,
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content,
+            )
+        }
     }
 }
 
@@ -747,22 +780,13 @@ private fun MenuAt(
 private fun WindowMenu(
     layout: ControllerLayout,
     element: LayoutElement,
-    at: Offset,
-    within: IntSize,
+    landscape: Boolean,
     onChange: (LayoutElement) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val options = layout.windowOptions()
-    MenuAt(at = at, within = within) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = element.id,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.weight(1f),
-            )
-            CloseButton(onDismiss)
-        }
+    MenuAt(landscape = landscape, onDismiss = onDismiss) {
+        MenuHeader(title = element.id, detail = "window", onDismiss = onDismiss)
         Text(
             text = "in: " + (element.group ?: "own window"),
             style = MaterialTheme.typography.bodyMedium,
@@ -779,11 +803,35 @@ private fun WindowMenu(
     }
 }
 
-/** A close button with a target round it, rather than a glyph a thumb has to find. */
+/**
+ * Whose menu this is, said loudly enough to be the answer to that question.
+ *
+ * It was the smallest line in the panel, which is backwards: the identity of the thing being edited
+ * is what somebody checks first and the only thing that says whether the right control was caught.
+ */
 @Composable
-private fun CloseButton(onDismiss: () -> Unit) {
-    KOutlinedButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
-        Text("×", style = MaterialTheme.typography.titleLarge)
+private fun MenuHeader(title: String, detail: String, onDismiss: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = detail, style = MaterialTheme.typography.labelMedium)
+        }
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.size(56.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Close",
+                modifier = Modifier.size(32.dp),
+            )
+        }
     }
 }
 
@@ -815,11 +863,12 @@ private fun ModeSwitch(mode: EditorMode, onMode: (EditorMode) -> Unit) {
 }
 
 /** The selected control in both units at once, which is the only way the two read on one scale. */
-private fun LayoutElement.summary(device: LayoutSurface): String {
+private fun LayoutElement.summary(device: LayoutSurface, portrait: Boolean): String {
     val unit = device.shortSide
+    val p = placementFor(portrait)
     return "$id  x %.2f  y %.2f  w %.2f  h %.2f   (%d × %d px)".format(
-        placement.offsetX, placement.offsetY, placement.width, placement.height,
-        (placement.width * unit).roundToInt(), (placement.height * unit).roundToInt(),
+        p.offsetX, p.offsetY, p.width, p.height,
+        (p.width * unit).roundToInt(), (p.height * unit).roundToInt(),
     )
 }
 
@@ -836,12 +885,13 @@ private fun WindowSummary(
     layout: ControllerLayout,
     device: LayoutSurface,
     controlScale: Float,
+    portrait: Boolean,
     element: LayoutElement?,
 ) {
     Spacer(modifier = Modifier.height(2.dp))
     Text("Windows", style = MaterialTheme.typography.labelLarge)
 
-    val clusters = layout.clustersOn(device, controlScale)
+    val clusters = layout.clustersOn(device, controlScale, portrait)
     val screen = device.widthPx * device.heightPx
     clusters.forEach { cluster ->
         val share = if (screen <= 0) 0.0 else cluster.bounds.width * cluster.bounds.height / screen
@@ -869,6 +919,73 @@ private fun WindowSummary(
  */
 private fun gridLabel(unit: Double, device: LayoutSurface): String =
     "%.2f · %d px".format(unit, (unit * device.shortSide).roundToInt())
+
+/**
+ * Which arrangement is on screen, and how to start the other one.
+ *
+ * A layout holds two: landscape and portrait. This says which is being edited, whether the other
+ * one exists yet, and offers the two things that are hard to do by dragging — start this
+ * orientation from a copy of the other, and give it up so it follows the other again.
+ *
+ * The button turns the phone rather than switching a mode, because the editor's canvas is a picture
+ * of the screen it is on and there is no honest way to draw a picture of a screen the phone is not
+ * currently showing.
+ */
+@Composable
+private fun OrientationTools(
+    portrait: Boolean,
+    layout: ControllerLayout,
+    onChange: (ControllerLayout) -> Unit,
+) {
+    val here = if (portrait) "portrait" else "landscape"
+    val other = if (portrait) "landscape" else "portrait"
+    val separate = layout.elements.any { it.portraitPlacement != null }
+
+    Spacer(modifier = Modifier.height(2.dp))
+    Text("Arrangement", style = MaterialTheme.typography.labelLarge)
+    Text(
+        text = if (separate) {
+            "Editing the $here arrangement. The two are kept separately."
+        } else {
+            "One arrangement for both. Editing it here changes it upright as well, until portrait " +
+                "is given one of its own."
+        },
+        style = MaterialTheme.typography.bodySmall,
+    )
+
+    if (portrait && !separate) {
+        KButton(
+            onClick = {
+                onChange(
+                    layout.copy(
+                        elements = layout.elements.map { it.copy(portraitPlacement = it.placement) }
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Give portrait its own arrangement") }
+    }
+    if (separate) {
+        KOutlinedButton(
+            onClick = {
+                onChange(
+                    layout.copy(elements = layout.elements.map { it.copy(portraitPlacement = null) })
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Drop the portrait arrangement") }
+        Text(
+            text = "Dropping it makes portrait follow landscape again. What was arranged upright " +
+                "is lost when this is saved.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    Text(
+        text = "Turn the phone to edit $other. The canvas is a picture of the screen it is on, and " +
+            "there is no honest way to draw a screen the phone is not showing.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
 
 /** Where a window stops being a pad and starts being a lid. Matches the shipped layout's tests. */
 private const val CROWDED = 0.25
@@ -1064,25 +1181,33 @@ private fun negated(text: String): String {
 
 // --- editing a control ---------------------------------------------------------------------------
 
-private fun LayoutElement.resizedBy(delta: Double): LayoutElement {
-    val next = (placement.width + delta).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)
-    val ratio = if (placement.width == 0.0) 1.0 else next / placement.width
-    return copy(
-        placement = placement.copy(
+private fun LayoutElement.resizedBy(delta: Double, portrait: Boolean): LayoutElement {
+    val current = placementFor(portrait)
+    val next = (current.width + delta).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)
+    val ratio = if (current.width == 0.0) 1.0 else next / current.width
+    return withPlacementFor(
+        portrait,
+        current.copy(
             width = round(next),
-            height = round((placement.height * ratio).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)),
-        )
+            height = round((current.height * ratio).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)),
+        ),
     )
 }
 
-private fun LayoutElement.taller(delta: Double): LayoutElement = copy(
-    placement = placement.copy(
-        height = round((placement.height + delta).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)),
-    )
-)
+private fun LayoutElement.taller(delta: Double, portrait: Boolean): LayoutElement =
+    placementFor(portrait).let { current ->
+        withPlacementFor(
+            portrait,
+            current.copy(
+                height = round(
+                    (current.height + delta).coerceIn(Placement.MIN_SIZE, Placement.MAX_SIZE)
+                ),
+            ),
+        )
+    }
 
 
-private fun LayoutElement.withNextAnchor(): LayoutElement {
+private fun LayoutElement.withNextAnchor(portrait: Boolean): LayoutElement {
     // Only the corners and edges a control is ever pinned to. The centre is excluded on purpose:
     // a control anchored to the middle of the screen is one no thumb can reach while holding a
     // phone, and offering it here would be offering a mistake.
@@ -1090,8 +1215,9 @@ private fun LayoutElement.withNextAnchor(): LayoutElement {
         Anchor.BOTTOM_LEFT, Anchor.BOTTOM_RIGHT, Anchor.TOP_LEFT, Anchor.TOP_RIGHT,
         Anchor.BOTTOM_CENTER, Anchor.TOP_CENTER, Anchor.CENTER_LEFT, Anchor.CENTER_RIGHT,
     )
-    val next = order[(order.indexOf(placement.anchor).coerceAtLeast(0) + 1) % order.size]
-    return copy(placement = placement.copy(anchor = next))
+    val current = placementFor(portrait)
+    val next = order[(order.indexOf(current.anchor).coerceAtLeast(0) + 1) % order.size]
+    return withPlacementFor(portrait, current.copy(anchor = next))
 }
 
 /**
@@ -1118,14 +1244,17 @@ private fun LayoutElement.withGroupStep(options: List<String?>, step: Int): Layo
 private fun ControllerLayout.replacing(element: LayoutElement): ControllerLayout =
     copy(elements = elements.map { if (it.id == element.id) element else it })
 
-private fun ControllerLayout.clustersOn(surface: LayoutSurface, scale: Float): List<Cluster> =
-    Clustering.group(
-        this,
-        elements.map {
-            it.id to it.placement.scaledBy(scale.toDouble()).resolve(surface)
-                .shapedAs(it.effectiveShape())
-        },
-    )
+private fun ControllerLayout.clustersOn(
+    surface: LayoutSurface,
+    scale: Float,
+    portrait: Boolean,
+): List<Cluster> = Clustering.group(
+    this,
+    elements.map {
+        it.id to it.placementFor(portrait).scaledBy(scale.toDouble()).resolve(surface)
+            .shapedAs(it.effectiveShape())
+    },
+)
 
 /** Two decimals, the same as the file gets, so what is on screen is what will be written. */
 private fun round(value: Double): Double = Math.round(value * 100.0) / 100.0
@@ -1169,9 +1298,12 @@ private fun EditorCanvas(
     device: LayoutSurface,
     bars: Rect?,
     controlScale: Float,
+    portrait: Boolean,
     layout: ControllerLayout,
     mode: EditorMode,
     selectedId: String?,
+    /** While a menu is open, everything but this control is darkened. */
+    dimExcept: String?,
     gridUnit: Double,
     snapToGrid: Boolean,
     snapToEdges: Boolean,
@@ -1188,6 +1320,7 @@ private fun EditorCanvas(
     val liveSnapGrid by rememberUpdatedState(snapToGrid)
     val liveSnapEdges by rememberUpdatedState(snapToEdges)
     val liveScale by rememberUpdatedState(controlScale)
+    val livePortrait by rememberUpdatedState(portrait)
     val liveSelect by rememberUpdatedState(onSelect)
     val liveLongPress by rememberUpdatedState(onLongPress)
     val livePlace by rememberUpdatedState(onPlace)
@@ -1226,7 +1359,7 @@ private fun EditorCanvas(
     }
 
     fun rectOf(fit: Fit, element: LayoutElement): PixelRect =
-        element.placement.scaledBy(liveScale.toDouble()).resolve(fit.surface)
+        element.placementFor(livePortrait).scaledBy(liveScale.toDouble()).resolve(fit.surface)
             .shapedAs(element.effectiveShape())
 
     fun hit(fit: Fit, at: Offset): String? {
@@ -1297,6 +1430,7 @@ private fun EditorCanvas(
                         layout = liveLayout,
                         fit = fitted,
                         scale = liveScale,
+                        portrait = livePortrait,
                         element = element,
                         wanted = wanted,
                         gridUnit = liveGrid,
@@ -1307,14 +1441,16 @@ private fun EditorCanvas(
                     // Placed as the pad shows it, written as the document holds it. The setting is
                     // applied on top of the file and editing must not fold it into the file.
                     val scale = liveScale.toDouble()
-                    val shown = element.placement.scaledBy(scale)
+                    val current = element.placementFor(livePortrait)
+                    val shown = current.scaledBy(scale)
                         .centeredAt(fitted.surface, snapped.x, snapped.y)
                     livePlace(
-                        element.copy(
-                            placement = element.placement.copy(
+                        element.withPlacementFor(
+                            livePortrait,
+                            current.copy(
                                 offsetX = shown.offsetX / scale,
                                 offsetY = shown.offsetY / scale,
-                            ).rounded()
+                            ).rounded(),
                         )
                     )
                 }
@@ -1332,6 +1468,19 @@ private fun EditorCanvas(
         }
         layout.elements.forEachIndexed { index, element ->
             drawControl(fitted, element, placed[index].second, element.id == selectedId)
+        }
+        // The subject of the menu is the only thing left lit. Drawn here rather than as a scrim
+        // behind the menu, because only the canvas knows where the control is.
+        if (dimExcept != null) {
+            drawRect(
+                color = Color(0xFF05070A).copy(alpha = 0.82f),
+                topLeft = Offset(fitted.left, fitted.top),
+                size = Size(fitted.width, fitted.height),
+            )
+            val index = layout.elements.indexOfFirst { it.id == dimExcept }
+            if (index >= 0) {
+                drawControl(fitted, layout.elements[index], placed[index].second, true)
+            }
         }
         guides.forEach { guide -> drawGuide(fitted, guide) }
     }
@@ -1365,13 +1514,14 @@ private fun snap(
     layout: ControllerLayout,
     fit: Fit,
     scale: Float,
+    portrait: Boolean,
     element: LayoutElement,
     wanted: Offset,
     gridUnit: Double,
     toGrid: Boolean,
     toEdges: Boolean,
 ): Snapped {
-    val rect = element.placement.scaledBy(scale.toDouble()).resolve(fit.surface)
+    val rect = element.placementFor(portrait).scaledBy(scale.toDouble()).resolve(fit.surface)
         .shapedAs(element.effectiveShape())
     val threshold = max(6.0, min(fit.width, fit.height) * 0.02)
     val step = gridUnit * fit.surface.shortSide
@@ -1379,7 +1529,8 @@ private fun snap(
     val others = layout.elements
         .filter { it.id != element.id }
         .map {
-            it.placement.scaledBy(scale.toDouble()).resolve(fit.surface).shapedAs(it.effectiveShape())
+            it.placementFor(portrait).scaledBy(scale.toDouble()).resolve(fit.surface)
+                .shapedAs(it.effectiveShape())
         }
 
     val verticalLines = buildList {

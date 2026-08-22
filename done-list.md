@@ -350,89 +350,143 @@ themselves were right first time.
 
 ---
 
-## Built, awaiting confirmation — `0.0.31-dev`
+### `BUG-22` + `BUG-23` — The menu opens where it should, first time — **closed `0.0.31-dev`**
 
-### `BUG-22` + `BUG-23` — The menu opens in the right place, first time
-
-`BUG-22` measured the menu to decide which side it opens on, and a thing has no measurement until it
-has been drawn once — so the first frame went to the raw touch point, off the edge, and the second
-was right. It is now laid out, measured and *then* made visible, which costs a frame nobody can see
-instead of one everybody can. Unverified on the device.
+Measured rather than guessed, and laid out before being shown. **Measured** on the device — and one
+round later the whole problem was removed rather than fixed: `FEAT-28` moves the menu to the centre,
+where neither bug can happen. Both fixes were correct and both stopped mattering, which is what
+happens when a design question is answered after the bugs it causes.
 
 ---
 
-### `BUG-24` — A close button with a target round it
+### `FEAT-23` — Two questions, not three answers — **closed `0.0.31-dev`**
 
-A `×` in a text button is a glyph with almost nothing to hit, in a menu opened by a thumb. It is a
-44dp button now. Touching the canvas away from the menu also closes it, which is what people try
-first. Unverified.
-
----
-
-### `BUG-25` — The toggle clears the camera in portrait
-
-Since the pad took the whole screen the `K` toggle in portrait sat directly over the front camera,
-where the glass is a different shape and a finger does not reliably land on the button. In portrait
-it moves down by its own height. Landscape is untouched — the cutout is on a short edge there.
-Unverified.
+**system, light, dark**, plus a **true black** switch live only when dark. The names an earlier build
+wrote still read and `dark-amoled` still means true black, so upgrading does not throw away a
+choice — unit-tested. Every binary setting is a switch. **Measured**, including the migration.
 
 ---
 
-### `FEAT-23` — AMOLED is a property of dark, and binary settings are switches
+### `FEAT-24` — The sheet is settings — **closed `0.0.31-dev`**
 
-**system, light, dark**, and a **true black** switch that is live only when the answer is dark. Two
-questions instead of three answers. The names the previous build wrote — `dark-grey` and
-`dark-amoled` — still read, and `dark-amoled` still means true black, so nobody's choice is thrown
-away by upgrading. There is a unit test for exactly that.
+Gear icon, smaller footprint, and only what is genuinely settings inside it: mode, grid, snapping,
+the canvas, and a read-out of every window with its share of the screen. **Measured.**
 
-Every binary setting is a switch. A checkbox is a form control, ticked as part of an answer being
-composed; a switch is a thing that is on or off and takes effect at once, which is what these are.
-The grid and edge snapping were checkboxes and should not have been.
-
-Unverified on the device; the settings migration is unit-tested.
+**What made it possible:** the long-press menu became the complete per-control editor first. Taking
+the tools out before the menu could replace them would have lost half the editor quietly.
 
 ---
 
-### `FEAT-24` — The sheet is settings, because editing moved to the control
-
-The sheet was a panel with everything in it, then a sheet with everything in it. With the long-press
-menu doing the per-control work, what is left is genuinely settings: which mode, the grid, snapping,
-what the canvas is, and a read-out of every window with its share of the screen — the one view that
-cannot be had at a single control. It opens from a **gear**, and it is smaller: 46% of the width in
-landscape, 52% of the height in portrait.
-
-**What this forced, and the forcing was right.** The long-press menu had to become complete first,
-so it gained the size steppers, taller and shorter, and the anchor. Removing the tools before the
-menu could replace them would have lost half the editor quietly, which is how an editor gets worse
-while looking cleaner.
-
-Unverified on the device.
-
----
-
-### `FEAT-25` — Snapping is remembered for the session
-
-Grid size and both snapping switches survive closing and reopening the editor, for as long as
-Kestrel is running. **Not written to `settings.json`, as asked** — it is working state rather than a
-preference, and every field in that file is one more thing to version and migrate. Unverified.
-
----
-
-### `FEAT-26` — Buttons are rounded rectangles
+### `FEAT-26` — Buttons are rounded rectangles — **closed `0.0.31-dev`**
 
 Material 3 draws a filled button as a capsule and the theme cannot say otherwise — the token maps to
-a full corner whatever `Shapes` holds. So the buttons are wrapped once, in `ui/theme`, and the
-application uses the wrappers: one number decides the corner for all of them, which is also what
-would make a setting cheap if one is ever wanted. Switches stay capsules, because that is what a
-switch is. Unverified.
+a full corner whatever `Shapes` holds — so the buttons are wrapped once and the application uses the
+wrappers. One number decides the corner. Switches stay capsules. **Measured.**
 
 ---
 
-### `FEAT-27` — The lighter band says what it is
+---
 
-A line above the floating buttons, only when there is a band: it is where the system bars and the
-camera cutout are, controls there work, and they share that strip with the system. It had been drawn
-since `0.0.28-dev` and explained only in a changelog nobody reads while holding a phone. Unverified.
+## Built, awaiting confirmation — `0.0.32-dev`
+
+### `FEAT-15` — One layout, two arrangements
+
+**The decision was (a):** one document holding two sets of placements, sharing one list of controls.
+
+**What is in the file.** Each element keeps its `anchor`, `offsetX`, `offsetY`, `width`, `height`
+and `rotation` — the landscape arrangement — and gains an optional `portrait` object holding the
+same six fields. `null` or absent means "the same as landscape", which is what every layout written
+before this field means.
+
+**The schema version is deliberately not bumped, and the reason is the opposite of laziness.** A
+build that does not know the field keeps it in `unknownFields` and writes it back untouched, so an
+older Kestrel opening a newer file **preserves** the portrait arrangement it cannot use. Bumping the
+version would have made that same file unreadable instead. The rule in `CLAUDE.md` asks for a version
+on schema changes; the purpose of that rule is not to break files, and an additive optional field
+with a null default breaks none.
+
+**Identity is stated once.** What a control is, what it binds, its group and its shape live outside
+both arrangements — so a control cannot exist in one orientation and vanish in the other, which two
+separate documents would have allowed.
+
+**The size setting is per orientation too**, as asked: `controlScale` and `controlScalePortrait`. A
+pad at 85% is right in landscape, where the thumbs are at the far corners of a wide screen; upright
+there is less width between them and more height above.
+
+**In the editor.** The arrangement being edited is the one for the orientation the phone is in —
+there is no mode switch, because the canvas is a picture of the screen it is on and there is no
+honest way to draw a screen the phone is not showing. The settings sheet says which is being edited,
+offers **"give portrait its own arrangement"** (which starts it as a copy rather than as nothing,
+so nobody begins from an empty screen) and **"drop the portrait arrangement"**, and says plainly
+that dropping loses what was arranged.
+
+**In the pad.** The overlay picks the arrangement and the scale from the surface it is drawing on,
+and re-reads both when the phone turns.
+
+**How it is known.** Unverified on the device. Eight unit tests cover the file format and the
+in-memory rule, including the two that matter most: a document written before the field still means
+what it meant, and editing one orientation cannot touch the other.
+
+---
+
+### `BUG-24` + `BUG-27` — A close button that can be hit
+
+56dp, with a real icon in it rather than a `×` from whatever font the phone has. 44dp is the
+platform's floor, not a size, and this is a thumb closing a menu it opened with a thumb. Unverified.
+
+---
+
+### `BUG-25` + `BUG-26` — The toggle clears the camera, and keeps clearing it
+
+`BUG-25` moved the toggle down by its own height in portrait and decided that **once**, when the
+window was created — so a toggle put up in portrait kept its portrait offset in landscape, and one
+put up in landscape stayed on the camera when the phone was turned. It is repositioned with
+everything else now, whether or not the controls are showing. Unverified.
+
+---
+
+### `BUG-28` — The band caption is above the buttons and no wider than they are
+
+It was added below them and given no width limit, so it was a bar of text lying across the pad it
+was describing. Every caption is now capped at 320dp. Unverified.
+
+---
+
+### `FEAT-25` — Snapping survives a restart
+
+Grid size and both snapping switches are in `settings.json` now. The session-only version was built,
+worked, and the project owner asked for the stronger thing. The argument for keeping working state
+out of a preference file was real — every field there is one more to version and migrate — and the
+request settles it. Unverified on the device; the round-trip is unit-tested.
+
+---
+
+### `FEAT-28` — The menu opens in the middle, with everything else out of the way
+
+Always centred. Everything behind is darkened **except the selected control**, which stays lit — the
+dimming is drawn by the canvas rather than as a scrim behind the menu, because only the canvas knows
+where the control is. The header is the control's identity, set large, bold and in the accent colour,
+because it is what somebody checks first and the only thing that says the right control was caught.
+**Vertical in landscape, wide in portrait**, so the pad stays visible around it either way.
+
+This also removes the reason for `BUG-22` and `BUG-23`: a menu that does not follow the finger
+cannot run off an edge or flash there first. Unverified on the device.
+
+---
+
+### `FEAT-29` — Real icons, not glyphs
+
+`⚙`, `⟳` and `×` are characters, and a character is whatever the phone's font happens to have. They
+are Google's Material icons now, drawn as vectors.
+
+**A dependency was added**, and here is the justification `CLAUDE.md` asks for:
+`androidx.compose.material:material-icons-core`, Apache-2.0, versioned by the Compose BOM already in
+the build, from the same authors as Material 3. **`core` rather than `extended`** — core is a small
+hand-picked set and extended is several thousand icons and several megabytes for the four used here.
+`THIRD_PARTY_LICENSES.md` is updated.
+
+**The limit:** core has no gamepad icon, which `FEAT-30` will need. That is a licence question to
+answer when it arrives, not in advance. Unverified on the device.
 
 ---
 

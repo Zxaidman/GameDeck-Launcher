@@ -36,6 +36,7 @@ If the license is unclear, do not merge the dependency until it has been reviewe
 | `dev.rikka.shizuku:api` / `:provider` | see `gradle/libs.versions.toml` | Apache-2.0 | The privilege `ADR-INPUT-001`'s backend needs. Optional at runtime (`ADR-003`) |
 | `androidx.documentfile:documentfile` | 1.1.0 | Apache-2.0 | Reading and writing inside the folder the user chose (`docs/STORAGE.md`) |
 | AndroidX core, lifecycle, activity-compose, Compose BOM | see `gradle/libs.versions.toml` | Apache-2.0 | Platform and interface |
+| `androidx.compose.material:material-icons-core` | from the Compose BOM | Apache-2.0 | Google's Material icons, as vectors. Chosen over drawing glyphs from a font, which is whatever shape and weight a given phone happens to have. **`core`, not `extended`** — core is a small hand-picked set, extended is several thousand icons and several megabytes for the handful used here |
 | JUnit 5 | see `gradle/libs.versions.toml` | EPL-2.0 | Tests only, not distributed |
 
 Kotlin and the Android Gradle Plugin are build tooling rather than dependencies of the artifact.

@@ -13,6 +13,58 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.32-dev` — One Layout, Two Arrangements
+
+`FEAT-15`, decided two rounds ago and built now on its own because it changes what a layout file
+holds.
+
+**A layout keeps a landscape arrangement and a portrait one.** Each element keeps its six placement
+fields as before and gains an optional `portrait` object holding the same six. Absent or null means
+"the same as landscape", which is what every layout written until now means. Identity is stated
+once — what a control is, what it binds, its group and its shape live outside both arrangements, so
+a control cannot exist in one orientation and vanish in the other.
+
+**The schema version is deliberately not bumped.** A build that does not know the field keeps it in
+`unknownFields` and writes it back untouched, so an older Kestrel opening a newer file *preserves*
+the portrait arrangement it cannot use. Bumping the version would have made that file unreadable
+instead. The rule exists to stop files breaking, and an additive optional field with a null default
+breaks none.
+
+**The size setting is per orientation too.** A pad at 85% is right in landscape, where the thumbs are
+at the far corners of a wide screen; upright there is less width between them and more height above.
+One slider for both meant choosing which orientation to be wrong in.
+
+**No mode switch in the editor.** The arrangement being edited is the one for the orientation the
+phone is in, because the canvas is a picture of the screen it is on and there is no honest way to
+draw a screen the phone is not showing. The settings sheet says which is being edited, offers to give
+portrait its own arrangement — starting it as a *copy*, so nobody begins from an empty screen — and
+to drop it again, saying plainly what dropping loses.
+
+**The long-press menu moved to the middle**, with everything behind it darkened except the control
+being edited, which stays lit. Its header is the control's identity, set large and bold, because that
+is what somebody checks first. Vertical in landscape and wide in portrait, so the pad stays visible
+around it. This deletes the reason for two bugs fixed last round: a menu that does not follow the
+finger cannot run off an edge, and cannot flash there first. Both fixes were correct and both stopped
+mattering — which is what happens when a design question is answered after the bugs it causes.
+
+**Icons are Google's Material icons now**, drawn as vectors rather than typeset from whatever font a
+phone happens to have. That is one new dependency — `material-icons-core`, Apache-2.0, from the
+Compose BOM already in the build, and deliberately `core` rather than `extended`, which is several
+thousand icons and several megabytes for the four used here. `THIRD_PARTY_LICENSES.md` records it.
+
+Also: snapping and grid size survive a restart rather than only a session; the close button is 56dp
+with a real icon in it; the toggle is repositioned when the phone turns, having previously decided
+once and for all where it went; and the band caption sits above the floating buttons instead of lying
+across the pad it describes.
+
+**Five items closed on the device.** Thirty-two are `done`.
+
+**Next:** `FEAT-30` — the toggle becomes part of the layout: placed, sized and shaped in the editor,
+written to the file, drawn in the pad's own palette, with a gamepad icon. Held back this round on
+purpose, because adding a second new thing to the same file in the same round is one migration to
+write and two ways to be wrong.
+
+
 ### `0.0.31-dev` — Editing Moved To The Control, So The Sheet Became Settings
 
 **The tools sheet is settings now.** It was a panel with everything in it, then a sheet with

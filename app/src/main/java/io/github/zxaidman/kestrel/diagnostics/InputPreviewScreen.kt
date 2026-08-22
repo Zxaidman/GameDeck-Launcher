@@ -395,16 +395,36 @@ public fun InputPreviewScreen(
                     Text("Copy layout to my folder")
                 }
             }
-            Mono("\ncontrol size  %.0f%%".format(SessionState.controlScale.value * 100))
+            // Two sliders' worth of setting behind one slider: which one is being moved depends on
+            // which way the phone is being held, because that is the orientation the number is for.
+            val portraitNow = androidx.compose.ui.platform.LocalConfiguration.current.let {
+                it.screenHeightDp > it.screenWidthDp
+            }
+            val padScale = AppSettings.current.value.let {
+                if (portraitNow) it.controlScalePortrait else it.controlScale
+            }.toFloat()
+            Mono(
+                "\ncontrol size — %s  %.0f%%".format(
+                    if (portraitNow) "portrait" else "landscape",
+                    padScale * 100,
+                )
+            )
             Slider(
-                value = SessionState.controlScale.value,
+                value = padScale,
                 onValueChange = { raw ->
                     val it = snap(raw)
                     SessionState.controlScale.value = it
+                    // Written before the overlay is told, because the overlay reads the setting for
+                    // the orientation it is in when it re-measures. Telling it first meant it read
+                    // the number that was there a moment ago.
+                    AppSettings.update { s ->
+                        if (portraitNow) s.copy(controlScalePortrait = it.toDouble())
+                        else s.copy(controlScale = it.toDouble())
+                    }
                     // Applied to the windows already on screen rather than by putting them up
                     // again, so a control being held is not dropped mid-press.
                     SessionState.overlay?.resize(it)
-                    AppSettings.update { s -> s.copy(controlScale = it.toDouble()) }
+
                 },
                 onValueChangeFinished = { AppSettings.persist(context) },
                 valueRange = KestrelSettings.MIN_CONTROL_SCALE.toFloat()

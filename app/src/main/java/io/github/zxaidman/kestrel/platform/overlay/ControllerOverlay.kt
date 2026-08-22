@@ -118,18 +118,10 @@ public class ControllerOverlay(
         // Deliberately not scaled with the controls. It is the way out, and a way out that shrinks
         // with a setting is a way out someone can make too small to use.
         val size = (unit * 0.10f).toInt()
-        // In portrait the top centre of the screen is the front camera, and since the pad took the
-        // whole display the toggle was sitting on it — where the glass is a different shape and a
-        // finger does not reliably land on the button. One toggle-height down clears it without
-        // moving it anywhere anyone has to look for it. Landscape is unaffected: the cutout is on a
-        // short edge there and the toggle is nowhere near it.
-        val surface = surface()
-        val portrait = surface.heightPx > surface.widthPx
-        val margin = (unit * 0.02f).toInt() + if (portrait) size else 0
         return runCatching {
             windows?.addView(
                 view,
-                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, margin),
+                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, toggleMargin(size)),
             )
             toggle = view
             true
@@ -170,6 +162,18 @@ public class ControllerOverlay(
      * change can cause. It releases everything first: a control that disappears mid-press leaves
      * nothing behind able to release it.
      */
+    /**
+     * The size setting for the orientation the phone is in.
+     *
+     * Read from the settings each time rather than held, because the answer changes when the phone
+     * turns and the overlay is not a configuration-aware component — it finds out by being asked to
+     * re-measure, which is the moment this is read.
+     */
+    private fun scaleFor(portrait: Boolean): Float {
+        val settings = io.github.zxaidman.kestrel.platform.settings.AppSettings.current.value
+        return (if (portrait) settings.controlScalePortrait else settings.controlScale).toFloat()
+    }
+
     public fun resize(scale: Float) {
         this.scale = scale
         if (!controlsVisible) return
@@ -189,8 +193,43 @@ public class ControllerOverlay(
      * showing and hiding them was working around.
      */
     public fun refresh() {
+        // The toggle first, and whether or not the controls are up. Its margin depends on the
+        // orientation and was decided once, when it was created — so a toggle put up in portrait
+        // kept its portrait offset in landscape, and one put up in landscape stayed on the camera
+        // when the phone was turned.
+        repositionToggle()
+        // The size setting belongs to the orientation as much as the arrangement does, so turning
+        // the phone changes which one applies. Read here because this is the moment the overlay
+        // finds out it has turned.
+        val surface = surface()
+        scale = scaleFor(surface.heightPx > surface.widthPx)
         if (!controlsVisible) return
         if (!reposition()) rebuild()
+    }
+
+    private fun repositionToggle() {
+        val view = toggle ?: return
+        val size = (unit * 0.10f).toInt()
+        runCatching {
+            windows?.updateViewLayout(
+                view,
+                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, toggleMargin(size)),
+            )
+        }
+    }
+
+    /**
+     * How far down the toggle sits.
+     *
+     * In portrait the top centre of the screen is the front camera, and since the pad took the whole
+     * display the toggle was sitting on it — where the glass is a different shape and a finger does
+     * not reliably land on the button. One toggle-height down clears it without moving it anywhere
+     * anyone has to look for it. Landscape is unaffected: the cutout is on a short edge there.
+     */
+    private fun toggleMargin(size: Int): Int {
+        val surface = surface()
+        val portrait = surface.heightPx > surface.widthPx
+        return (unit * 0.02f).toInt() + if (portrait) size else 0
     }
 
     private fun rebuild() {
@@ -241,9 +280,12 @@ public class ControllerOverlay(
 
     private fun plan(): List<Piece>? {
         val surface = surface()
+        // Which arrangement, and which size setting. Both are per orientation: a pad that fits a
+        // landscape grip is not the same pad upright, and neither is the size that suits it.
+        val portrait = surface.heightPx > surface.widthPx
         val factor = scale.toDouble()
         val placed = layout.elements.map { element ->
-            element.id to element.placement.scaledBy(factor).resolve(surface)
+            element.id to element.placementFor(portrait).scaledBy(factor).resolve(surface)
         }
         if (placed.isEmpty()) return null
 
@@ -251,7 +293,8 @@ public class ControllerOverlay(
         val rects = placed.toMap()
         return Clustering.group(layout, placed).mapNotNull { cluster ->
             val bounds = padded(cluster)
-            val anchor = byId[cluster.elementIds.first()]?.placement?.anchor ?: Anchor.TOP_LEFT
+            val anchor = byId[cluster.elementIds.first()]?.placementFor(portrait)?.anchor
+                ?: Anchor.TOP_LEFT
             val members = cluster.elementIds.mapNotNull { id ->
                 val element = byId[id] ?: return@mapNotNull null
                 val rect = rects[id] ?: return@mapNotNull null
