@@ -219,10 +219,6 @@ class MainActivity : ComponentActivity() {
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(
-                            text = androidx.compose.ui.res.stringResource(id = R.string.app_name),
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
                         // Every one of these is a fact about the phone that can change from
                         // outside Kestrel while this screen is open — a permission granted in
                         // system settings, Shizuku started. So the page leaves of its own accord

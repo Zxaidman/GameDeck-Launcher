@@ -13,6 +13,48 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.29-dev` — Both Renderers Draw The Same Pad
+
+The project owner found the third cause of a symptom that had been chased for three rounds, and
+found it from a screenshot: *"buttons size representation in Canva is not aligned with actual gamepad
+size."*
+
+**It was not aligned.** The overlay resolves `placement.scaledBy(controlScale)` — 0.85 by default —
+and the editor resolved `placement` and nothing else. Every control on the canvas was drawn about
+17% larger than the pad draws it, and four controls that fit on the phone at 85% were reported as
+leaving the screen at 100%. `BUG-10` was real, `BUG-15` was real, and neither was the whole answer:
+the canvas was the wrong shape, then the pad was on the wrong surface, and underneath both the two
+renderers were drawing at different sizes. A canvas exists to make that kind of fault visible and
+could not, because it had the fault too.
+
+The canvas now resolves at the same scale the pad is showing, and dragging still writes the
+**unscaled** number to the file. That distinction matters: the document is the pad at full size and
+the setting is applied on top of it, so folding the setting into the file would shrink the layout a
+little further with every drag.
+
+**The canvas is now exactly the size of the screen.** The 4% margin was left over from when it
+shared the screen with a panel. At no margin, previewing the orientation the phone is in, the canvas
+is 1 : 1 with the display — which makes "does the pad match" a question anyone can answer by
+looking.
+
+**Long press a control** for the things done to one control: size, shape, copy and paste. Copy takes
+size and outline and **not position** — two controls in the same place are two controls, one of which
+cannot be pressed. Paste appears only within a family: the sticks and the pad in one, everything
+pressed in the other. A face button's size means nothing on a stick, so the option is absent rather
+than greyed out.
+
+Also: rotation becomes a fourth floating button and leaves the tools sheet, because turning the phone
+is done *while* arranging rather than configured beforehand; and the home page title scrolls with
+everything else instead of holding a band of a small screen permanently.
+
+**Six items closed on the device**, including the two oldest bugs on the list: the pad uses the notch
+now, and the setting that was supposed to control that finally reaches it. Fourteen items are `done`.
+
+**Decided, not yet built:** a layout will hold a separate arrangement per orientation, one document
+with two placement sets. It changes the file format, so it gets its own round and its own test cycle
+rather than riding along with an interaction change.
+
+
 ### `0.0.28-dev` — The Pad Takes The Whole Screen
 
 Four items closed on the device, one superseded a round after it was built, and the question the

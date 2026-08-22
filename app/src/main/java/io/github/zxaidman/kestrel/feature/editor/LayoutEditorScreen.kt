@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -54,9 +55,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.zxaidman.kestrel.core.common.Outcome
 import io.github.zxaidman.kestrel.core.layout.Anchor
@@ -73,8 +77,10 @@ import io.github.zxaidman.kestrel.core.layout.centeredAt
 import io.github.zxaidman.kestrel.core.layout.effectiveShape
 import io.github.zxaidman.kestrel.core.layout.isWithin
 import io.github.zxaidman.kestrel.core.layout.resolve
+import io.github.zxaidman.kestrel.core.layout.scaledBy
 import io.github.zxaidman.kestrel.core.layout.shapedAs
 import io.github.zxaidman.kestrel.platform.display.DeviceSurface
+import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.settings.AppSettings
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -145,22 +151,41 @@ public fun LayoutEditorScreen(
     var typingNumbers by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
+    var menuFor by remember(layout.header.id) { mutableStateOf<String?>(null) }
+    var menuAt by remember { mutableStateOf(Offset.Zero) }
+    var copied by remember { mutableStateOf<ControlStyle?>(null) }
+    var rootSize by remember { mutableStateOf(IntSize.Zero) }
 
     val selected = working.element(selectedId ?: "")
     val landscape = device.widthPx >= device.heightPx
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The size setting the pad is showing right now. The document is the pad at full size and the
+    // setting is applied on top of it — so the canvas has to apply it too, or it draws a pad 17%
+    // larger than the one on the phone. Two rounds of "it does not match" had this underneath the
+    // cause that was found first.
+    val controlScale = SessionState.controlScale.value
+
+    Box(modifier = Modifier.fillMaxSize().onSizeChanged { rootSize = it }) {
         EditorCanvas(
             modifier = Modifier.fillMaxSize(),
             device = device,
             bars = bars,
+            controlScale = controlScale,
             layout = working,
             mode = mode,
             selectedId = selectedId,
             gridUnit = gridUnit,
             snapToGrid = snapToGrid,
             snapToEdges = snapToEdges,
-            onSelect = { selectedId = it },
+            onSelect = {
+                selectedId = it
+                menuFor = null
+            },
+            onLongPress = { id, at ->
+                selectedId = id
+                menuFor = id
+                menuAt = at
+            },
             onPlace = { updated ->
                 working = working.replacing(updated)
                 dirty = true
@@ -177,6 +202,11 @@ public fun LayoutEditorScreen(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FloatingActionButton(onClick = { toolsOpen = true }) { Text("Tools") }
+                // Turning the phone is done *while* arranging, not configured beforehand, so it
+                // does not belong two taps deep in a sheet.
+                FloatingActionButton(
+                    onClick = { onPreviewOrientation(!landscape) },
+                ) { Text("⟳", style = MaterialTheme.typography.titleLarge) }
                 FloatingActionButton(
                     containerColor = if (dirty) {
                         MaterialTheme.colorScheme.primary
@@ -203,7 +233,7 @@ public fun LayoutEditorScreen(
             selected?.let { Caption(text = it.summary(device)) }
 
             val strays = working.elements.count { element ->
-                !element.placement.resolve(device)
+                !element.placement.scaledBy(controlScale.toDouble()).resolve(device)
                     .shapedAs(element.effectiveShape())
                     .isWithin(device)
             }
@@ -214,6 +244,36 @@ public fun LayoutEditorScreen(
                 )
             }
             if (message.isNotBlank()) Caption(text = message)
+        }
+
+        val menuElement = working.element(menuFor ?: "")
+        if (menuElement != null && !toolsOpen) {
+            ControlMenu(
+                element = menuElement,
+                at = menuAt,
+                within = rootSize,
+                copied = copied,
+                onSize = {
+                    menuFor = null
+                    typingNumbers = true
+                },
+                onShape = { shape ->
+                    working = working.replacing(menuElement.copy(shape = shape))
+                    dirty = true
+                },
+                onCopy = {
+                    copied = ControlStyle.of(menuElement)
+                    menuFor = null
+                },
+                onPaste = {
+                    copied?.let { style ->
+                        working = working.replacing(style.appliedTo(menuElement))
+                        dirty = true
+                    }
+                    menuFor = null
+                },
+                onDismiss = { menuFor = null },
+            )
         }
 
         if (toolsOpen) {
@@ -238,6 +298,7 @@ public fun LayoutEditorScreen(
                 WindowTools(
                     layout = working,
                     device = device,
+                    controlScale = controlScale,
                     element = selected,
                     enabled = mode == EditorMode.WINDOWS,
                     onChange = { updated ->
@@ -253,8 +314,6 @@ public fun LayoutEditorScreen(
                     onSnapToGrid = { snapToGrid = it },
                     snapToEdges = snapToEdges,
                     onSnapToEdges = { snapToEdges = it },
-                    landscape = landscape,
-                    onPreviewOrientation = onPreviewOrientation,
                     device = device,
                     wholeScreen = wholeScreen,
                 )
@@ -390,6 +449,147 @@ private fun ToolsSheet(
     }
 }
 
+/**
+ * What can be taken from one control and given to another: its size and its outline, and nothing
+ * else.
+ *
+ * **Position is deliberately not copied.** Two controls in the same place are two controls, one of
+ * which cannot be pressed — a paste that did that would be a way to lose a button silently.
+ */
+private data class ControlStyle(
+    val width: Double,
+    val height: Double,
+    val shape: ControlShape,
+    val family: ControlFamily,
+) {
+    fun appliedTo(element: LayoutElement): LayoutElement = element.copy(
+        shape = shape,
+        placement = element.placement.copy(width = width, height = height),
+    )
+
+    companion object {
+        fun of(element: LayoutElement) = ControlStyle(
+            width = element.placement.width,
+            height = element.placement.height,
+            shape = element.shape,
+            family = element.kind.family(),
+        )
+    }
+}
+
+/**
+ * Which controls a size means anything between.
+ *
+ * The project owner's rule, and it is the right one: a face button's size means nothing on a stick.
+ * Offering a paste that produces nonsense and then refusing it is worse than not offering it.
+ */
+private enum class ControlFamily(val label: String) {
+    /** The sticks and the pad — the same kind of object, sized against the same thumb. */
+    DIRECTIONAL("directional"),
+
+    /** Face, shoulders, menu and triggers: everything pressed rather than pushed around. */
+    BUTTONS("buttons"),
+
+    /** Anything that sends nothing. It keeps to itself. */
+    OTHER("other"),
+}
+
+private fun ControlKind.family(): ControlFamily = when (this) {
+    ControlKind.STICK, ControlKind.DPAD -> ControlFamily.DIRECTIONAL
+    ControlKind.BUTTON, ControlKind.ANALOG_TRIGGER, ControlKind.DIGITAL_TRIGGER ->
+        ControlFamily.BUTTONS
+    ControlKind.DECORATION -> ControlFamily.OTHER
+}
+
+/**
+ * The things done to one control, at the control.
+ *
+ * Everything here is about the control under the finger, so it opens under the finger rather than
+ * in a sheet somewhere else on the screen.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ControlMenu(
+    element: LayoutElement,
+    at: Offset,
+    within: IntSize,
+    copied: ControlStyle?,
+    onSize: () -> Unit,
+    onShape: (ControlShape) -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val width = with(density) { MENU_WIDTH.dp.toPx() }
+    val height = with(density) { MENU_HEIGHT.dp.toPx() }
+    // Kept on the screen. A menu opened on a control in the bottom-right corner would otherwise
+    // open mostly off the edge, which is where the controls a thumb reaches actually are.
+    val x = at.x.coerceIn(0f, max(0f, within.width - width))
+    val y = (at.y + 24f).coerceIn(0f, max(0f, within.height - height))
+
+    Surface(
+        modifier = Modifier
+            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+            .width(MENU_WIDTH.dp),
+        tonalElevation = 6.dp,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${element.id}  ·  ${element.kind.family().label}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onDismiss) { Text("×") }
+            }
+
+            Button(onClick = onSize, modifier = Modifier.fillMaxWidth()) { Text("size") }
+
+            Text("shape", style = MaterialTheme.typography.labelSmall)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                ControlShape.entries.forEach { shape ->
+                    if (shape == element.shape) {
+                        Button(onClick = { onShape(shape) }) { Text(shape.wireName) }
+                    } else {
+                        OutlinedButton(onClick = { onShape(shape) }) { Text(shape.wireName) }
+                    }
+                }
+            }
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Button(onClick = onCopy) { Text("copy") }
+                // Shown only when what is on the clipboard means something here. There is no
+                // greyed-out paste, because "why is this disabled" is a worse question than "where
+                // is paste" has an answer for.
+                if (copied != null && copied.family == element.kind.family()) {
+                    Button(onClick = onPaste) { Text("paste") }
+                }
+            }
+            if (copied != null && copied.family != element.kind.family()) {
+                Text(
+                    text = "copied a ${copied.family.label} size — it means nothing here",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+    }
+}
+
+private const val MENU_WIDTH = 230
+private const val MENU_HEIGHT = 260
+
 // --- the tools -----------------------------------------------------------------------------------
 
 @Composable
@@ -477,6 +677,7 @@ private fun ControlTools(
 private fun WindowTools(
     layout: ControllerLayout,
     device: LayoutSurface,
+    controlScale: Float,
     element: LayoutElement?,
     enabled: Boolean,
     onChange: (LayoutElement) -> Unit,
@@ -508,7 +709,7 @@ private fun WindowTools(
         fontFamily = FontFamily.Monospace,
     )
 
-    val clusters = layout.clustersOn(device)
+    val clusters = layout.clustersOn(device, controlScale)
     val screen = device.widthPx * device.heightPx
     clusters.forEach { cluster ->
         val share = if (screen <= 0) 0.0 else cluster.bounds.width * cluster.bounds.height / screen
@@ -548,8 +749,6 @@ private fun GridTools(
     onSnapToGrid: (Boolean) -> Unit,
     snapToEdges: Boolean,
     onSnapToEdges: (Boolean) -> Unit,
-    landscape: Boolean,
-    onPreviewOrientation: (Boolean) -> Unit,
     device: LayoutSurface,
     wholeScreen: Boolean,
 ) {
@@ -590,25 +789,6 @@ private fun GridTools(
         text = "The grid is measured in the same unit as the controls — a fraction of the screen's " +
             "shorter side — so a 0.12 button against a 0.04 grid means what it looks like. A step " +
             "of 0.02 is exactly what the file stores.",
-        style = MaterialTheme.typography.bodySmall,
-    )
-
-    Spacer(modifier = Modifier.height(2.dp))
-    Text("Orientation", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(true to "landscape", false to "portrait").forEach { (wide, name) ->
-            if (wide == landscape) {
-                Button(onClick = { onPreviewOrientation(wide) }) { Text(name) }
-            } else {
-                OutlinedButton(onClick = { onPreviewOrientation(wide) }) { Text(name) }
-            }
-        }
-    }
-    Text(
-        text = "This turns the phone rather than drawing a small picture of it turned. A portrait " +
-            "pad drawn inside a landscape editor is a strip too narrow to work in, and its bars " +
-            "were guessed at — only the orientation the phone is in can be measured. Leaving the " +
-            "editor puts the orientation back to whatever the display settings say.",
         style = MaterialTheme.typography.bodySmall,
     )
 
@@ -802,10 +982,13 @@ private fun LayoutElement.withGroupStep(options: List<String?>, step: Int): Layo
 private fun ControllerLayout.replacing(element: LayoutElement): ControllerLayout =
     copy(elements = elements.map { if (it.id == element.id) element else it })
 
-private fun ControllerLayout.clustersOn(surface: LayoutSurface): List<Cluster> =
+private fun ControllerLayout.clustersOn(surface: LayoutSurface, scale: Float): List<Cluster> =
     Clustering.group(
         this,
-        elements.map { it.id to it.placement.resolve(surface).shapedAs(it.effectiveShape()) },
+        elements.map {
+            it.id to it.placement.scaledBy(scale.toDouble()).resolve(surface)
+                .shapedAs(it.effectiveShape())
+        },
     )
 
 /** Two decimals, the same as the file gets, so what is on screen is what will be written. */
@@ -849,6 +1032,7 @@ private fun EditorCanvas(
     modifier: Modifier,
     device: LayoutSurface,
     bars: Rect?,
+    controlScale: Float,
     layout: ControllerLayout,
     mode: EditorMode,
     selectedId: String?,
@@ -856,6 +1040,7 @@ private fun EditorCanvas(
     snapToGrid: Boolean,
     snapToEdges: Boolean,
     onSelect: (String?) -> Unit,
+    onLongPress: (String, Offset) -> Unit,
     onPlace: (LayoutElement) -> Unit,
 ) {
     // Read through these inside the gesture handlers rather than capturing them. A pointerInput
@@ -866,7 +1051,9 @@ private fun EditorCanvas(
     val liveGrid by rememberUpdatedState(gridUnit)
     val liveSnapGrid by rememberUpdatedState(snapToGrid)
     val liveSnapEdges by rememberUpdatedState(snapToEdges)
+    val liveScale by rememberUpdatedState(controlScale)
     val liveSelect by rememberUpdatedState(onSelect)
+    val liveLongPress by rememberUpdatedState(onLongPress)
     val livePlace by rememberUpdatedState(onPlace)
 
     var canvasSize by remember { mutableStateOf(Size.Zero) }
@@ -880,10 +1067,12 @@ private fun EditorCanvas(
         if (bounds.width <= 0f || bounds.height <= 0f || device.widthPx <= 0 || device.heightPx <= 0) {
             return Fit(0f, 0f, 0f, 0f, 1f, empty, null)
         }
-        val room = 0.96f
+        // No margin. The canvas has the screen to itself and the same shape as the screen, so a
+        // margin only makes the picture smaller than the thing it is a picture of. Previewing the
+        // orientation the phone is in, this comes out at exactly 1 : 1.
         val scale = min(
-            bounds.width * room / device.widthPx.toFloat(),
-            bounds.height * room / device.heightPx.toFloat(),
+            bounds.width / device.widthPx.toFloat(),
+            bounds.height / device.heightPx.toFloat(),
         )
         val width = device.widthPx.toFloat() * scale
         val height = device.heightPx.toFloat() * scale
@@ -901,7 +1090,8 @@ private fun EditorCanvas(
     }
 
     fun rectOf(fit: Fit, element: LayoutElement): PixelRect =
-        element.placement.resolve(fit.surface).shapedAs(element.effectiveShape())
+        element.placement.scaledBy(liveScale.toDouble()).resolve(fit.surface)
+            .shapedAs(element.effectiveShape())
 
     fun hit(fit: Fit, at: Offset): String? {
         val x = (at.x - fit.left).toDouble()
@@ -922,7 +1112,12 @@ private fun EditorCanvas(
         modifier = modifier
             .onSizeChanged { canvasSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .pointerInput(layout.header.id, device, bars) {
-                detectTapGestures { at -> liveSelect(hit(fit(), at)) }
+                detectTapGestures(
+                    onTap = { at -> liveSelect(hit(fit(), at)) },
+                    onLongPress = { at ->
+                        hit(fit(), at)?.let { id -> liveLongPress(id, at) }
+                    },
+                )
             }
             .pointerInput(layout.header.id, device, bars) {
                 detectDragGestures(
@@ -965,6 +1160,7 @@ private fun EditorCanvas(
                     val snapped = snap(
                         layout = liveLayout,
                         fit = fitted,
+                        scale = liveScale,
                         element = element,
                         wanted = wanted,
                         gridUnit = liveGrid,
@@ -972,11 +1168,17 @@ private fun EditorCanvas(
                         toEdges = liveSnapEdges,
                     )
                     guides = snapped.guides
+                    // Placed as the pad shows it, written as the document holds it. The setting is
+                    // applied on top of the file and editing must not fold it into the file.
+                    val scale = liveScale.toDouble()
+                    val shown = element.placement.scaledBy(scale)
+                        .centeredAt(fitted.surface, snapped.x, snapped.y)
                     livePlace(
                         element.copy(
-                            placement = element.placement
-                                .centeredAt(fitted.surface, snapped.x, snapped.y)
-                                .rounded()
+                            placement = element.placement.copy(
+                                offsetX = shown.offsetX / scale,
+                                offsetY = shown.offsetY / scale,
+                            ).rounded()
                         )
                     )
                 }
@@ -988,6 +1190,7 @@ private fun EditorCanvas(
         drawGrid(fitted, gridUnit)
 
         val placed = layout.elements.map { it.id to rectOf(fitted, it) }
+        @Suppress("UNUSED_EXPRESSION") controlScale
         if (mode == EditorMode.WINDOWS) {
             drawWindows(fitted, Clustering.group(layout, placed), selectedId)
         }
@@ -1025,19 +1228,23 @@ private data class Snapped(val x: Double, val y: Double, val guides: List<Guide>
 private fun snap(
     layout: ControllerLayout,
     fit: Fit,
+    scale: Float,
     element: LayoutElement,
     wanted: Offset,
     gridUnit: Double,
     toGrid: Boolean,
     toEdges: Boolean,
 ): Snapped {
-    val rect = element.placement.resolve(fit.surface).shapedAs(element.effectiveShape())
+    val rect = element.placement.scaledBy(scale.toDouble()).resolve(fit.surface)
+        .shapedAs(element.effectiveShape())
     val threshold = max(6.0, min(fit.width, fit.height) * 0.02)
     val step = gridUnit * fit.surface.shortSide
 
     val others = layout.elements
         .filter { it.id != element.id }
-        .map { it.placement.resolve(fit.surface).shapedAs(it.effectiveShape()) }
+        .map {
+            it.placement.scaledBy(scale.toDouble()).resolve(fit.surface).shapedAs(it.effectiveShape())
+        }
 
     val verticalLines = buildList {
         add(0.0)

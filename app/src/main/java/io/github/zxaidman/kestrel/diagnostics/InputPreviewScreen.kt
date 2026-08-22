@@ -253,6 +253,14 @@ public fun InputPreviewScreen(
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Inside the scroll on purpose. It sat above it and held a band of a small screen
+        // permanently, which is a title costing more than it says.
+        Text(
+            text = androidx.compose.ui.res.stringResource(
+                id = io.github.zxaidman.kestrel.R.string.app_name
+            ),
+            style = MaterialTheme.typography.headlineSmall,
+        )
         val context = LocalContext.current
 
         Section("Report") {

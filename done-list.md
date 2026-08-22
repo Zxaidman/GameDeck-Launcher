@@ -145,99 +145,182 @@ nobody could see.
 
 ---
 
-## Built, awaiting confirmation — `0.0.28-dev`
+### `BUG-1` + `BUG-2` — The pad uses the notch, and the setting reaches it — **closed `0.0.28-dev`**
 
-### `BUG-15` — The pad uses the whole screen, and so does the canvas
+Two entries, one fault, and it took the whole-screen decision to close them. The "use the notch
+area" setting existed since `0.0.24-dev` and never reached the overlay: Kestrel's own screen obeyed
+it and the pad — the only thing on screen while playing — did not.
 
-**The decision.** *"i want the gamepad and it's window to always use the whole screen 2400x1080."*
+Overlay windows now carry `FLAG_LAYOUT_IN_SCREEN` and `FLAG_LAYOUT_NO_LIMITS`, and a cutout mode of
+`ALWAYS` on API 30 and above, `SHORT_EDGES` on 29. Without the first two the window manager keeps
+every window inside the area it hands out, so a control the layout puts against the top of the
+screen quietly arrives below the status bar.
 
-**What was wrong before it.** `BUG-10` made the canvas the whole display and left the pad in the
-usable area. So four controls sitting plainly on the screen were reported as *"outside the usable
-screen"* and outlined in orange — true of the usable area, false of the phone, and the project
-owner's screenshots said so. A warning that fires on correct work is worse than no warning.
+**Measured** — the project owner confirmed the pad's top row sits in the notch strip.
 
-**Built.** `DeviceSurface.forPad` gives one answer to *what surface is a pad laid out against*, and
-the overlay and the editor both ask it. The overlay's windows gained `FLAG_LAYOUT_IN_SCREEN` and
-`FLAG_LAYOUT_NO_LIMITS` — without those the window manager keeps every window inside the area it
-hands out, so a control the layout puts against the top of the screen quietly arrives below the
-status bar — and a cutout mode of `ALWAYS` on API 30 and above, `SHORT_EDGES` on 29.
-
-**This closes `BUG-1` and `BUG-2` from the other direction.** The "use the notch area" setting
-existed and never reached the overlay: the application obeyed it and the pad — the only thing on
-screen while playing — did not. It does now, and the same setting decides what the canvas draws.
-
-**How it is known.** Unverified on the device. The window flags are documented platform behaviour,
-not measured here, and that is exactly the kind of claim this project does not treat as settled.
-
-**The cost, stated once.** A control under the status bar shares that strip with the system: a swipe
-from the top edge will sometimes open the shade instead of pressing the control. The band stays
-drawn on the canvas so that is visible while arranging rather than discovered while playing.
+**The cost, and it stands:** a control under the status bar shares that strip with the shade. A
+swipe from the top edge will sometimes open the shade instead of pressing the control. The band
+stays drawn on the editor's canvas so that is visible while arranging rather than discovered while
+playing.
 
 ---
 
-### `BUG-16` — Tools wrap instead of running off the edge
+### `BUG-16` — Tools wrap instead of running off the edge — **closed `0.0.28-dev`**
 
 The control and window tools are `FlowRow`s. Seven buttons in a fixed row lost the last one off a
-narrow panel, which is how `⋮ values` came to exist in portrait and not in landscape. Unverified on
-the device.
+narrow panel, which is how `⋮ values` came to exist in portrait and not in landscape. **Measured.**
 
 ---
 
-### `FEAT-16` — The editor is the canvas, with three buttons floating on it
+### `FEAT-11` — A grid, and snapping — **closed `0.0.28-dev`**
 
-**Asked for.** *"instead of 3:1 canvas whole screen display the Canva and with three floating
-button, options … save, exit. in both orientation."*
+Grid steps in the layout's own unit — 0.02, 0.04, 0.06, 0.10 of the shorter side, labelled with the
+pixels they come to on this phone. Two snapping modes, both off until asked for: to the grid, and to
+the other controls' edges and centres and the screen's own. Edge snapping wins over the grid per
+axis, because lining up with the control next door is a statement about this layout and landing on a
+grid line is a statement about the screen.
 
-**Built.** The canvas is the entire screen — no title bar above it, no margin around it, nothing
-beside it. Three buttons float on it: **Tools**, **Save**, **Exit**. Everything that was a side
-panel is now a sheet that opens over the canvas and closes again, down one edge in landscape and up
-from the bottom in portrait.
+A yellow **guide** appears while a control is being dragged, showing what it has caught, and goes
+when the finger lifts. It had to be explained before it could be tested — which is a note about
+this project's documentation, not about the feature.
 
-They float **in the middle of the screen**, which is the one region a pad never occupies: controls
-belong to the corners and edges a thumb reaches, and the centre is what a game is played through.
-Any other position would have put them on top of the thing being arranged.
-
-Under them, on a dark plate so they stay readable over whatever is drawn behind: the layout's name,
-whether there are unsaved changes, the selected control in both units, and any warning.
-
-**Added without being asked, and it should be flagged:** leaving with unsaved changes now asks
-first. "Nothing is saved until it is saved" is a rule that makes an accidental exit expensive, and
-the exit button became a great deal easier to press.
-
-**How it is known.** Unverified on the device.
+**Measured** across three rounds. It shipped first in pixels, which was the wrong unit and was
+caught by the project owner: a control is `0.12` and a grid line was `32px`.
 
 ---
 
-### `FEAT-17` — The preview turns the phone
+### `FEAT-12` — Typing the numbers — **closed `0.0.28-dev`**
 
-**Asked for.** *"pressing portrait preview should rotate the app to portrait view for editing period
-only once outside app should follow chosen orientation."*
+A `⋮ values` button opens the four numbers — offsetX, offsetY, width, height — as fields on a
+decimal keyboard, two to a row, in a body that scrolls. Apply validates through the same
+`Placement.of` the file reader uses, so a bad number names the field and the range rather than being
+silently clamped. `±` buttons flip the sign of an offset. The dialog states the units, which were
+reported as confusing and are not obvious.
 
-**Built.** The orientation buttons ask the activity to turn. The editor then measures the
-orientation it is really in, and closing the editor calls `applyDisplayPreferences`, which puts the
-orientation back to whatever the display settings say.
-
-**What this removes is better than what it adds.** The old toggle drew a small picture of the phone
-turned — a strip too narrow to work in — and the system bars in that picture were an estimate,
-because only the orientation the phone is in can be measured. That estimate is gone from the code
-along with the feature that needed it.
-
-**How it is known.** Unverified on the device.
+**Measured.** It took three rounds: the feature worked from the first, and was unusable in landscape
+and unreachable in the tools until `BUG-13` and `BUG-16`.
 
 ---
 
-### `FEAT-14` — Grid steps narrowed
+### `FEAT-14` — The grid in the layout's own unit — **closed `0.0.28-dev`**
 
-`0.01` was too fine to see and `0.25` too coarse to place anything with. The steps are now **0.02,
-0.04, 0.06 and 0.10** of the shorter side, still labelled with the pixels they come to on this
-phone. Unverified on the device; the rest of `FEAT-14` was confirmed working.
+Covered above with `FEAT-11`. Recorded separately because it was a separate correction: moving the
+grid to fractions also meant a snapped control lands on a number the file can hold, which the pixel
+grid could not promise on any screen.
 
 ---
 
-### `CRIT-5`, `BUG-10`, `FEAT-11`, `FEAT-12` — still `testing`
+### `FEAT-16` — The editor is the canvas — **closed `0.0.28-dev`**
 
-`CRIT-5` and `BUG-10` do not close until the pad on the phone matches what the editor drew — that is
-the test that has failed twice. `FEAT-11` and `FEAT-12` are open only on the small changes above.
+The canvas is the entire screen: no title above it, no margin around it, nothing beside it. Tools,
+Save and Exit float in the middle — the one region a pad never occupies, because controls belong to
+the corners a thumb reaches and the centre is what a game is played through. The tools open as a
+sheet and close again; under the buttons, on a dark plate, the layout's name, whether anything is
+unsaved, the selected control in both units, and any warning.
+
+Leaving with unsaved changes asks first — added unasked, because "nothing is saved until it is
+saved" makes an accidental exit expensive and the exit button had become very easy to press.
+
+**Measured** — *"Yes, absolutely"* and *"working as expected"*.
+
+---
+
+### `FEAT-17` — The preview turns the phone — **closed `0.0.28-dev`**
+
+The orientation buttons ask the activity to turn; the editor then measures the orientation it is
+really in; leaving the editor puts the orientation back to the display setting.
+
+What it removed is better than what it added: the old toggle drew a small picture of the phone
+turned — a strip too narrow to work in — with system bars that were an estimate, since only the
+orientation the phone is in can be measured. That estimate is gone from the code along with the
+feature that needed it.
+
+**Measured.** One round later the project owner asked for it to be a floating button rather than a
+tool, which is `FEAT-18`.
+
+---
+
+---
+
+## Built, awaiting confirmation — `0.0.29-dev`
+
+### `BUG-17` — The canvas draws the pad at the size the pad is
+
+**Found by the project owner, from a screenshot:** *"buttons size representation in Canva is not
+aligned with actual gamepad size maybe this could be why outside warning is shown."*
+
+It is exactly why. The overlay resolves `placement.scaledBy(controlScale)` — 0.85 by default. The
+editor resolved `placement` and nothing else. Every control on the canvas was drawn about 17% larger
+than the pad draws it, and four controls that fit on the phone at 85% were reported as leaving the
+screen at 100%.
+
+**Three rounds of "the pad does not match the editor" had this sitting underneath the cause that was
+found first.** `BUG-10` was real, `BUG-15` was real, and neither was the whole answer. This is the
+kind of fault a canvas exists to make visible and could not, because the canvas had it too.
+
+**Built.** The canvas resolves at the same scale the pad is showing, and dragging still writes the
+**unscaled** number to the file: the document is the pad at full size and the setting is applied on
+top of it. Editing must not fold the setting into the file, or every drag at 85% would shrink the
+layout permanently.
+
+**How it is known.** Unverified on the device. This is the third attempt at the same symptom, and it
+is the first one that names a difference between the two renderers rather than a difference in what
+they are drawing on.
+
+---
+
+### `BUG-18` — The canvas is the size of the screen
+
+The 4% margin is gone. It was left over from when the canvas shared the screen with a panel, and the
+canvas has the screen to itself and the same shape as it. Previewing the orientation the phone is in,
+the canvas is now exactly 1 : 1 with the display — which makes "does the pad match the editor" a
+question that can be answered by looking rather than by measuring. Unverified on the device.
+
+---
+
+### `BUG-19` — The home page header scrolls
+
+The title moved inside the scrolling column. It was holding a band of a small screen permanently,
+which is a title costing more than it says. Unverified on the device.
+
+---
+
+### `FEAT-18` — Rotation is a fourth floating button
+
+`⟳` beside Tools, and the orientation section is gone from the sheet. Turning the phone is something
+done *while* arranging, not configured beforehand, so it does not belong two taps deep. Unverified
+on the device.
+
+---
+
+### `FEAT-19` — Long press a control
+
+A small menu opens at the control, kept on screen when the control is in a corner — which is where
+the controls a thumb reaches actually are. It holds:
+
+- **size** — opens the four numbers directly.
+- **shape** — circle, square and rectangle as three buttons, the current one filled.
+- **copy** — takes **size and outline only**. Position is deliberately not copied: two controls in
+  the same place are two controls, one of which cannot be pressed, and a paste that did that would
+  be a way to lose a button silently.
+- **paste** — shown **only where it means something**.
+
+Paste is offered within a family, which is the project owner's rule: **directional** (the sticks and
+the pad, the same kind of object sized against the same thumb) and **buttons** (face, shoulders,
+menu, triggers). A face button's size means nothing on a stick, so the option is absent rather than
+greyed out — and when the clipboard holds the wrong family the menu says so, because "where is
+paste" needs an answer and "why is this disabled" is a worse question to leave someone with.
+
+Unverified on the device.
+
+---
+
+### `CRIT-5`, `BUG-10`, `BUG-15` — still `testing`
+
+One thread, three entries, and it does not close until the pad on the phone matches what the editor
+drew. That test has now failed three times, for three different reasons, each real: the canvas was
+the wrong shape, then the pad was on the wrong surface, and now the two were drawing at different
+sizes.
 
 ---
 
