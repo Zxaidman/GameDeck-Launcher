@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Optional by ADR-003: with Shizuku absent Kestrel still runs, and says what is unavailable
+         rather than refusing to start (docs/DEGRADED_STATE.md). -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <!-- A session outlives this screen on purpose; the notification is what makes it visible and
+         stoppable from anywhere. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- The controls must be drawn over the target, in a window that never takes focus: the
+         platform delivers a controller's events to the focused window, so controls inside an
+         ordinary activity send their input back to Kestrel. Measured — see
+         docs/phase0/results/app-stick-focus-20260819-redmi-note-13-5g.json. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Kestrel">
+
+        <!--
+            The configuration change is handled rather than causing a rebuild. Turning the phone
+            inside the layout editor destroyed the activity, which threw away which page was open,
+            which control was selected, and every unsaved edit. Compose re-lays-out on its own and
+            LocalConfiguration still updates, so the editor re-measures the screen and loses nothing.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|uiMode"
+            android:theme="@style/Theme.Kestrel">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".platform.session.ControllerSessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Holds a virtual controller open for a gaming session, and keeps it
+                    visible and stoppable while it exists." />
+        </service>
+
+        <!-- Lets Share hand over the report as an actual file. Not exported: nothing can pull a
+             file out of Kestrel without Kestrel offering it. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Required by the Shizuku library so it can hand the binder to this process. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:ignore="ExportedContentProvider" />
+
+    </application>
+
+</manifest>

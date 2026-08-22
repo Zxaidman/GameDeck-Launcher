@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Kestrel mark — a double chevron reading as swept wings and ascent.
+
+  Deliberately geometric rather than illustrative. Earlier organic attempts at a falcon silhouette
+  were rendered and inspected: they read as an aircraft or an insect at icon size. Straight edges
+  and a strong figure/ground ratio survive being shrunk to 48dp on a home screen, which is the only
+  size that actually matters here.
+
+  Artwork stays inside the adaptive-icon safe zone (the central 66 of 108), so no mask crops it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- upper wing -->
+    <path
+        android:fillColor="#D4D4D8"
+        android:pathData="M54,30 L70,50 L61,50 L54,41 L47,50 L38,50 Z" />
+
+    <!-- lower wing -->
+    <path
+        android:fillColor="#D4D4D8"
+        android:pathData="M54,50 L76,76 L65,76 L54,62 L43,76 L32,76 Z" />
+
+</vector>

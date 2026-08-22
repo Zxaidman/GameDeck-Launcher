@@ -1,8 +1,11 @@
-# GameDeck Android — AI Development Guide
+# Kestrel — AI Development Guide
+
+**Document:** `AI_DEVELOPMENT_GUIDE.md`  
+**Status:** Active — rules for AI-assisted implementation  
 
 ## Purpose
 
-AI coding tools are a major part of GameDeck development. This guide keeps fast code generation from becoming uncontrolled architecture drift.
+AI coding tools are a major part of Kestrel development. This guide keeps fast code generation from becoming uncontrolled architecture drift.
 
 The AI is a development assistant, not the source of truth.
 
@@ -19,16 +22,18 @@ Verified Android behavior
 
 ## Required reading order
 
-Before implementation, an AI agent should read:
+The canonical order is defined in `README.md` under "Project Documentation". It is reproduced here
+because implementation work depends on it; if the two ever differ, `README.md` wins.
 
 1. `README.md`
 2. `PRD.md`
 3. `ARCHITECTURE.md`
-4. relevant module documentation
-5. relevant ADRs
-6. `docs/COMPATIBILITY.md`
-7. `docs/CONFIGURATION_SCHEMA.md`
-8. existing code and tests
+4. `PROJECT_STRUCTURE.md`
+5. `docs/PHASE-0.md`
+6. relevant module documentation under `docs/` and relevant records under `docs/adr/`
+7. `docs/COMPATIBILITY.md`
+8. `docs/CONFIGURATION_SCHEMA.md`
+9. existing code and tests
 
 ## Hierarchy of truth
 

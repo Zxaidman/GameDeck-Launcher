@@ -1,0 +1,153 @@
+{
+  "kestrelVersion": "0.0.5-dev",
+  "capturedAtMillis": 1787141082782,
+  "device": {
+    "manufacturer": "Xiaomi",
+    "brand": "Redmi",
+    "model": "2312DRAABI",
+    "androidRelease": "15",
+    "sdkInt": 35,
+    "securityPatch": "2026-06-01",
+    "fingerprint": "Redmi\/gold_in_global\/gold:15\/AP3A.240905.015.A2\/OS3.0.3.0.VNQINXM:user\/release-keys"
+  },
+  "privilege": {
+    "serviceRunning": true,
+    "permissionGranted": true,
+    "level": "ADB_SHELL",
+    "version": 13,
+    "usable": true
+  },
+  "session": {
+    "open": true,
+    "detail": "(no output, exit=0)\nholder started\nholding: 24298\nhelper: (no output, exit=0)",
+    "holders": "24298"
+  },
+  "inputDevices": [
+    {
+      "id": -1,
+      "name": "Virtual",
+      "descriptor": "a718a782d34bc767f4689c232d64d527998ea7fd",
+      "sourcesRaw": 769,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 0,
+      "name": "uinput-goodix",
+      "descriptor": "16eefc4957ed20bc14d87787478660f2723a864b",
+      "sourcesRaw": 1281,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 2,
+      "name": "mtk-kpd",
+      "descriptor": "9a244e01c90550ca2eb2798ffe20d8731e811765",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 3,
+      "name": "mtk-pmic-keys",
+      "descriptor": "485d69228e24f5e46da1598745890b214130dbc4",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 4,
+      "name": "mt6833-mt6359 Headset Jack",
+      "descriptor": "393bc96fab9421f9d6a6059cfe79e8b042c8755d",
+      "sourcesRaw": -2147483391,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 5,
+      "name": "swtp",
+      "descriptor": "b694711109f0e5ef59f2ca6f8166f03a196c6741",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 6,
+      "name": "goodix_ts",
+      "descriptor": "c63c3be2de98f10e6bbd97f78684d819a6c862b9",
+      "sourcesRaw": 4355,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 8,
+      "distinctAxes": 8,
+      "axes": [
+        "AXIS_X",
+        "AXIS_Y",
+        "AXIS_PRESSURE",
+        "AXIS_SIZE",
+        "AXIS_TOUCH_MAJOR",
+        "AXIS_TOUCH_MINOR",
+        "AXIS_TOOL_MAJOR",
+        "AXIS_TOOL_MINOR"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "uinput_nav",
+      "descriptor": "8136f1e77728f603ac0ec0e545d338eba3cbcbc0",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": true,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 9,
+      "name": "Kestrel Virtual Controller",
+      "descriptor": "8cc7a295a758edbbada3044903f0f8fb0c1157f1",
+      "sourcesRaw": 16778513,
+      "controllerNumber": 1,
+      "isExternal": true,
+      "rangeCount": 10,
+      "distinctAxes": 10,
+      "axes": [
+        "AXIS_HAT_Y",
+        "AXIS_LTRIGGER",
+        "AXIS_BRAKE",
+        "AXIS_RTRIGGER",
+        "AXIS_GAS",
+        "AXIS_Z",
+        "AXIS_Y",
+        "AXIS_HAT_X",
+        "AXIS_RZ",
+        "AXIS_X"
+      ]
+    }
+  ],
+  "lastInput": {
+    "source": "touch pad (this screen)",
+    "events": 4533,
+    "lastButton": "VOLUME_DOWN",
+    "rawX": 1,
+    "rawY": 0.15870164334774017
+  }
+}

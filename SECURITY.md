@@ -1,10 +1,13 @@
 # Security Policy
 
-## GameDeck Android
+**Document:** `SECURITY.md`  
+**Status:** Active — security policy and threat boundaries  
 
-GameDeck is an open-source Android gaming project intended to provide a unified gaming launcher, virtual controller, game profiles, skins, and configuration system for Android phones.
+## Kestrel
 
-Security is especially important because GameDeck may eventually interact with:
+Kestrel is an open-source Android gaming project intended to provide a unified gaming launcher, virtual controller, game profiles, skins, and configuration system for Android phones.
+
+Security is especially important because Kestrel may eventually interact with:
 
 - Android overlay functionality
 - Shizuku
@@ -21,7 +24,7 @@ This document explains how security issues should be reported and how security i
 
 # 1. Security Philosophy
 
-GameDeck follows a simple principle:
+Kestrel follows a simple principle:
 
 > **Use the minimum privileges necessary to provide the required functionality.**
 
@@ -75,7 +78,7 @@ A malicious or compromised component could potentially abuse system-level input 
 
 ### Shizuku misuse
 
-A vulnerability in a Shizuku integration could cause GameDeck to perform unintended privileged operations.
+A vulnerability in a Shizuku integration could cause Kestrel to perform unintended privileged operations.
 
 ### Malicious community configurations
 
@@ -87,7 +90,7 @@ Image or resource processing could potentially expose vulnerabilities.
 
 ### Package/application manipulation
 
-Incorrect application detection or package handling could cause GameDeck to launch or interact with an unintended application.
+Incorrect application detection or package handling could cause Kestrel to launch or interact with an unintended application.
 
 ### Update/repository compromise
 
@@ -101,7 +104,7 @@ Logs could accidentally contain information that should not be exposed.
 
 # 4. Community Content Is Untrusted
 
-GameDeck must treat all downloaded community content as untrusted.
+Kestrel must treat all downloaded community content as untrusted.
 
 This includes:
 
@@ -162,7 +165,7 @@ Validation should include:
 
 Malformed input should fail safely.
 
-GameDeck must not crash or enter an unsafe state because a user imported a malformed configuration.
+Kestrel must not crash or enter an unsafe state because a user imported a malformed configuration.
 
 ---
 
@@ -189,7 +192,7 @@ Any Shizuku-backed implementation must be kept as small as practical.
 Preferred architecture:
 
 ```text
-GameDeck UI
+Kestrel UI
       ↓
 Capability Interface
       ↓
@@ -212,7 +215,7 @@ The privileged layer should perform only the privileged operation it exists to p
 
 # 9. Shizuku Permissions
 
-GameDeck must not assume that Shizuku always means root access.
+Kestrel must not assume that Shizuku always means root access.
 
 The application should explicitly distinguish between:
 
@@ -244,7 +247,7 @@ Where root-assisted functionality is experimentally supported:
 - the implementation should be isolated
 - the normal application should continue to function without it where possible
 
-GameDeck should never silently assume that a rooted device exists.
+Kestrel should never silently assume that a rooted device exists.
 
 ---
 
@@ -264,14 +267,14 @@ When a gaming session terminates unexpectedly, active inputs must be released/re
 Example:
 
 ```text
-GameDeck process terminated
+Kestrel process terminated
         ↓
 Release active inputs
         ↓
 Terminate privileged session
 ```
 
-The system should avoid leaving an active privileged input channel running after GameDeck has stopped using it.
+The system should avoid leaving an active privileged input channel running after Kestrel has stopped using it.
 
 ---
 
@@ -291,7 +294,7 @@ Target application
 
 Operations belonging to one session must not accidentally affect another.
 
-This becomes particularly important if GameDeck eventually supports:
+This becomes particularly important if Kestrel eventually supports:
 
 - multiple profiles
 - rapid application switching
@@ -302,7 +305,7 @@ This becomes particularly important if GameDeck eventually supports:
 
 # 13. Foreground Application Safety
 
-GameDeck may monitor which gaming application is currently active.
+Kestrel may monitor which gaming application is currently active.
 
 The application should verify that the target package is one of the applications associated with the active gaming session before performing session-specific operations.
 
@@ -326,7 +329,7 @@ rather than continuing to inject input blindly.
 
 # 14. Overlay Security
 
-GameDeck may use Android overlay capabilities for the controller interface.
+Kestrel may use Android overlay capabilities for the controller interface.
 
 The overlay implementation must:
 
@@ -359,13 +362,13 @@ If accessibility functionality is ever used as an input fallback:
 - its behavior should remain limited to the intended gaming functionality
 - the implementation must respect relevant Android platform and distribution requirements
 
-GameDeck should not abuse accessibility APIs to perform unrelated automation.
+Kestrel should not abuse accessibility APIs to perform unrelated automation.
 
 ---
 
 # 16. Credentials and Secrets
 
-GameDeck must never intentionally collect or store:
+Kestrel must never intentionally collect or store:
 
 - passwords
 - authentication tokens
@@ -397,7 +400,7 @@ Diagnostics should prefer technical identifiers such as:
 ```text
 Android version
 device model
-GameDeck version
+Kestrel version
 input backend
 target package
 session state
@@ -430,7 +433,7 @@ The application should avoid including sensitive information by default.
 
 The core application should remain offline-first.
 
-When GameDeck accesses a community repository:
+When Kestrel accesses a community repository:
 
 - use HTTPS
 - validate downloaded content
@@ -439,7 +442,7 @@ When GameDeck accesses a community repository:
 - handle network failures safely
 - avoid executing downloaded content
 
-Community network access should not require a GameDeck account.
+Community network access should not require a Kestrel account.
 
 ---
 
@@ -447,7 +450,7 @@ Community network access should not require a GameDeck account.
 
 A GitHub repository is not automatically trustworthy just because it is hosted on GitHub.
 
-GameDeck should use mechanisms such as:
+Kestrel should use mechanisms such as:
 
 - versioned manifests
 - checksums
@@ -506,7 +509,7 @@ A dependency should not be added simply because it saves a few lines of code.
 
 Native code creates additional security and maintenance risks.
 
-GameDeck should prefer Kotlin/Java unless native code is technically necessary.
+Kestrel should prefer Kotlin/Java unless native code is technically necessary.
 
 Any native component must receive additional review for:
 
@@ -633,7 +636,7 @@ The maintainer should make a good-faith effort to:
 
 # 30. Security Advisories
 
-As the project matures, GameDeck should use GitHub Security Advisories or another appropriate private vulnerability-reporting mechanism.
+As the project matures, Kestrel should use GitHub Security Advisories or another appropriate private vulnerability-reporting mechanism.
 
 A future security process may include:
 
@@ -705,7 +708,7 @@ The goal is to discover crashes and unexpected states caused by malformed input.
 
 # 34. Secure Defaults
 
-GameDeck should prefer safe defaults.
+Kestrel should prefer safe defaults.
 
 Examples:
 
@@ -759,13 +762,18 @@ Security-relevant architectural decisions should be documented in:
 docs/adr/
 ```
 
-Examples:
+Security decisions use the same naming rule as every other record — sequential `ADR-NNN-topic.md`,
+per `CONTRIBUTING.md` §57. There is no separate security numbering series.
+
+Topics that would justify a record:
 
 ```text
-ADR-SEC-001-community-content.md
-ADR-SEC-002-shizuku-boundaries.md
-ADR-SEC-003-input-session-isolation.md
+community content trust boundary
+Shizuku capability boundaries
+input/session isolation
 ```
+
+Check `docs/adr/` directly for the records that currently exist.
 
 ---
 
@@ -802,7 +810,7 @@ A vulnerability being embarrassing does not make it less important.
 
 # 39. Transparency
 
-GameDeck is intended to be an open-source project.
+Kestrel is intended to be an open-source project.
 
 Security communication should therefore favor honesty.
 
@@ -826,10 +834,10 @@ when disclosure is appropriate.
 
 This security policy applies primarily to:
 
-- GameDeck Android
-- official GameDeck repositories
-- official GameDeck configuration formats
-- official GameDeck distribution mechanisms
+- Kestrel
+- official Kestrel repositories
+- official Kestrel configuration formats
+- official Kestrel distribution mechanisms
 
 Third-party applications such as:
 
@@ -841,15 +849,15 @@ Third-party applications such as:
 - Xbox Cloud Gaming
 - GeForce NOW
 
-are outside GameDeck's direct security ownership.
+are outside Kestrel's direct security ownership.
 
-Security issues in those applications should generally be reported to their respective maintainers unless GameDeck itself is responsible for the vulnerability.
+Security issues in those applications should generally be reported to their respective maintainers unless Kestrel itself is responsible for the vulnerability.
 
 ---
 
 # 41. Android Platform Vulnerabilities
 
-GameDeck cannot fix Android platform vulnerabilities directly.
+Kestrel cannot fix Android platform vulnerabilities directly.
 
 When an issue depends on:
 
@@ -864,7 +872,7 @@ the project should document the affected environment and, where appropriate, dir
 
 # 42. Security and Project Scope
 
-GameDeck is a gaming application.
+Kestrel is a gaming application.
 
 Security controls should support the gaming experience without turning the project into an unnecessarily complex security platform.
 
@@ -878,7 +886,7 @@ Do not add a massive infrastructure simply because a theoretical threat exists w
 
 # 43. Final Principle
 
-GameDeck is intentionally open source.
+Kestrel is intentionally open source.
 
 That means people should be able to inspect the code, understand how privileged functionality works, identify problems, and improve it.
 
@@ -892,4 +900,4 @@ The goal is to make security problems:
 - easier to understand
 - easier to fix
 
-Security is part of maintaining trust with the people who use GameDeck.
+Security is part of maintaining trust with the people who use Kestrel.

@@ -1,8 +1,8 @@
-# GameDeck Android — Phase 0 Input Feasibility Specification
+# Kestrel — Phase 0 Input Feasibility Specification
 
 **Document:** `docs/PHASE-0.md`  
 **Status:** Required before full application implementation  
-**Objective:** Determine whether GameDeck can provide usable gamepad-style input to target applications on Android 10+.
+**Objective:** Determine whether Kestrel can provide usable gamepad-style input to target applications on Android 10+.
 
 ---
 
@@ -10,7 +10,7 @@
 
 Phase 0 is a technical feasibility experiment.
 
-It is NOT an attempt to build the GameDeck application.
+It is NOT an attempt to build the Kestrel application.
 
 It exists to answer one question:
 
@@ -35,7 +35,7 @@ Therefore Phase 0 must establish facts experimentally.
 The preferred result is:
 
 ```text
-GameDeck Touch
+Kestrel Touch
       ↓
 Input Backend
       ↓
@@ -47,7 +47,7 @@ Target application receives it
 The strongest possible result is:
 
 ```text
-GameDeck virtual controller
+Kestrel virtual controller
         ↓
 Android input subsystem
         ↓
@@ -69,7 +69,7 @@ There are four separate outcomes:
 Example:
 
 ```text
-GameDeck button
+Kestrel button
       ↓
 screen tap
       ↓
@@ -87,7 +87,7 @@ Not a true virtual gamepad.
 Example:
 
 ```text
-GameDeck button
+Kestrel button
       ↓
 Android key event
       ↓
@@ -105,7 +105,7 @@ Still not automatically equivalent to a gamepad device.
 Example:
 
 ```text
-GameDeck analog stick
+Kestrel analog stick
       ↓
 axis event
       ↓
@@ -123,7 +123,7 @@ Still needs verification of how the target application identifies the source.
 Example:
 
 ```text
-GameDeck
+Kestrel
       ↓
 virtual input device
       ↓
@@ -146,7 +146,7 @@ No Shizuku.
 
 ```text
 Android 10+
-GameDeck prototype
+Kestrel prototype
 ```
 
 Purpose:
@@ -158,7 +158,7 @@ Determine the baseline capabilities of an ordinary application.
 ## Test B — Shizuku + ADB
 
 ```text
-GameDeck
+Kestrel
    ↓
 Shizuku UserService
    ↓
@@ -176,7 +176,7 @@ Determine whether shell-level access is enough to provide useful gamepad-style i
 ## Test C — Shizuku + root
 
 ```text
-GameDeck
+Kestrel
    ↓
 Shizuku UserService
    ↓
@@ -187,7 +187,7 @@ Shizuku documentation identifies the root-backed UserService identity as UID 0.
 
 Purpose:
 
-Determine what becomes possible with root while keeping the main GameDeck process unrooted.
+Determine what becomes possible with root while keeping the main Kestrel process unrooted.
 
 Root is an experimental capability here, not an initial product requirement.
 
@@ -265,7 +265,7 @@ Start
 Back
 ```
 
-Do not build the full GameDeck controller editor yet.
+Do not build the full Kestrel controller editor yet.
 
 A simple test UI is sufficient.
 
@@ -581,7 +581,7 @@ General Gamepad Backend
 Start:
 
 ```text
-GameDeck
+Kestrel
 ```
 
 then:
@@ -619,8 +619,8 @@ During a held button:
 2. Unlock.
 3. Open another app.
 4. Return to target.
-5. Kill GameDeck.
-6. Restart GameDeck.
+5. Kill Kestrel.
+6. Restart Kestrel.
 
 Verify that no button remains permanently pressed.
 
@@ -655,11 +655,11 @@ Shizuku stopped
 Shizuku started
 permission revoked
 permission granted
-GameDeck restarted
+Kestrel restarted
 Shizuku restarted
 ```
 
-GameDeck must identify capability changes without crashing.
+Kestrel must identify capability changes without crashing.
 
 ---
 
@@ -1023,7 +1023,7 @@ This ADR determines the production input strategy.
 
 The final Phase 0 decision must explicitly answer:
 
-1. Can GameDeck create a true virtual gamepad?
+1. Can Kestrel create a true virtual gamepad?
 2. On which Android versions?
 3. Does it require Shizuku?
 4. Does it require root?
@@ -1130,7 +1130,7 @@ ADR-INPUT-001
 
 has been completed.
 
-At that point the project can move confidently into the full GameDeck implementation.
+At that point the project can move confidently into the full Kestrel implementation.
 
 ---
 
@@ -1148,7 +1148,7 @@ The target concept is:
 └──────────┴──────────────────────┴──────────┘
 ```
 
-Do not assume this requires embedding the game inside GameDeck.
+Do not assume this requires embedding the game inside Kestrel.
 
 Test separately:
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Neutral steel, so the experimental harness is never mistaken for the product on a
+         home screen. Same mark, deliberately colourless treatment. -->
+    <color name="ic_launcher_background">#3F3F46</color>
+</resources>

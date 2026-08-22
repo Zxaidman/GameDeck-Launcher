@@ -1,8 +1,11 @@
-# GameDeck Android — Project Structure
+# Kestrel — Project Structure
+
+**Document:** `PROJECT_STRUCTURE.md`  
+**Status:** Canonical — folder organization and dependency rules  
 
 ## Purpose
 
-This document is the canonical initial folder architecture for the GameDeck repository.
+This document is the canonical initial folder architecture for the Kestrel repository.
 
 It exists so that:
 
@@ -22,7 +25,7 @@ Directories should be created when the corresponding implementation begins.
 # 1. Top-Level Structure
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 ├── core/
@@ -42,6 +45,7 @@ GameDeck/
 ├── ARCHITECTURE.md
 ├── DEVELOPMENT.md
 ├── AI_DEVELOPMENT_GUIDE.md
+├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
@@ -73,6 +77,7 @@ The repository root is intentionally kept for documents that every contributor o
 | `PROJECT_STRUCTURE.md`    | Canonical repository/folder organization            |
 | `DEVELOPMENT.md`          | Build, test, and development workflow               |
 | `AI_DEVELOPMENT_GUIDE.md` | Rules for AI-assisted implementation                |
+| `CLAUDE.md`               | Condensed operating brief for AI coding agents      |
 | `CONTRIBUTING.md`         | Contributor workflow and expectations               |
 | `SECURITY.md`             | Security policy                                     |
 | `CODE_OF_CONDUCT.md`      | Community conduct                                   |
@@ -89,6 +94,7 @@ Project knowledge that is too detailed for the root README but is not applicatio
 ```text
 docs/
 │
+├── SETUP.md
 ├── PHASE-0.md
 ├── COMPATIBILITY.md
 ├── INPUT_BACKENDS.md
@@ -109,11 +115,16 @@ docs/
 │   └── reports/
 │
 └── phase0/
-    ├── results/
+    ├── README.md          test procedure for the feasibility harness
+    ├── results/           exported evidence
     ├── reports/
     ├── logs/
     └── screenshots/
 ```
+
+### `docs/SETUP.md`
+
+Toolchain installation and on-device install, for contributors not using the full IDE.
 
 ### `docs/PHASE-0.md`
 
@@ -349,7 +360,7 @@ CompatibilityReport
 
 # 6. `feature/`
 
-`feature/` contains user-facing GameDeck functionality.
+`feature/` contains user-facing Kestrel functionality.
 
 ```text
 feature/
@@ -483,6 +494,10 @@ platform/
 └── input/
 ```
 
+Two of these are large enough to get their own sections below: `platform/shizuku/` is §8 and
+`platform/input/` is §9. Section numbering in this document is flat, so those sections are still
+part of `platform/` despite their top-level numbers.
+
 ---
 
 ## `platform/android/`
@@ -551,7 +566,7 @@ Responsibilities:
 - expose capabilities
 - perform narrowly scoped privileged operations
 
-Do not put unrelated GameDeck business logic here.
+Do not put unrelated Kestrel business logic here.
 
 ---
 
@@ -625,7 +640,7 @@ data/
 
 # 11. Built-In Content
 
-`data/builtin/` contains official GameDeck defaults.
+`data/builtin/` contains official Kestrel defaults.
 
 Examples:
 
@@ -679,7 +694,7 @@ Only create a migration when an actual schema version requires one.
 
 # 14. `data/compatibility/`
 
-Packaged, reviewed compatibility data that GameDeck ships with.
+Packaged, reviewed compatibility data that Kestrel ships with.
 
 This is distinct from:
 
@@ -998,7 +1013,7 @@ Do not create every directory shown in this document as an empty folder.
 A recommended initial implementation might contain only:
 
 ```text
-GameDeck/
+Kestrel/
 ├── app/
 ├── core/
 ├── feature/
@@ -1011,6 +1026,7 @@ GameDeck/
 ├── ARCHITECTURE.md
 ├── DEVELOPMENT.md
 ├── AI_DEVELOPMENT_GUIDE.md
+├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
@@ -1046,7 +1062,7 @@ temporary
 
 where appropriate.
 
-When Phase 0 completes, the accepted production input approach should be moved behind the proper `platform/input/` abstraction and documented in `ADR-INPUT-001.md`.
+Phase 0 is complete and `ADR-INPUT-001` records the accepted approach, scoped to the device it was measured on. Moving it behind the proper `platform/input/` abstraction is Phase 1 work: the harness is a measuring instrument and must be rebuilt behind that abstraction rather than promoted out of `tools/phase0/`.
 
 ---
 
@@ -1055,7 +1071,7 @@ When Phase 0 completes, the accepted production input approach should be moved b
 The structure should make this conceptual separation obvious:
 
 ```text
-WHAT IS GAMEDECK?
+WHAT IS KESTREL?
         ↓
 core/
 

@@ -1,14 +1,17 @@
-# GameDeck Android
+# Kestrel
+
+**Document:** `README.md`  
+**Status:** Project overview, vision, and status  
 
 > Turn the Android phone you already own into a game-focused handheld experience.
 
-GameDeck Android is an open-source, Android 10+ gaming launcher and virtual-controller project for people who want a unified way to play emulators, game-streaming clients, and cloud-gaming applications without needing a physical controller, telescopic controller, or a separate handheld device.
+Kestrel is an open-source, Android 10+ gaming launcher and virtual-controller project for people who want a unified way to play emulators, game-streaming clients, and cloud-gaming applications without needing a physical controller, telescopic controller, or a separate handheld device.
 
 The goal is simple:
 
 **One place to launch your games, configure your controls, choose your screen layout, customize the appearance, and play.**
 
-GameDeck is intended to bring a software-first handheld experience to ordinary Android phones.
+Kestrel is intended to bring a software-first handheld experience to ordinary Android phones.
 
 ---
 
@@ -16,7 +19,7 @@ GameDeck is intended to bring a software-first handheld experience to ordinary A
 
 **Status: Early architecture / technical feasibility**
 
-GameDeck is not yet a finished application.
+Kestrel is not yet a finished application.
 
 The first engineering milestone is a technical feasibility prototype for gamepad-style input on real Android devices. Before a large amount of UI and feature work is built, the project must prove that the intended input architecture can reliably control real target applications.
 
@@ -26,11 +29,11 @@ See:
 - [`ARCHITECTURE.md`](ARCHITECTURE.md)
 - [`docs/PHASE-0.md`](docs/PHASE-0.md)
 
-> **Important:** Some of the project's most important technical goals depend on Android system restrictions, device/OEM behavior, and the capabilities available through Shizuku. GameDeck will document what is actually proven on physical devices rather than promising functionality that has not been verified.
+> **Important:** Some of the project's most important technical goals depend on Android system restrictions, device/OEM behavior, and the capabilities available through Shizuku. Kestrel will document what is actually proven on physical devices rather than promising functionality that has not been verified.
 
 ---
 
-# Why GameDeck Exists
+# Why Kestrel Exists
 
 Not everyone can justify buying a dedicated handheld, a physical gamepad, or a telescopic controller.
 
@@ -47,7 +50,7 @@ Others already use:
 
 but have to configure each application separately and switch between different interfaces.
 
-GameDeck is an attempt to bring those experiences together.
+Kestrel is an attempt to bring those experiences together.
 
 The idea is not to make Android into a general desktop replacement.
 
@@ -108,12 +111,12 @@ The important part is that **the launcher, game profile, controller configuratio
 
 ---
 
-# What GameDeck Is
+# What Kestrel Is
 
-GameDeck is designed as a gaming environment consisting of several connected systems:
+Kestrel is designed as a gaming environment consisting of several connected systems:
 
 ```text
-GameDeck
+Kestrel
 │
 ├── Gaming Launcher
 │
@@ -142,7 +145,7 @@ The individual systems are intentionally separated so that one experimental Andr
 
 # Initial Target
 
-GameDeck initially targets **Android phones running Android 10 or newer**.
+Kestrel initially targets **Android phones running Android 10 or newer**.
 
 The first release deliberately does **not** target:
 
@@ -184,15 +187,15 @@ Examples include:
 - GeForce NOW
 - other controller-oriented cloud gaming clients
 
-GameDeck should treat these as examples, not as a promise that every version of every application will work.
+Kestrel should treat these as examples, not as a promise that every version of every application will work.
 
 Compatibility will be measured and documented.
 
 ---
 
-# What GameDeck Is Not
+# What Kestrel Is Not
 
-GameDeck is not intended to be:
+Kestrel is not intended to be:
 
 - a replacement for an emulator
 - a ROM distributor
@@ -204,7 +207,7 @@ GameDeck is not intended to be:
 - a proprietary controller hardware company
 - a closed ecosystem
 
-GameDeck does not provide game files or copyrighted game assets.
+Kestrel does not provide game files or copyrighted game assets.
 
 Users are responsible for the software, games, ROMs, BIOS files, accounts, and services they use with their device and third-party applications.
 
@@ -223,7 +226,7 @@ Conceptually:
 ```text
 Touch
   ↓
-GameDeck Controller
+Kestrel Controller
   ↓
 Input Abstraction
   ↓
@@ -246,7 +249,7 @@ That is why the project starts with Phase 0.
 
 # Phase 0: Prove the Input Architecture First
 
-Before building the complete product, GameDeck will run an input-feasibility experiment.
+Before building the complete product, Kestrel will run an input-feasibility experiment.
 
 The prototype will investigate:
 
@@ -293,7 +296,7 @@ See [`docs/PHASE-0.md`](docs/PHASE-0.md).
 
 # Shizuku
 
-GameDeck is designed to work in two broad modes.
+Kestrel is designed to work in two broad modes.
 
 ## Standard Mode
 
@@ -331,7 +334,7 @@ https://github.com/RikkaApps/Shizuku
 
 A major part of the idea is that users should not have to manage separate configuration systems for every game.
 
-A GameDeck profile might look like:
+A Kestrel profile might look like:
 
 ```text
 PPSSPP
@@ -373,7 +376,7 @@ The user should be able to launch the application and have the appropriate confi
 
 # Controller Layouts
 
-GameDeck will include default controller templates.
+Kestrel will include default controller templates.
 
 Initial template families:
 
@@ -431,7 +434,7 @@ The goal is to avoid hard-coding the controller into the UI.
 
 # Skins
 
-GameDeck will separate:
+Kestrel will separate:
 
 **Layout**
 
@@ -481,7 +484,7 @@ Future skins may contain:
 
 # Screen and Aspect Ratio Controls
 
-GameDeck is intended to support a configurable game area.
+Kestrel is intended to support a configurable game area.
 
 Initial scaling modes:
 
@@ -501,7 +504,7 @@ Planned aspect-ratio presets include:
 
 The project will clearly separate:
 
-1. what GameDeck can visually control itself
+1. what Kestrel can visually control itself
 2. what Android allows for another application's window
 3. what may require elevated system capabilities
 
@@ -528,7 +531,7 @@ It should not initially become a replacement for the normal Android launcher.
 
 # Automatic Detection + Manual Add
 
-GameDeck should detect common gaming applications automatically.
+Kestrel should detect common gaming applications automatically.
 
 However, automatic detection will never be assumed to be perfect.
 
@@ -549,7 +552,7 @@ This is important for:
 
 # JSON-First Configuration
 
-GameDeck is designed to be JSON-first.
+Kestrel is designed to be JSON-first.
 
 Examples:
 
@@ -585,7 +588,7 @@ Small local application preferences may use Android-native persistence where app
 
 # Community Sharing Without a Proprietary Cloud
 
-GameDeck is not planned to require a private backend just to share configurations.
+Kestrel is not planned to require a private backend just to share configurations.
 
 The initial community system can use GitHub repositories.
 
@@ -600,7 +603,7 @@ community/
 └── previews/
 ```
 
-GameDeck can read a machine-readable index and allow users to discover and import community content.
+Kestrel can read a machine-readable index and allow users to discover and import community content.
 
 This gives the project an initial sharing mechanism without requiring:
 
@@ -625,7 +628,7 @@ That means:
 
 rather than arbitrary executable plugins.
 
-GameDeck must treat downloaded community files as untrusted data.
+Kestrel must treat downloaded community files as untrusted data.
 
 Community content must be validated before being imported.
 
@@ -635,7 +638,7 @@ Community content must be validated before being imported.
 
 The core gaming experience should not depend on the internet.
 
-After configuration is installed, GameDeck should be able to operate locally without needing a server.
+After configuration is installed, Kestrel should be able to operate locally without needing a server.
 
 Network connectivity may be used for:
 
@@ -649,7 +652,7 @@ but the core launcher, controller configuration, and local profiles should remai
 
 # Privacy
 
-GameDeck should be local-first.
+Kestrel should be local-first.
 
 The project does not intend to require:
 
@@ -667,7 +670,7 @@ Any future telemetry or analytics proposal should be explicit, documented, optio
 
 # Open Source
 
-GameDeck is licensed under the **GNU General Public License v3.0 (GPLv3)**.
+Kestrel is licensed under the **GNU General Public License v3.0 (GPLv3)**.
 
 See the [`LICENSE`](LICENSE) file in the repository for the complete legal terms.
 
@@ -679,7 +682,7 @@ https://www.gnu.org/licenses/gpl-3.0.html
 
 # Why GPLv3 Instead of a Proprietary License?
 
-GameDeck is intended to remain a community-oriented open-source project.
+Kestrel is intended to remain a community-oriented open-source project.
 
 A major part of the idea is that people should be able to inspect how the software works, improve it, adapt it to their devices, and share improvements under the project's license.
 
@@ -698,7 +701,7 @@ The code should not become inaccessible simply because the original author loses
 
 # Project Philosophy
 
-GameDeck is being built around a simple principle:
+Kestrel is being built around a simple principle:
 
 > **A useful gaming tool should help people get more out of the hardware they already own.**
 
@@ -720,13 +723,13 @@ The project is especially aimed at people who:
 - want one unified gaming interface
 - already have an Android phone capable of running their games
 
-That purpose is more important than turning GameDeck into a profit-driven product.
+That purpose is more important than turning Kestrel into a profit-driven product.
 
 ---
 
 # A Transparent Note From the Project Owner
 
-GameDeck is being started by someone who **does not have a formal background in Android software development**.
+Kestrel is being started by someone who **does not have a formal background in Android software development**.
 
 That is worth stating publicly rather than hiding it.
 
@@ -770,9 +773,9 @@ A contribution does **not** create an entitlement to:
 - a future company role
 - equity
 - employment
-- a promise that GameDeck will become a business
+- a promise that Kestrel will become a business
 
-The project owner may eventually consider donations, sponsorship, premium services, or other sustainable funding models, but there is **no commitment that GameDeck will become profit-driven**, and financial sustainability will not automatically take priority over the project's original community purpose.
+The project owner may eventually consider donations, sponsorship, premium services, or other sustainable funding models, but there is **no commitment that Kestrel will become profit-driven**, and financial sustainability will not automatically take priority over the project's original community purpose.
 
 Any significant change in project direction should be discussed openly with the community rather than quietly changing the project's character.
 
@@ -934,7 +937,7 @@ If a contributor discovers that something previously believed to be possible is 
 The intended structure is approximately:
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 ├── core/
@@ -969,7 +972,7 @@ Architecture decisions should be documented before major reorganizations.
 The high-level architecture is:
 
 ```text
-                         GameDeck
+                         Kestrel
                             │
            ┌────────────────┼────────────────┐
            │                │                │
@@ -1098,13 +1101,13 @@ The first meaningful milestone is not a beautiful launcher.
 It is this:
 
 ```text
-Open GameDeck
+Open Kestrel
       ↓
 Choose a supported gaming application
       ↓
 Launch it
       ↓
-Load a GameDeck layout
+Load a Kestrel layout
       ↓
 Use the virtual controller
       ↓
@@ -1117,7 +1120,7 @@ At least one emulator and one streaming application must successfully complete t
 
 # Compatibility Philosophy
 
-GameDeck will not claim universal compatibility without evidence.
+Kestrel will not claim universal compatibility without evidence.
 
 Compatibility labels should eventually include:
 
@@ -1130,7 +1133,7 @@ Compatibility labels should eventually include:
 
 A device-specific limitation is not treated as a user error.
 
-Android manufacturers modify system behavior, and the same GameDeck version may behave differently across devices.
+Android manufacturers modify system behavior, and the same Kestrel version may behave differently across devices.
 
 The project will document those differences rather than hiding them.
 
@@ -1138,7 +1141,7 @@ The project will document those differences rather than hiding them.
 
 # Security Philosophy
 
-GameDeck will eventually interact with:
+Kestrel will eventually interact with:
 
 - overlays
 - system APIs
@@ -1164,7 +1167,7 @@ See [`SECURITY.md`](SECURITY.md).
 
 # Third-Party Software
 
-GameDeck will depend on third-party libraries and services where appropriate.
+Kestrel will depend on third-party libraries and services where appropriate.
 
 Every dependency should be reviewed for:
 
@@ -1177,20 +1180,20 @@ Every dependency should be reviewed for:
 
 Third-party software should be documented in the project's third-party notices.
 
-GameDeck's GPLv3 license does not mean every third-party component automatically becomes GPLv3; dependency licensing must be respected individually.
+Kestrel's GPLv3 license does not mean every third-party component automatically becomes GPLv3; dependency licensing must be respected individually.
 
 ---
 
 # Community Repositories and User Content
 
-GameDeck may eventually support community repositories for:
+Kestrel may eventually support community repositories for:
 
 - layouts
 - skins
 - profiles
 - compatibility data
 
-A community contribution is not automatically an endorsement by the GameDeck project.
+A community contribution is not automatically an endorsement by the Kestrel project.
 
 Repository content should include appropriate licensing and attribution.
 
@@ -1200,7 +1203,7 @@ Users should be able to import, export, remove, and manage community content loc
 
 # No Promise of Commercialization
 
-GameDeck currently has no promised:
+Kestrel currently has no promised:
 
 - paid version
 - subscription
@@ -1215,7 +1218,7 @@ The project exists because the underlying problem is worth solving:
 
 > **Can a person with an Android phone get a more coherent handheld gaming experience without needing to buy additional hardware?**
 
-That is the problem GameDeck is trying to solve.
+That is the problem Kestrel is trying to solve.
 
 ---
 
@@ -1289,7 +1292,7 @@ Good evidence from a real Android device can be more valuable than a large code 
 
 # Development Principles
 
-GameDeck follows these principles:
+Kestrel follows these principles:
 
 ### Prove difficult assumptions early
 
@@ -1327,26 +1330,73 @@ The goal is a useful gaming experience, not an impressive architecture diagram.
 
 # Project Documentation
 
-Recommended reading order:
+This is the canonical reading order for the project. Other documents refer to it rather than
+keeping their own copy:
 
-1. [`PRD.md`](PRD.md)
-2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
-3. [`docs/PHASE-0.md`](docs/PHASE-0.md)
-4. [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)
-5. [`CONTRIBUTING.md`](CONTRIBUTING.md)
+1. [`README.md`](README.md) — what the project is and why it exists
+2. [`PRD.md`](PRD.md) — what the product is supposed to do
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the software is organized
+4. [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — where code belongs
+5. [`docs/PHASE-0.md`](docs/PHASE-0.md) — the first feasibility experiment, and the current gate
+6. the relevant module documents under [`docs/`](docs/) and decision records under [`docs/adr/`](docs/adr/)
+7. [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) — what is actually known to work
+8. [`docs/CONFIGURATION_SCHEMA.md`](docs/CONFIGURATION_SCHEMA.md) — the JSON model
+
+Then [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request, and existing code and
+tests before changing them.
+
+The full set, and what each file is authoritative for:
+
+| Document | Authoritative for |
+| --- | --- |
+| [`README.md`](README.md) | Project overview, vision, status |
+| [`PRD.md`](PRD.md) | Product requirements, scope, non-goals, phases, MVP |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Layers, boundaries, domain model, subsystem architecture |
+| [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) | Canonical folder organization and dependency rules |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Build/test workflow, testing levels, definition of done |
+| [`docs/SETUP.md`](docs/SETUP.md) | Installing the toolchain and running on a device, without the full IDE |
+| [`AI_DEVELOPMENT_GUIDE.md`](AI_DEVELOPMENT_GUIDE.md) | Rules for AI-assisted implementation |
+| [`CLAUDE.md`](CLAUDE.md) | Condensed operating brief for AI coding agents |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contributor workflow, style, commit/branch/PR/ADR conventions |
+| [`SECURITY.md`](SECURITY.md) | Security policy and threat boundaries |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Community conduct |
+| [`CHANGELOG.md`](CHANGELOG.md) | What has actually been established |
+| [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Dependency and license tracking |
+| [`docs/PHASE-0.md`](docs/PHASE-0.md) | Input feasibility spec: tests, evidence grades, acceptance criteria |
+| [`docs/INPUT_BACKENDS.md`](docs/INPUT_BACKENDS.md) | Input abstraction and backend categories |
+| [`docs/CONFIGURATION_SCHEMA.md`](docs/CONFIGURATION_SCHEMA.md) | JSON configuration model, versioning, validation |
+| [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | Device/application compatibility matrix and status definitions |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records — why each choice was made |
 
 ---
 
 # Building From Source
 
-Build instructions will be expanded as the first working project is established.
+The repository now contains a Gradle build. It produces a launchable placeholder application only —
+Phase 0 is complete on the reference device and `ADR-INPUT-001` is Accepted with that scope, but no
+product code has been written yet: there is no controller, input backend, overlay, or gaming session
+in the application. What exists is the experiment that proved the approach, under `tools/phase0/`,
+with its evidence in `docs/phase0/results/`.
 
-Expected baseline:
+```bash
+git clone https://github.com/Zxaidman/Kestrel.git
+cd Kestrel-Launcher
+./gradlew :core:test          # domain tests, no SDK required
+./gradlew :app:assembleDebug  # debug APK, requires the Android SDK
+```
 
-- Android Studio
-- Android SDK
-- JDK version compatible with the project's Gradle/Android Gradle Plugin configuration
+Baseline:
+
+- JDK 17 or newer
+- Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`)
 - Android 10+ test device recommended
+- Android Studio is optional — see below
+
+**New to this, or not a software developer?** [`docs/SETUP.md`](docs/SETUP.md) walks through the
+whole thing with a code editor and the command-line tools instead of the full IDE, including
+connecting the phone and installing over USB.
+
+Dependency versions are pinned in `gradle/libs.versions.toml`.
 
 Do not assume the current branch is production-ready.
 
@@ -1380,7 +1430,7 @@ When reporting a bug, include as much reproducible information as possible.
 
 Useful information includes:
 
-- GameDeck version or commit
+- Kestrel version or commit
 - Android version
 - device manufacturer
 - device model
@@ -1416,7 +1466,7 @@ Use the security reporting process documented in [`SECURITY.md`](SECURITY.md).
 
 # License
 
-GameDeck Android is licensed under the:
+Kestrel is licensed under the:
 
 **GNU General Public License v3.0**
 
@@ -1429,7 +1479,7 @@ https://www.gnu.org/licenses/gpl-3.0.html
 
 # A Final Note
 
-GameDeck started from a very practical idea:
+Kestrel started from a very practical idea:
 
 **A phone can already be a surprisingly capable gaming device. Why should someone have to buy another piece of hardware just to make the experience feel unified?**
 
@@ -1451,7 +1501,7 @@ The goal is not to pretend that every idea is possible.
 
 The goal is to keep trying to build the best practical version of the idea that Android actually allows.
 
-If GameDeck eventually becomes a useful tool for other people, that is the measure of success.
+If Kestrel eventually becomes a useful tool for other people, that is the measure of success.
 
 ---
 

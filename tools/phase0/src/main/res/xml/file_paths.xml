@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shares the report as a real file rather than as pasted text.
+
+  Only one path is exposed: a single subdirectory of the private cache. Nothing else in the
+  harness's storage is reachable through the provider, and the cache is cleared by the platform
+  without the user having to do anything.
+-->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

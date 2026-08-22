@@ -1,12 +1,15 @@
 # Code of Conduct
 
-## GameDeck Android Community Code of Conduct
+**Document:** `CODE_OF_CONDUCT.md`  
+**Status:** Active — community conduct  
 
-GameDeck is an open-source project built to create a better gaming experience for Android users.
+## Kestrel Community Code of Conduct
+
+Kestrel is an open-source project built to create a better gaming experience for Android users.
 
 The project welcomes contributors with different technical backgrounds, experience levels, cultures, and areas of expertise.
 
-This document explains the behavior expected in GameDeck community spaces.
+This document explains the behavior expected in Kestrel community spaces.
 
 The goal is simple: people should be able to work on software without being harassed, intimidated, or treated disrespectfully.
 
@@ -52,7 +55,7 @@ Instead of:
 
 Not everyone knows Android internals, Kotlin, Compose, Git, GitHub, or the same technical terminology.
 
-GameDeck is intentionally welcoming to contributors who are learning.
+Kestrel is intentionally welcoming to contributors who are learning.
 
 ### Be honest
 
@@ -74,7 +77,7 @@ Reviews and technical discussions may take time.
 
 ## 3. Unacceptable Behavior
 
-The following behavior is not acceptable in GameDeck community spaces:
+The following behavior is not acceptable in Kestrel community spaces:
 
 - harassment
 - discrimination
@@ -100,7 +103,7 @@ This list is not exhaustive. Behavior can violate this Code of Conduct even if i
 
 ## 4. Technical Disagreement Is Allowed
 
-GameDeck is a software project. Technical disagreement is expected.
+Kestrel is a software project. Technical disagreement is expected.
 
 You may challenge:
 
@@ -303,7 +306,7 @@ See [`LICENSE`](LICENSE) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## 14. Commercial and Financial Discussions
 
-GameDeck is currently community-first and is not being developed with a guaranteed profit model.
+Kestrel is currently community-first and is not being developed with a guaranteed profit model.
 
 People may discuss:
 
@@ -395,7 +398,7 @@ Public information a person intentionally shared publicly is different from expo
 
 ## 19. Scope
 
-This Code of Conduct applies to official GameDeck project spaces, including where applicable:
+This Code of Conduct applies to official Kestrel project spaces, including where applicable:
 
 - GitHub issues
 - pull requests
@@ -424,7 +427,7 @@ For security issues, use the process in [`SECURITY.md`](SECURITY.md).
 
 ## 21. Good-Faith Participation
 
-GameDeck is intentionally built by people with different levels of knowledge.
+Kestrel is intentionally built by people with different levels of knowledge.
 
 Mistakes will happen.
 
@@ -446,7 +449,7 @@ Move forward.
 
 ## 22. Final Principle
 
-The standard for GameDeck community participation is simple:
+The standard for Kestrel community participation is simple:
 
 > **Be someone you would be comfortable working with again.**
 

@@ -1,4 +1,4 @@
-# GameDeck Android — Architecture
+# Kestrel — Architecture
 
 **Document:** `ARCHITECTURE.md`  
 **Status:** Initial architecture baseline  
@@ -12,7 +12,7 @@
 
 ## 1. Purpose
 
-This document defines how GameDeck should be structured internally.
+This document defines how Kestrel should be structured internally.
 
 It does not attempt to describe every Android implementation detail. Instead, it establishes stable boundaries so that:
 
@@ -31,7 +31,7 @@ The architecture MUST support the possibility that the best input mechanism chan
 
 ## 2.1 Capability over assumption
 
-GameDeck must ask:
+Kestrel must ask:
 
 > "What capabilities does this device currently provide?"
 
@@ -91,7 +91,7 @@ The UI communicates with `InputEngine`.
 
 ## 2.3 JSON-first
 
-GameDeck configuration should remain data-driven.
+Kestrel configuration should remain data-driven.
 
 The following should be JSON whenever practical:
 
@@ -130,7 +130,7 @@ No UI should expose direct modification of built-in configuration.
 
 ## 2.5 No giant subsystem
 
-Avoid creating one enormous `GameDeckManager`.
+Avoid creating one enormous `KestrelManager`.
 
 Each feature must have a defined responsibility.
 
@@ -139,7 +139,7 @@ Each feature must have a defined responsibility.
 # 3. High-Level System
 
 ```text
-                         GameDeck Application
+                         Kestrel Application
                                   │
           ┌───────────────────────┼───────────────────────┐
           │                       │                       │
@@ -162,10 +162,14 @@ Each feature must have a defined responsibility.
 
 ---
 
-# 4. Proposed Repository Structure
+# 4. Repository Structure
+
+`PROJECT_STRUCTURE.md` is the canonical source for folder organization. The tree below is reproduced
+here for architectural context only. If the two ever disagree, `PROJECT_STRUCTURE.md` wins and this
+section must be corrected.
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 │   └── src/
@@ -173,38 +177,40 @@ GameDeck/
 ├── core/
 │   ├── common/
 │   ├── model/
+│   ├── configuration/
 │   ├── input/
 │   ├── layout/
 │   ├── profile/
 │   ├── skin/
 │   ├── compatibility/
-│   ├── configuration/
 │   └── diagnostics/
 │
 ├── feature/
 │   ├── launcher/
 │   ├── gaming-session/
 │   ├── controller-editor/
-│   ├── settings/
 │   ├── skins/
+│   ├── settings/
 │   └── community/
 │
 ├── platform/
 │   ├── android/
-│   ├── overlay/
+│   ├── display/
 │   ├── foreground-app/
-│   └── display/
-│
-├── input/
-│   ├── api/
-│   ├── gamepad/
+│   ├── overlay/
 │   ├── shizuku/
-│   └── fallback/
+│   └── input/
+│       ├── gamepad/
+│       ├── shizuku/
+│       └── fallback/
 │
 ├── data/
 │   ├── builtin/
+│   ├── schema/
 │   ├── migrations/
-│   └── repositories/
+│   └── compatibility/
+│
+├── community/
 │
 ├── docs/
 │
@@ -217,6 +223,10 @@ GameDeck/
     ├── ISSUE_TEMPLATE/
     └── PULL_REQUEST_TEMPLATE.md
 ```
+
+Input implementations live under `platform/input/` because they are Android-specific. The
+platform-independent input contract (`InputBackend`, controller semantics, analog processing) lives in
+`core/input/`. See `PROJECT_STRUCTURE.md` §9 and §21.
 
 This is an initial logical structure. The exact Gradle modules may be simplified during Phase 1 if the module boundaries create unnecessary build complexity.
 
@@ -365,7 +375,7 @@ This separation allows the same layout to use different visual styles.
 
 ## Profile
 
-A profile connects a target application to GameDeck behavior.
+A profile connects a target application to Kestrel behavior.
 
 ```text
 GamingProfile
@@ -539,7 +549,7 @@ The exact ordering will be determined by Phase 0.
 
 # 12. Real Gamepad Identity
 
-GameDeck's ultimate target is not merely:
+Kestrel's ultimate target is not merely:
 
 ```text
 "send a key event"
@@ -582,7 +592,7 @@ These are different capabilities.
 Shizuku is an optional platform adapter.
 
 ```text
-GameDeck process
+Kestrel process
        │
        ▼
 ShizukuCapabilityService
@@ -606,7 +616,7 @@ The UserService should be a narrow system-capability adapter.
 
 # 14. Shizuku Capability Detection
 
-GameDeck should expose something similar to:
+Kestrel should expose something similar to:
 
 ```kotlin
 data class PrivilegeState(
@@ -633,7 +643,7 @@ The application must not infer `ROOT` merely because Shizuku is installed.
 
 # 15. Fallback Input
 
-Touch mapping is a fallback capability, not the definition of GameDeck's controller system.
+Touch mapping is a fallback capability, not the definition of Kestrel's controller system.
 
 Android's AccessibilityService can dispatch gestures to the touchscreen, but that is still touchscreen interaction rather than a native virtual gamepad device.
 
@@ -655,6 +665,16 @@ Fallback
 
 The final ordering depends on Phase 0 results.
 
+**Settled, by measurement.** The preferred backend is `ADR-INPUT-001`, proven on the reference
+device. Touch mapping was built as a probe, measured, and **rejected** — not because it failed, but
+because what it succeeds at is a different product: it can press a target's own on-screen buttons
+and can never create a controller (`ADR-006`, Outcome). System-level event injection needs a
+signature permission and is not reachable.
+
+So the list has one entry that is real. **Kestrel's input requires Shizuku**, and the ordering above
+is kept as written because `ADR-002`'s interface exists precisely so a second backend can arrive
+without the rest of the system noticing — not because one is expected.
+
 ---
 
 # 16. Accessibility Consideration
@@ -672,6 +692,22 @@ The project must evaluate:
 The Android documentation explicitly describes accessibility services as specialized assistive tools, not a general-purpose automation mechanism.
 
 Therefore the architecture must allow accessibility to be removed without affecting the rest of the system.
+
+**Evaluated and removed.** Each item on that list now has an answer, and one of them decided it.
+
+- *Technical suitability* — **adequate.** Median 4 ms injected touch, ~242 drag movements a second.
+- *Android behavior* — **a hard gate.** Restricted settings block a sideloaded application's
+  accessibility service, and both programmatic enable routes write nothing while reporting success
+  until the user lifts it by hand.
+- *Device compatibility* — measured on one device only.
+- *User disclosure* — soluble; the probe's service could inject and could not read the screen.
+- **Distribution-policy implications — decisive.** Declaring the service made Play Protect block
+  Kestrel's install outright, where the same application without it produced only the ordinary
+  unknown-source warning. That cost falls on every user at install time, whether or not the code
+  ever runs.
+
+The requirement that accessibility be removable without affecting the rest of the system was
+honoured literally: it was removed, and nothing else changed. `ADR-006` carries the evidence.
 
 ---
 
@@ -787,7 +823,7 @@ The implementation must distinguish:
 
 ### UI composition
 
-What GameDeck can directly control in its own surface.
+What Kestrel can directly control in its own surface.
 
 ### External activity/window
 
@@ -797,7 +833,7 @@ What Android permits for the selected target application.
 
 What may require elevated privileges.
 
-GameDeck must never claim that an external game has been resized merely because GameDeck changed its own layout.
+Kestrel must never claim that an external game has been resized merely because Kestrel changed its own layout.
 
 ---
 
@@ -920,7 +956,7 @@ The engine must correctly handle:
 - Overlay disappearance
 - Application switching
 
-When a gaming session stops, GameDeck MUST release any active inputs.
+When a gaming session stops, Kestrel MUST release any active inputs.
 
 ---
 
@@ -1069,15 +1105,22 @@ Every significant architecture choice should be recorded under:
 docs/adr/
 ```
 
-Example:
+The records that currently exist:
 
 ```text
-ADR-001-json-first-config.md
-ADR-002-input-backend-abstraction.md
-ADR-003-shizuku-is-optional.md
-ADR-004-gplv3.md
-ADR-005-android-10-minimum.md
+ADR-001-json-first-config.md          Accepted
+ADR-002-input-backend-abstraction.md  Accepted
+ADR-003-shizuku-optional.md           Accepted
+ADR-004-android-10-baseline.md        Accepted
+ADR-005-gplv3.md                      Accepted
+ADR-INPUT-001.md                      Accepted — scoped to the reference device
 ```
+
+The directory `docs/adr/` is the source of truth for which records exist. Verify against it before
+citing a record by name; do not trust a list reproduced in prose, including this one.
+
+Naming follows `CONTRIBUTING.md` §57: sequential `ADR-NNN-topic.md` by default, with a reserved
+prefix only where a decision is gated on an experiment or scoped to one domain.
 
 A new contributor or AI agent should be able to determine why a decision was made.
 
@@ -1127,4 +1170,4 @@ not:
 Input implementation = finalized
 ```
 
-This keeps the remainder of GameDeck insulated from the main technical uncertainty.
+This keeps the remainder of Kestrel insulated from the main technical uncertainty.

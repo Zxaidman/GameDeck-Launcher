@@ -1,8 +1,11 @@
-# GameDeck Android — Configuration Schema
+# Kestrel — Configuration Schema
+
+**Document:** `docs/CONFIGURATION_SCHEMA.md`  
+**Status:** Active — schema version 1, no implementation yet  
 
 ## Purpose
 
-GameDeck is JSON-first. Configuration should be portable, inspectable, versioned, exportable, migration-friendly, safe to import, and independent of UI code or a specific input backend.
+Kestrel is JSON-first. Configuration should be portable, inspectable, versioned, exportable, migration-friendly, safe to import, and independent of UI code or a specific input backend.
 
 ## Configuration types
 
@@ -100,6 +103,8 @@ May define:
 
 - id
 - control
+- group
+- shape
 - x/y
 - width/height
 - rotation
@@ -109,7 +114,98 @@ May define:
 - behavior
 - anchors
 
+### `control` and capability
+
+`control` names what the element **is** — `button`, `dpad`, `stick`, `analog-trigger`,
+`digital-trigger`, `decoration`. What a backend must provide for it to work is **derived from that
+kind**, never stored in the document.
+
+That is deliberate. Storing the requirement would freeze today's understanding of capability into
+every file ever exported, and a document written now would mean the wrong thing after the capability
+model gains a distinction. Storing the kind means a layout keeps meaning what its author meant.
+
+`ADR-007` decides what happens when the active backend cannot provide it: the element is **shown and
+disabled**, never removed, never substituted. `digital-trigger` exists as a separate kind for the
+same reason — a user may choose a digital trigger, and it then works where an analog one cannot, but
+the product never performs that substitution on their behalf.
+
 Coordinates should use a device-independent or normalized representation rather than one phone's raw pixels as the canonical source.
+
+### `group` — which controls share a window
+
+Optional. Elements naming the same group are drawn in **one window**; an element with no group gets
+one to itself.
+
+It is not decoration, and it is not a category. **It decides whether a thumb can slide from one
+control to another**, because a finger belongs to the window that received its touch-down for the
+life of the gesture. Rolling across face buttons and pressing each in turn works only if they share
+a window; so does holding a stick press and then moving the stick.
+
+It is **declared rather than inferred**, and that was learned the hard way. Deriving it from how
+close two controls were drawn failed on the shipped layout: the gap that had to mean *together* and
+the gap that had to mean *apart* were fifteen pixels apart, so the answer flipped with rounding and
+with the size setting. A gesture that works at one size and not another is worse than one that never
+worked.
+
+The cost is real and bounds how groups should be used: a window is dead to whatever is underneath
+everywhere its controls are not, so a group should be controls a thumb would genuinely travel
+between rather than everything on one side of the screen.
+
+### `shape` — what a control is drawn and pressed as
+
+Optional, one of `circle` (the default), `square`, `rectangle`.
+
+Separate from the kind, and the separation matters: a kind says what a control **does**, a shape
+says what it **looks like**. A shoulder button is a rectangle on most pads and a circle on some, and
+nothing about which one it is changes what it sends.
+
+- `circle` — drawn and pressed as a circle of `min(width, height) / 2`.
+- `square` — a rounded square of the shorter side. Stated rather than left to equal width and height,
+  so a control stays square when a hand-edited file makes them slightly uneven.
+- `rectangle` — a rounded rectangle using `width` and `height` as given.
+
+**The shape decides where the control can be pressed, not only how it is drawn.** A rectangle
+hit-tested as a circle would have corners that look pressable and are not, which is a fault a player
+feels and cannot describe.
+
+A stick and a d-pad are drawn round whatever the shape says. Deflection is a distance from a centre,
+and a rectangular stick would reach further along its diagonal than along its sides.
+
+### How position and size are normalised, and why differently
+
+Normalising alone is not enough: a layout built on a 20:9 phone and opened on a squarer screen has
+to stay *playable*, and both naive approaches fail. Normalising position against full width and
+height moves a thumb-reachable control towards the middle of a wider screen. Normalising size
+against width and height independently turns a round button into an ellipse.
+
+So the two are normalised differently, on purpose:
+
+- **Position** is an offset from an **anchor** — one of nine points on the surface. A control pinned
+  to the bottom-left corner stays where a thumb rests, whatever the screen becomes. Offsets are
+  applied *inwards* from the anchor, so an author never writes a negative number to move a
+  right-hand control away from the right edge.
+- **Size** is measured against the surface's **shorter side only**, so a control keeps its shape and
+  its size relative to the hand holding the phone — and rotating the phone does not resize anything.
+
+Both are in the same unit, so a control and its offsets scale together and an arrangement holds its
+proportions.
+
+### Insets
+
+The usable surface excludes display cutouts and gesture areas. Those are device-specific, which is
+exactly why a layout must not encode them: the surface subtracts them, and the same layout lands
+correctly on a phone with a cutout and one without.
+
+A control that falls outside the usable area is **reported, not corrected**. Running a control off
+an edge can be a deliberate design, and the same principle as `ADR-007` applies — the product says
+what it sees rather than overruling the author.
+
+### Rotation
+
+Rotation is part of hit testing, not only of drawing. A touch is tested by rotating the *point* back
+around the control's centre and comparing against an upright rectangle, which is exact. A rotated
+control's bounding box is larger than its own width and height, and the bounding box is used only as
+an editor hint about overlap — never to decide which control receives a touch.
 
 ## Skin
 
@@ -181,7 +277,7 @@ Community repositories should expose declarative metadata such as:
 
 ```text
 id, type, name, author, version, license,
-download, checksum, minimumGameDeckVersion,
+download, checksum, minimumKestrelVersion,
 compatibility, preview
 ```
 
@@ -203,9 +299,25 @@ Every import must validate:
 
 Invalid data must produce a typed error and must not crash the application.
 
+The typed errors are `ConfigurationError` in `core/configuration/`, and each names the field it
+concerns. A user handed someone else's layout and told only that it is invalid has no way forward;
+told that `elements[3].opacity` is 1.4 and must be between 0 and 1, they can fix it or report it
+usefully.
+
+Two ordering rules, because they change what the other checks mean:
+
+- **Schema version is checked first.** A document from a future version is not malformed — this
+  build is simply older — and it must be reported as such rather than as an invalid file.
+- **Document type is checked before any type-specific field.** Reading a skin as a layout should
+  say so, not fail later on a missing field that was never going to be there.
+
 ## Unknown fields
 
 Unknown non-executable fields should ideally be preserved where safe to improve forward compatibility.
+
+Implemented: validation reads from the parsed document rather than consuming it, and every header
+carries the fields it did not recognise. A document written by a newer build at the same schema
+version keeps those fields when this build re-exports it, instead of quietly losing them.
 
 ## Export/import
 

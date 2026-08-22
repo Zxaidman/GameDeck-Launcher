@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Lets the harness ask Shizuku for shell privilege. It grants nothing by itself: the user
+         must have Shizuku installed, running, and must approve the request. -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <!-- A controller session outlives this screen on purpose: a controller that dies when you open
+         something else cannot be used to play anything. The notification is what makes that
+         visible and stoppable — while a device exists, the user can see it exists and end it from
+         anywhere. See docs/phase0/results/tier5-orphan-report.md for why that matters. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      EXPERIMENTAL Phase 0 harness. Separate applicationId, separate APK.
+      The harness observes input; it never injects into its own window. Stimulus is produced by the
+      platform's own tools in a shell-privileged process and travels the ordinary input path.
+    -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.KestrelPhase0">
+
+        <activity
+            android:name=".Phase0Activity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Holds the session open and renews its lease. The lease is what makes the session
+             end when the user says so: the privileged watchdog closes the device seconds after
+             renewals stop, which covers force-stop, cleared data and uninstalling, none of which
+             let an application run any code on its way out. -->
+        <service
+            android:name=".SessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps an experimental virtual controller open, and visible, while
+                    input feasibility is measured against other applications." />
+        </service>
+
+        <!-- Lets Share hand over the report as an actual .json file. The receiving application
+             gets a one-shot read grant for that single file; the provider is not exported, so
+             nothing can pull a file out of the harness without the harness offering it. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Required by the Shizuku library so it can hand the binder to this process. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
+            tools:ignore="ExportedContentProvider" />
+
+    </application>
+
+</manifest>

@@ -1,20 +1,47 @@
-# GameDeck Android — Development Guide
+# Kestrel — Development Guide
+
+**Document:** `DEVELOPMENT.md`  
+**Status:** Active — build and test workflow  
 
 ## Purpose
 
-This guide explains how to build, test, and work on GameDeck. It is intentionally practical for both human contributors and AI coding agents.
+This guide explains how to build, test, and work on Kestrel. It is intentionally practical for both human contributors and AI coding agents.
 
 ## Tooling
 
-The project is intended to use:
+The project uses:
 
 - Android Studio
 - Android SDK
-- JDK compatible with the repository Gradle/Android Gradle Plugin version
+- JDK 17 or newer (the build targets Java 17 bytecode; no exact JDK is provisioned, so any
+  supported JDK from 17 upwards works)
 - Git
 - a physical Android 10+ phone for Android-specific testing
 
-Exact versions should be pinned when the initial build is established.
+Versions are pinned in `gradle/libs.versions.toml`. That file is the only place a dependency or
+plugin version is declared — do not hardcode one in a module build script.
+
+Android Studio is not required. `docs/SETUP.md` documents a verified command-line-tools setup with
+the exact SDK packages needed, and is written for contributors who are not software developers.
+
+## Commands
+
+```text
+./gradlew :core:test                  JVM domain tests (no SDK required)
+./gradlew :app:assembleDebug          product debug APK (requires the SDK)
+./gradlew :tools:phase0:assembleDebug Phase 0 harness APK (requires the SDK)
+./gradlew build                       everything: compile, lint, test
+```
+
+`build` runs lint, and lint errors fail the build. Fix them rather than suppressing, unless a
+suppression is genuinely justified and carries a comment saying why.
+
+`:app` needs a configured SDK. Without one, Gradle reports `SDK location not found` and asks for
+`ANDROID_HOME` or `sdk.dir` in `local.properties`. `local.properties` is machine-specific and is
+not committed.
+
+A container or CI runner without the SDK can still run `:core:test`. Do not report a green
+`:core:test` as evidence that the Android side builds.
 
 ## Initial setup
 
@@ -132,7 +159,7 @@ When modifying JSON:
 
 ## Compatibility work
 
-Every new device-specific result should update `docs/COMPATIBILITY.md` with device, Android version, firmware, GameDeck version/commit, target app, backend, result, and limitations.
+Every new device-specific result should update `docs/COMPATIBILITY.md` with device, Android version, firmware, Kestrel version/commit, target app, backend, result, and limitations.
 
 ## Pull request readiness
 

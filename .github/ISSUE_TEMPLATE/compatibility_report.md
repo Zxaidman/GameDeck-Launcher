@@ -12,7 +12,7 @@ assignees: ""
 - Device model:
 - Android/API:
 - Firmware/OEM skin:
-- GameDeck version/commit:
+- Kestrel version/commit:
 - Shizuku state:
 - Shizuku privilege:
 

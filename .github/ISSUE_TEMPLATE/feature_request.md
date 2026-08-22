@@ -8,7 +8,7 @@ assignees: ""
 
 ## Problem
 
-What user problem should GameDeck solve?
+What user problem should Kestrel solve?
 
 ## Proposed behavior
 

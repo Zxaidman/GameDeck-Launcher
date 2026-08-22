@@ -1,0 +1,2661 @@
+{
+  "kestrelVersion": "0.0.14-dev",
+  "capturedAtMillis": 1787223317206,
+  "device": {
+    "manufacturer": "Xiaomi",
+    "brand": "Redmi",
+    "model": "2312DRAABI",
+    "androidRelease": "15",
+    "sdkInt": 35,
+    "securityPatch": "2026-06-01",
+    "fingerprint": "Redmi\/gold_in_global\/gold:15\/AP3A.240905.015.A2\/OS3.0.3.0.VNQINXM:user\/release-keys"
+  },
+  "privilege": {
+    "serviceRunning": true,
+    "permissionGranted": true,
+    "level": "ADB_SHELL",
+    "version": 13,
+    "usable": true
+  },
+  "session": {
+    "open": true,
+    "detail": "Controls are on screen. The round K button at the top shows and hides them, and nothing outside the controls is covered.",
+    "holders": "28472"
+  },
+  "inputDevices": [
+    {
+      "id": -1,
+      "name": "Virtual",
+      "descriptor": "a718a782d34bc767f4689c232d64d527998ea7fd",
+      "sourcesRaw": 769,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 0,
+      "name": "uinput-goodix",
+      "descriptor": "16eefc4957ed20bc14d87787478660f2723a864b",
+      "sourcesRaw": 1281,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 2,
+      "name": "mtk-kpd",
+      "descriptor": "9a244e01c90550ca2eb2798ffe20d8731e811765",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 3,
+      "name": "mtk-pmic-keys",
+      "descriptor": "485d69228e24f5e46da1598745890b214130dbc4",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 4,
+      "name": "mt6833-mt6359 Headset Jack",
+      "descriptor": "393bc96fab9421f9d6a6059cfe79e8b042c8755d",
+      "sourcesRaw": -2147483391,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 5,
+      "name": "swtp",
+      "descriptor": "b694711109f0e5ef59f2ca6f8166f03a196c6741",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 6,
+      "name": "goodix_ts",
+      "descriptor": "c63c3be2de98f10e6bbd97f78684d819a6c862b9",
+      "sourcesRaw": 4355,
+      "controllerNumber": 0,
+      "isExternal": false,
+      "rangeCount": 8,
+      "distinctAxes": 8,
+      "axes": [
+        "AXIS_X",
+        "AXIS_Y",
+        "AXIS_PRESSURE",
+        "AXIS_SIZE",
+        "AXIS_TOUCH_MAJOR",
+        "AXIS_TOUCH_MINOR",
+        "AXIS_TOOL_MAJOR",
+        "AXIS_TOOL_MINOR"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "uinput_nav",
+      "descriptor": "8136f1e77728f603ac0ec0e545d338eba3cbcbc0",
+      "sourcesRaw": 257,
+      "controllerNumber": 0,
+      "isExternal": true,
+      "rangeCount": 0,
+      "distinctAxes": 0,
+      "axes": []
+    },
+    {
+      "id": 21,
+      "name": "Kestrel Virtual Controller",
+      "descriptor": "8cc7a295a758edbbada3044903f0f8fb0c1157f1",
+      "sourcesRaw": 16778513,
+      "controllerNumber": 1,
+      "isExternal": true,
+      "rangeCount": 10,
+      "distinctAxes": 10,
+      "axes": [
+        "AXIS_HAT_Y",
+        "AXIS_LTRIGGER",
+        "AXIS_BRAKE",
+        "AXIS_RTRIGGER",
+        "AXIS_GAS",
+        "AXIS_Z",
+        "AXIS_Y",
+        "AXIS_HAT_X",
+        "AXIS_RZ",
+        "AXIS_X"
+      ]
+    }
+  ],
+  "lastInput": {
+    "source": "Kestrel Virtual Controller (id 21)",
+    "events": 364,
+    "lastButton": "BUTTON_L1",
+    "rawX": 1.5259021893143654E-5,
+    "rawY": 1.5259021893143654E-5
+  },
+  "sent": {
+    "count": 250,
+    "dropped": 0,
+    "marks": [
+      {
+        "tMs": 0,
+        "kind": "button",
+        "detail": "304 down"
+      },
+      {
+        "tMs": 387,
+        "kind": "button",
+        "detail": "305 down"
+      },
+      {
+        "tMs": 388,
+        "kind": "button",
+        "detail": "304 up"
+      },
+      {
+        "tMs": 730,
+        "kind": "button",
+        "detail": "305 up"
+      },
+      {
+        "tMs": 738,
+        "kind": "button",
+        "detail": "308 down"
+      },
+      {
+        "tMs": 1063,
+        "kind": "button",
+        "detail": "308 up"
+      },
+      {
+        "tMs": 1064,
+        "kind": "button",
+        "detail": "307 down"
+      },
+      {
+        "tMs": 1457,
+        "kind": "button",
+        "detail": "307 up"
+      },
+      {
+        "tMs": 4223,
+        "kind": "button",
+        "detail": "308 down"
+      },
+      {
+        "tMs": 4473,
+        "kind": "button",
+        "detail": "308 up"
+      },
+      {
+        "tMs": 4473,
+        "kind": "button",
+        "detail": "307 down"
+      },
+      {
+        "tMs": 4716,
+        "kind": "button",
+        "detail": "307 up"
+      },
+      {
+        "tMs": 6745,
+        "kind": "button",
+        "detail": "318 down"
+      },
+      {
+        "tMs": 6898,
+        "kind": "rightStick",
+        "detail": "-1.000 +0.026"
+      },
+      {
+        "tMs": 6915,
+        "kind": "rightStick",
+        "detail": "-0.998 +0.056"
+      },
+      {
+        "tMs": 6932,
+        "kind": "rightStick",
+        "detail": "-0.994 +0.110"
+      },
+      {
+        "tMs": 6948,
+        "kind": "rightStick",
+        "detail": "-0.980 +0.201"
+      },
+      {
+        "tMs": 6965,
+        "kind": "rightStick",
+        "detail": "-0.949 +0.314"
+      },
+      {
+        "tMs": 6981,
+        "kind": "rightStick",
+        "detail": "-0.894 +0.448"
+      },
+      {
+        "tMs": 6998,
+        "kind": "rightStick",
+        "detail": "-0.799 +0.601"
+      },
+      {
+        "tMs": 7015,
+        "kind": "rightStick",
+        "detail": "-0.672 +0.740"
+      },
+      {
+        "tMs": 7031,
+        "kind": "rightStick",
+        "detail": "-0.552 +0.834"
+      },
+      {
+        "tMs": 7048,
+        "kind": "rightStick",
+        "detail": "-0.460 +0.888"
+      },
+      {
+        "tMs": 7064,
+        "kind": "rightStick",
+        "detail": "-0.397 +0.918"
+      },
+      {
+        "tMs": 7081,
+        "kind": "rightStick",
+        "detail": "-0.349 +0.937"
+      },
+      {
+        "tMs": 7098,
+        "kind": "rightStick",
+        "detail": "-0.301 +0.954"
+      },
+      {
+        "tMs": 7114,
+        "kind": "rightStick",
+        "detail": "-0.197 +0.980"
+      },
+      {
+        "tMs": 7131,
+        "kind": "rightStick",
+        "detail": "-0.014 +1.000"
+      },
+      {
+        "tMs": 7147,
+        "kind": "rightStick",
+        "detail": "+0.157 +0.930"
+      },
+      {
+        "tMs": 7164,
+        "kind": "rightStick",
+        "detail": "+0.338 +0.793"
+      },
+      {
+        "tMs": 7181,
+        "kind": "rightStick",
+        "detail": "+0.597 +0.612"
+      },
+      {
+        "tMs": 7198,
+        "kind": "rightStick",
+        "detail": "+0.825 +0.432"
+      },
+      {
+        "tMs": 7215,
+        "kind": "rightStick",
+        "detail": "+0.976 +0.217"
+      },
+      {
+        "tMs": 7232,
+        "kind": "rightStick",
+        "detail": "+1.000 +0.013"
+      },
+      {
+        "tMs": 7249,
+        "kind": "rightStick",
+        "detail": "+0.989 -0.148"
+      },
+      {
+        "tMs": 7266,
+        "kind": "rightStick",
+        "detail": "+0.948 -0.319"
+      },
+      {
+        "tMs": 7284,
+        "kind": "rightStick",
+        "detail": "+0.879 -0.477"
+      },
+      {
+        "tMs": 7301,
+        "kind": "rightStick",
+        "detail": "+0.749 -0.663"
+      },
+      {
+        "tMs": 7318,
+        "kind": "rightStick",
+        "detail": "+0.650 -0.760"
+      },
+      {
+        "tMs": 7335,
+        "kind": "rightStick",
+        "detail": "+0.599 -0.801"
+      },
+      {
+        "tMs": 7352,
+        "kind": "rightStick",
+        "detail": "+0.510 -0.860"
+      },
+      {
+        "tMs": 7369,
+        "kind": "rightStick",
+        "detail": "+0.383 -0.924"
+      },
+      {
+        "tMs": 7387,
+        "kind": "rightStick",
+        "detail": "+0.337 -0.941"
+      },
+      {
+        "tMs": 7404,
+        "kind": "rightStick",
+        "detail": "+0.237 -0.971"
+      },
+      {
+        "tMs": 7421,
+        "kind": "rightStick",
+        "detail": "+0.094 -0.996"
+      },
+      {
+        "tMs": 7438,
+        "kind": "rightStick",
+        "detail": "-0.051 -0.999"
+      },
+      {
+        "tMs": 7455,
+        "kind": "rightStick",
+        "detail": "-0.205 -0.979"
+      },
+      {
+        "tMs": 7473,
+        "kind": "rightStick",
+        "detail": "-0.340 -0.940"
+      },
+      {
+        "tMs": 7490,
+        "kind": "rightStick",
+        "detail": "-0.405 -0.914"
+      },
+      {
+        "tMs": 7507,
+        "kind": "rightStick",
+        "detail": "-0.570 -0.822"
+      },
+      {
+        "tMs": 7524,
+        "kind": "rightStick",
+        "detail": "-0.662 -0.750"
+      },
+      {
+        "tMs": 7541,
+        "kind": "rightStick",
+        "detail": "-0.741 -0.671"
+      },
+      {
+        "tMs": 7558,
+        "kind": "rightStick",
+        "detail": "-0.798 -0.602"
+      },
+      {
+        "tMs": 7575,
+        "kind": "rightStick",
+        "detail": "-0.852 -0.523"
+      },
+      {
+        "tMs": 7592,
+        "kind": "rightStick",
+        "detail": "-0.902 -0.431"
+      },
+      {
+        "tMs": 7609,
+        "kind": "rightStick",
+        "detail": "-0.955 -0.295"
+      },
+      {
+        "tMs": 7627,
+        "kind": "rightStick",
+        "detail": "-0.988 -0.157"
+      },
+      {
+        "tMs": 7644,
+        "kind": "rightStick",
+        "detail": "-0.999 -0.037"
+      },
+      {
+        "tMs": 7661,
+        "kind": "rightStick",
+        "detail": "-0.998 +0.069"
+      },
+      {
+        "tMs": 7678,
+        "kind": "rightStick",
+        "detail": "-0.972 +0.234"
+      },
+      {
+        "tMs": 7695,
+        "kind": "rightStick",
+        "detail": "-0.931 +0.364"
+      },
+      {
+        "tMs": 7713,
+        "kind": "rightStick",
+        "detail": "-0.890 +0.456"
+      },
+      {
+        "tMs": 7730,
+        "kind": "rightStick",
+        "detail": "-0.840 +0.543"
+      },
+      {
+        "tMs": 7747,
+        "kind": "rightStick",
+        "detail": "-0.804 +0.595"
+      },
+      {
+        "tMs": 7764,
+        "kind": "rightStick",
+        "detail": "-0.774 +0.633"
+      },
+      {
+        "tMs": 7781,
+        "kind": "rightStick",
+        "detail": "-0.747 +0.665"
+      },
+      {
+        "tMs": 7798,
+        "kind": "rightStick",
+        "detail": "-0.712 +0.702"
+      },
+      {
+        "tMs": 7815,
+        "kind": "rightStick",
+        "detail": "-0.665 +0.747"
+      },
+      {
+        "tMs": 7851,
+        "kind": "rightStick",
+        "detail": "-0.547 +0.837"
+      },
+      {
+        "tMs": 7868,
+        "kind": "rightStick",
+        "detail": "-0.450 +0.893"
+      },
+      {
+        "tMs": 7886,
+        "kind": "rightStick",
+        "detail": "-0.294 +0.956"
+      },
+      {
+        "tMs": 7903,
+        "kind": "rightStick",
+        "detail": "+0.109 +0.994"
+      },
+      {
+        "tMs": 7913,
+        "kind": "button",
+        "detail": "318 up"
+      },
+      {
+        "tMs": 7920,
+        "kind": "rightStick",
+        "detail": "+0.000 +0.000"
+      },
+      {
+        "tMs": 8442,
+        "kind": "button",
+        "detail": "317 down"
+      },
+      {
+        "tMs": 8632,
+        "kind": "leftStick",
+        "detail": "+0.989 -0.149"
+      },
+      {
+        "tMs": 8747,
+        "kind": "leftStick",
+        "detail": "+0.106 +0.225"
+      },
+      {
+        "tMs": 8765,
+        "kind": "leftStick",
+        "detail": "-0.001 +0.357"
+      },
+      {
+        "tMs": 8782,
+        "kind": "leftStick",
+        "detail": "-0.101 +0.502"
+      },
+      {
+        "tMs": 8799,
+        "kind": "leftStick",
+        "detail": "-0.185 +0.677"
+      },
+      {
+        "tMs": 8816,
+        "kind": "leftStick",
+        "detail": "-0.221 +0.778"
+      },
+      {
+        "tMs": 8866,
+        "kind": "leftStick",
+        "detail": "-0.261 +0.965"
+      },
+      {
+        "tMs": 9097,
+        "kind": "leftStick",
+        "detail": "-0.179 +0.984"
+      },
+      {
+        "tMs": 9114,
+        "kind": "leftStick",
+        "detail": "-0.100 +0.995"
+      },
+      {
+        "tMs": 9131,
+        "kind": "leftStick",
+        "detail": "+0.155 +0.909"
+      },
+      {
+        "tMs": 9148,
+        "kind": "leftStick",
+        "detail": "+0.387 +0.757"
+      },
+      {
+        "tMs": 9165,
+        "kind": "leftStick",
+        "detail": "+0.494 +0.630"
+      },
+      {
+        "tMs": 9183,
+        "kind": "leftStick",
+        "detail": "+0.595 +0.451"
+      },
+      {
+        "tMs": 9200,
+        "kind": "leftStick",
+        "detail": "+0.694 +0.205"
+      },
+      {
+        "tMs": 9217,
+        "kind": "leftStick",
+        "detail": "+0.732 +0.091"
+      },
+      {
+        "tMs": 9267,
+        "kind": "leftStick",
+        "detail": "+0.676 -0.737"
+      },
+      {
+        "tMs": 9285,
+        "kind": "leftStick",
+        "detail": "+0.582 -0.813"
+      },
+      {
+        "tMs": 9302,
+        "kind": "leftStick",
+        "detail": "+0.440 -0.898"
+      },
+      {
+        "tMs": 9368,
+        "kind": "leftStick",
+        "detail": "+0.376 -0.927"
+      },
+      {
+        "tMs": 9385,
+        "kind": "leftStick",
+        "detail": "-0.079 -0.997"
+      },
+      {
+        "tMs": 9402,
+        "kind": "leftStick",
+        "detail": "-0.240 -0.971"
+      },
+      {
+        "tMs": 9419,
+        "kind": "leftStick",
+        "detail": "-0.294 -0.956"
+      },
+      {
+        "tMs": 9437,
+        "kind": "leftStick",
+        "detail": "-0.436 -0.900"
+      },
+      {
+        "tMs": 9454,
+        "kind": "leftStick",
+        "detail": "-0.573 -0.819"
+      },
+      {
+        "tMs": 9471,
+        "kind": "leftStick",
+        "detail": "-0.641 -0.767"
+      },
+      {
+        "tMs": 9488,
+        "kind": "leftStick",
+        "detail": "-0.796 -0.605"
+      },
+      {
+        "tMs": 9554,
+        "kind": "leftStick",
+        "detail": "-0.954 -0.299"
+      },
+      {
+        "tMs": 9572,
+        "kind": "leftStick",
+        "detail": "-0.987 -0.162"
+      },
+      {
+        "tMs": 9589,
+        "kind": "leftStick",
+        "detail": "-0.978 +0.206"
+      },
+      {
+        "tMs": 9606,
+        "kind": "leftStick",
+        "detail": "-0.952 +0.307"
+      },
+      {
+        "tMs": 9624,
+        "kind": "leftStick",
+        "detail": "-0.895 +0.446"
+      },
+      {
+        "tMs": 9641,
+        "kind": "leftStick",
+        "detail": "-0.839 +0.543"
+      },
+      {
+        "tMs": 9658,
+        "kind": "leftStick",
+        "detail": "-0.759 +0.651"
+      },
+      {
+        "tMs": 9675,
+        "kind": "leftStick",
+        "detail": "-0.713 +0.702"
+      },
+      {
+        "tMs": 9726,
+        "kind": "leftStick",
+        "detail": "-0.643 +0.766"
+      },
+      {
+        "tMs": 9743,
+        "kind": "leftStick",
+        "detail": "-0.392 +0.920"
+      },
+      {
+        "tMs": 9777,
+        "kind": "leftStick",
+        "detail": "-0.292 +0.956"
+      },
+      {
+        "tMs": 9795,
+        "kind": "leftStick",
+        "detail": "-0.255 +0.967"
+      },
+      {
+        "tMs": 9812,
+        "kind": "leftStick",
+        "detail": "-0.205 +0.979"
+      },
+      {
+        "tMs": 9829,
+        "kind": "leftStick",
+        "detail": "-0.167 +0.986"
+      },
+      {
+        "tMs": 9846,
+        "kind": "leftStick",
+        "detail": "-0.097 +0.995"
+      },
+      {
+        "tMs": 9863,
+        "kind": "leftStick",
+        "detail": "+0.097 +0.995"
+      },
+      {
+        "tMs": 9879,
+        "kind": "button",
+        "detail": "317 up"
+      },
+      {
+        "tMs": 9881,
+        "kind": "leftStick",
+        "detail": "+0.000 +0.000"
+      },
+      {
+        "tMs": 10595,
+        "kind": "hat",
+        "detail": "x=0 y=1"
+      },
+      {
+        "tMs": 10853,
+        "kind": "hat",
+        "detail": "x=1 y=1"
+      },
+      {
+        "tMs": 10933,
+        "kind": "hat",
+        "detail": "x=1 y=0"
+      },
+      {
+        "tMs": 11187,
+        "kind": "hat",
+        "detail": "x=1 y=-1"
+      },
+      {
+        "tMs": 11396,
+        "kind": "hat",
+        "detail": "x=0 y=-1"
+      },
+      {
+        "tMs": 11478,
+        "kind": "hat",
+        "detail": "x=-1 y=-1"
+      },
+      {
+        "tMs": 11550,
+        "kind": "hat",
+        "detail": "x=-1 y=0"
+      },
+      {
+        "tMs": 11578,
+        "kind": "hat",
+        "detail": "x=-1 y=1"
+      },
+      {
+        "tMs": 11978,
+        "kind": "hat",
+        "detail": "x=0 y=1"
+      },
+      {
+        "tMs": 12295,
+        "kind": "hat",
+        "detail": "x=1 y=1"
+      },
+      {
+        "tMs": 12361,
+        "kind": "hat",
+        "detail": "x=1 y=0"
+      },
+      {
+        "tMs": 12823,
+        "kind": "hat",
+        "detail": "x=1 y=-1"
+      },
+      {
+        "tMs": 13088,
+        "kind": "hat",
+        "detail": "x=1 y=0"
+      },
+      {
+        "tMs": 13221,
+        "kind": "hat",
+        "detail": "x=0 y=0"
+      },
+      {
+        "tMs": 13288,
+        "kind": "hat",
+        "detail": "x=-1 y=-1"
+      },
+      {
+        "tMs": 13305,
+        "kind": "hat",
+        "detail": "x=-1 y=0"
+      },
+      {
+        "tMs": 13450,
+        "kind": "hat",
+        "detail": "x=0 y=0"
+      },
+      {
+        "tMs": 15135,
+        "kind": "button",
+        "detail": "315 down"
+      },
+      {
+        "tMs": 15580,
+        "kind": "button",
+        "detail": "311 down"
+      },
+      {
+        "tMs": 15581,
+        "kind": "button",
+        "detail": "315 up"
+      },
+      {
+        "tMs": 16125,
+        "kind": "button",
+        "detail": "311 up"
+      },
+      {
+        "tMs": 16342,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 16350,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 16387,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 16392,
+        "kind": "R2",
+        "detail": "0.022 -> 5"
+      },
+      {
+        "tMs": 16401,
+        "kind": "R2",
+        "detail": "0.056 -> 14"
+      },
+      {
+        "tMs": 16408,
+        "kind": "R2",
+        "detail": "0.089 -> 22"
+      },
+      {
+        "tMs": 16424,
+        "kind": "R2",
+        "detail": "0.122 -> 31"
+      },
+      {
+        "tMs": 16435,
+        "kind": "R2",
+        "detail": "0.156 -> 39"
+      },
+      {
+        "tMs": 16447,
+        "kind": "R2",
+        "detail": "0.189 -> 48"
+      },
+      {
+        "tMs": 16456,
+        "kind": "R2",
+        "detail": "0.222 -> 56"
+      },
+      {
+        "tMs": 16459,
+        "kind": "R2",
+        "detail": "0.256 -> 65"
+      },
+      {
+        "tMs": 16470,
+        "kind": "R2",
+        "detail": "0.289 -> 73"
+      },
+      {
+        "tMs": 16481,
+        "kind": "R2",
+        "detail": "0.322 -> 82"
+      },
+      {
+        "tMs": 16492,
+        "kind": "R2",
+        "detail": "0.356 -> 90"
+      },
+      {
+        "tMs": 16499,
+        "kind": "R2",
+        "detail": "0.389 -> 99"
+      },
+      {
+        "tMs": 16509,
+        "kind": "R2",
+        "detail": "0.422 -> 107"
+      },
+      {
+        "tMs": 16518,
+        "kind": "R2",
+        "detail": "0.456 -> 116"
+      },
+      {
+        "tMs": 16540,
+        "kind": "R2",
+        "detail": "0.489 -> 124"
+      },
+      {
+        "tMs": 16551,
+        "kind": "R2",
+        "detail": "0.522 -> 133"
+      },
+      {
+        "tMs": 16561,
+        "kind": "R2",
+        "detail": "0.556 -> 141"
+      },
+      {
+        "tMs": 16577,
+        "kind": "R2",
+        "detail": "0.589 -> 150"
+      },
+      {
+        "tMs": 16589,
+        "kind": "R2",
+        "detail": "0.622 -> 158"
+      },
+      {
+        "tMs": 16598,
+        "kind": "R2",
+        "detail": "0.656 -> 167"
+      },
+      {
+        "tMs": 16607,
+        "kind": "R2",
+        "detail": "0.689 -> 175"
+      },
+      {
+        "tMs": 16618,
+        "kind": "R2",
+        "detail": "0.722 -> 184"
+      },
+      {
+        "tMs": 16629,
+        "kind": "R2",
+        "detail": "0.756 -> 192"
+      },
+      {
+        "tMs": 16638,
+        "kind": "R2",
+        "detail": "0.789 -> 201"
+      },
+      {
+        "tMs": 16651,
+        "kind": "R2",
+        "detail": "0.822 -> 209"
+      },
+      {
+        "tMs": 16657,
+        "kind": "R2",
+        "detail": "0.856 -> 218"
+      },
+      {
+        "tMs": 16683,
+        "kind": "R2",
+        "detail": "0.889 -> 226"
+      },
+      {
+        "tMs": 16693,
+        "kind": "R2",
+        "detail": "0.922 -> 235"
+      },
+      {
+        "tMs": 16704,
+        "kind": "R2",
+        "detail": "0.956 -> 243"
+      },
+      {
+        "tMs": 16714,
+        "kind": "R2",
+        "detail": "0.989 -> 252"
+      },
+      {
+        "tMs": 16725,
+        "kind": "R2",
+        "detail": "1.000 -> 255"
+      },
+      {
+        "tMs": 17108,
+        "kind": "R2",
+        "detail": "0.939 -> 239"
+      },
+      {
+        "tMs": 17118,
+        "kind": "R2",
+        "detail": "0.878 -> 223"
+      },
+      {
+        "tMs": 17126,
+        "kind": "R2",
+        "detail": "0.817 -> 208"
+      },
+      {
+        "tMs": 17140,
+        "kind": "R2",
+        "detail": "0.756 -> 192"
+      },
+      {
+        "tMs": 17154,
+        "kind": "R2",
+        "detail": "0.694 -> 177"
+      },
+      {
+        "tMs": 17166,
+        "kind": "R2",
+        "detail": "0.633 -> 161"
+      },
+      {
+        "tMs": 17176,
+        "kind": "R2",
+        "detail": "0.572 -> 145"
+      },
+      {
+        "tMs": 17187,
+        "kind": "R2",
+        "detail": "0.511 -> 130"
+      },
+      {
+        "tMs": 17201,
+        "kind": "R2",
+        "detail": "0.450 -> 114"
+      },
+      {
+        "tMs": 17214,
+        "kind": "R2",
+        "detail": "0.389 -> 99"
+      },
+      {
+        "tMs": 17225,
+        "kind": "R2",
+        "detail": "0.328 -> 83"
+      },
+      {
+        "tMs": 17235,
+        "kind": "R2",
+        "detail": "0.267 -> 67"
+      },
+      {
+        "tMs": 17245,
+        "kind": "R2",
+        "detail": "0.206 -> 52"
+      },
+      {
+        "tMs": 17255,
+        "kind": "R2",
+        "detail": "0.144 -> 36"
+      },
+      {
+        "tMs": 17264,
+        "kind": "R2",
+        "detail": "0.083 -> 21"
+      },
+      {
+        "tMs": 17268,
+        "kind": "R2",
+        "detail": "0.022 -> 5"
+      },
+      {
+        "tMs": 17278,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 17288,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 17296,
+        "kind": "R2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 17875,
+        "kind": "button",
+        "detail": "314 down"
+      },
+      {
+        "tMs": 18317,
+        "kind": "button",
+        "detail": "314 up"
+      },
+      {
+        "tMs": 18325,
+        "kind": "button",
+        "detail": "310 down"
+      },
+      {
+        "tMs": 19109,
+        "kind": "button",
+        "detail": "310 up"
+      },
+      {
+        "tMs": 19285,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 19294,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 19302,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 19310,
+        "kind": "L2",
+        "detail": "0.022 -> 5"
+      },
+      {
+        "tMs": 19319,
+        "kind": "L2",
+        "detail": "0.056 -> 14"
+      },
+      {
+        "tMs": 19328,
+        "kind": "L2",
+        "detail": "0.089 -> 22"
+      },
+      {
+        "tMs": 19340,
+        "kind": "L2",
+        "detail": "0.122 -> 31"
+      },
+      {
+        "tMs": 19352,
+        "kind": "L2",
+        "detail": "0.156 -> 39"
+      },
+      {
+        "tMs": 19364,
+        "kind": "L2",
+        "detail": "0.189 -> 48"
+      },
+      {
+        "tMs": 19374,
+        "kind": "L2",
+        "detail": "0.222 -> 56"
+      },
+      {
+        "tMs": 19384,
+        "kind": "L2",
+        "detail": "0.256 -> 65"
+      },
+      {
+        "tMs": 19387,
+        "kind": "L2",
+        "detail": "0.289 -> 73"
+      },
+      {
+        "tMs": 19399,
+        "kind": "L2",
+        "detail": "0.322 -> 82"
+      },
+      {
+        "tMs": 19410,
+        "kind": "L2",
+        "detail": "0.356 -> 90"
+      },
+      {
+        "tMs": 19422,
+        "kind": "L2",
+        "detail": "0.389 -> 99"
+      },
+      {
+        "tMs": 19434,
+        "kind": "L2",
+        "detail": "0.422 -> 107"
+      },
+      {
+        "tMs": 19443,
+        "kind": "L2",
+        "detail": "0.456 -> 116"
+      },
+      {
+        "tMs": 19452,
+        "kind": "L2",
+        "detail": "0.489 -> 124"
+      },
+      {
+        "tMs": 19463,
+        "kind": "L2",
+        "detail": "0.522 -> 133"
+      },
+      {
+        "tMs": 19475,
+        "kind": "L2",
+        "detail": "0.556 -> 141"
+      },
+      {
+        "tMs": 19484,
+        "kind": "L2",
+        "detail": "0.589 -> 150"
+      },
+      {
+        "tMs": 19493,
+        "kind": "L2",
+        "detail": "0.622 -> 158"
+      },
+      {
+        "tMs": 19504,
+        "kind": "L2",
+        "detail": "0.656 -> 167"
+      },
+      {
+        "tMs": 19515,
+        "kind": "L2",
+        "detail": "0.689 -> 175"
+      },
+      {
+        "tMs": 19525,
+        "kind": "L2",
+        "detail": "0.722 -> 184"
+      },
+      {
+        "tMs": 19528,
+        "kind": "L2",
+        "detail": "0.756 -> 192"
+      },
+      {
+        "tMs": 19539,
+        "kind": "L2",
+        "detail": "0.789 -> 201"
+      },
+      {
+        "tMs": 19551,
+        "kind": "L2",
+        "detail": "0.822 -> 209"
+      },
+      {
+        "tMs": 19561,
+        "kind": "L2",
+        "detail": "0.856 -> 218"
+      },
+      {
+        "tMs": 19568,
+        "kind": "L2",
+        "detail": "0.889 -> 226"
+      },
+      {
+        "tMs": 19585,
+        "kind": "L2",
+        "detail": "0.922 -> 235"
+      },
+      {
+        "tMs": 19597,
+        "kind": "L2",
+        "detail": "0.956 -> 243"
+      },
+      {
+        "tMs": 19608,
+        "kind": "L2",
+        "detail": "0.989 -> 252"
+      },
+      {
+        "tMs": 19618,
+        "kind": "L2",
+        "detail": "1.000 -> 255"
+      },
+      {
+        "tMs": 20010,
+        "kind": "L2",
+        "detail": "0.939 -> 239"
+      },
+      {
+        "tMs": 20019,
+        "kind": "L2",
+        "detail": "0.878 -> 223"
+      },
+      {
+        "tMs": 20028,
+        "kind": "L2",
+        "detail": "0.817 -> 208"
+      },
+      {
+        "tMs": 20045,
+        "kind": "L2",
+        "detail": "0.756 -> 192"
+      },
+      {
+        "tMs": 20056,
+        "kind": "L2",
+        "detail": "0.694 -> 177"
+      },
+      {
+        "tMs": 20067,
+        "kind": "L2",
+        "detail": "0.633 -> 161"
+      },
+      {
+        "tMs": 20077,
+        "kind": "L2",
+        "detail": "0.572 -> 145"
+      },
+      {
+        "tMs": 20085,
+        "kind": "L2",
+        "detail": "0.511 -> 130"
+      },
+      {
+        "tMs": 20094,
+        "kind": "L2",
+        "detail": "0.450 -> 114"
+      },
+      {
+        "tMs": 20106,
+        "kind": "L2",
+        "detail": "0.389 -> 99"
+      },
+      {
+        "tMs": 20116,
+        "kind": "L2",
+        "detail": "0.328 -> 83"
+      },
+      {
+        "tMs": 20126,
+        "kind": "L2",
+        "detail": "0.267 -> 67"
+      },
+      {
+        "tMs": 20135,
+        "kind": "L2",
+        "detail": "0.206 -> 52"
+      },
+      {
+        "tMs": 20147,
+        "kind": "L2",
+        "detail": "0.144 -> 36"
+      },
+      {
+        "tMs": 20158,
+        "kind": "L2",
+        "detail": "0.083 -> 21"
+      },
+      {
+        "tMs": 20170,
+        "kind": "L2",
+        "detail": "0.022 -> 5"
+      },
+      {
+        "tMs": 20177,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 20187,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      },
+      {
+        "tMs": 20197,
+        "kind": "L2",
+        "detail": "0.000 -> 0"
+      }
+    ]
+  },
+  "received": {
+    "count": 249,
+    "dropped": 0,
+    "note": "Only fills while Kestrel's own screen has focus. The platform delivers a controller's events to the focused window, so an empty trail during play in another application is expected and is not evidence that nothing arrived.",
+    "marks": [
+      {
+        "tMs": 0,
+        "kind": "key",
+        "detail": "BUTTON_A (96) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 5,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 395,
+        "kind": "key",
+        "detail": "BUTTON_B (97) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 406,
+        "kind": "key",
+        "detail": "BACK (4) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 420,
+        "kind": "key",
+        "detail": "BUTTON_A (96) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 424,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 737,
+        "kind": "key",
+        "detail": "BUTTON_B (97) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 743,
+        "kind": "key",
+        "detail": "BACK (4) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 797,
+        "kind": "key",
+        "detail": "BUTTON_Y (100) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 826,
+        "kind": "key",
+        "detail": "SPACE (62) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 856,
+        "kind": "key",
+        "detail": "BUTTON_Y (100) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 857,
+        "kind": "key",
+        "detail": "SPACE (62) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4222,
+        "kind": "key",
+        "detail": "BUTTON_Y (100) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4225,
+        "kind": "key",
+        "detail": "SPACE (62) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4488,
+        "kind": "key",
+        "detail": "BUTTON_Y (100) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4490,
+        "kind": "key",
+        "detail": "SPACE (62) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4494,
+        "kind": "key",
+        "detail": "BUTTON_X (99) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4497,
+        "kind": "key",
+        "detail": "DEL (67) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4715,
+        "kind": "key",
+        "detail": "BUTTON_X (99) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 4718,
+        "kind": "key",
+        "detail": "DEL (67) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6743,
+        "kind": "key",
+        "detail": "BUTTON_THUMBR (107) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6751,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6904,
+        "kind": "rightStick",
+        "detail": "-1.000 +0.026  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6924,
+        "kind": "rightStick",
+        "detail": "-0.998 +0.056  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6940,
+        "kind": "rightStick",
+        "detail": "-0.994 +0.110  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6957,
+        "kind": "rightStick",
+        "detail": "-0.980 +0.201  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6974,
+        "kind": "rightStick",
+        "detail": "-0.949 +0.314  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 6990,
+        "kind": "rightStick",
+        "detail": "-0.894 +0.448  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7007,
+        "kind": "rightStick",
+        "detail": "-0.799 +0.601  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7023,
+        "kind": "rightStick",
+        "detail": "-0.672 +0.740  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7039,
+        "kind": "rightStick",
+        "detail": "-0.552 +0.834  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7056,
+        "kind": "rightStick",
+        "detail": "-0.460 +0.888  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7074,
+        "kind": "rightStick",
+        "detail": "-0.396 +0.918  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7089,
+        "kind": "rightStick",
+        "detail": "-0.349 +0.937  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7106,
+        "kind": "rightStick",
+        "detail": "-0.301 +0.954  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7123,
+        "kind": "rightStick",
+        "detail": "-0.197 +0.980  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7139,
+        "kind": "rightStick",
+        "detail": "-0.014 +1.000  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7158,
+        "kind": "rightStick",
+        "detail": "+0.157 +0.930  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7171,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7174,
+        "kind": "rightStick",
+        "detail": "+0.338 +0.793  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7190,
+        "kind": "rightStick",
+        "detail": "+0.597 +0.612  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7209,
+        "kind": "rightStick",
+        "detail": "+0.825 +0.432  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7225,
+        "kind": "rightStick",
+        "detail": "+0.976 +0.217  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7242,
+        "kind": "rightStick",
+        "detail": "+1.000 +0.013  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7260,
+        "kind": "rightStick",
+        "detail": "+0.989 -0.148  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7276,
+        "kind": "rightStick",
+        "detail": "+0.948 -0.319  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7290,
+        "kind": "rightStick",
+        "detail": "+0.879 -0.477  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7317,
+        "kind": "rightStick",
+        "detail": "+0.749 -0.663  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7330,
+        "kind": "rightStick",
+        "detail": "+0.650 -0.760  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7345,
+        "kind": "rightStick",
+        "detail": "+0.599 -0.801  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7372,
+        "kind": "rightStick",
+        "detail": "+0.510 -0.860  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7385,
+        "kind": "rightStick",
+        "detail": "+0.383 -0.924  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7400,
+        "kind": "rightStick",
+        "detail": "+0.337 -0.941  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7417,
+        "kind": "rightStick",
+        "detail": "+0.237 -0.971  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7433,
+        "kind": "rightStick",
+        "detail": "+0.094 -0.996  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7449,
+        "kind": "rightStick",
+        "detail": "-0.051 -0.999  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7473,
+        "kind": "rightStick",
+        "detail": "-0.205 -0.979  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7494,
+        "kind": "rightStick",
+        "detail": "-0.340 -0.940  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7505,
+        "kind": "rightStick",
+        "detail": "-0.405 -0.914  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7519,
+        "kind": "rightStick",
+        "detail": "-0.570 -0.822  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7532,
+        "kind": "rightStick",
+        "detail": "-0.662 -0.750  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7549,
+        "kind": "rightStick",
+        "detail": "-0.741 -0.671  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7569,
+        "kind": "rightStick",
+        "detail": "-0.798 -0.602  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7584,
+        "kind": "rightStick",
+        "detail": "-0.852 -0.523  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7600,
+        "kind": "rightStick",
+        "detail": "-0.902 -0.431  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7616,
+        "kind": "rightStick",
+        "detail": "-0.955 -0.295  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7633,
+        "kind": "rightStick",
+        "detail": "-0.988 -0.157  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7649,
+        "kind": "rightStick",
+        "detail": "-0.999 -0.037  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7668,
+        "kind": "rightStick",
+        "detail": "-0.998 +0.069  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7682,
+        "kind": "rightStick",
+        "detail": "-0.972 +0.234  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7705,
+        "kind": "rightStick",
+        "detail": "-0.931 +0.364  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7723,
+        "kind": "rightStick",
+        "detail": "-0.890 +0.456  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7741,
+        "kind": "rightStick",
+        "detail": "-0.839 +0.543  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7757,
+        "kind": "rightStick",
+        "detail": "-0.804 +0.595  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7775,
+        "kind": "rightStick",
+        "detail": "-0.774 +0.633  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7791,
+        "kind": "rightStick",
+        "detail": "-0.747 +0.665  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7807,
+        "kind": "rightStick",
+        "detail": "-0.712 +0.702  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7841,
+        "kind": "rightStick",
+        "detail": "-0.665 +0.747  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7865,
+        "kind": "rightStick",
+        "detail": "-0.547 +0.837  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7879,
+        "kind": "rightStick",
+        "detail": "-0.450 +0.893  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7891,
+        "kind": "rightStick",
+        "detail": "-0.294 +0.956  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7909,
+        "kind": "rightStick",
+        "detail": "+0.109 +0.994  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7922,
+        "kind": "key",
+        "detail": "BUTTON_THUMBR (107) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 7922,
+        "kind": "rightStick",
+        "detail": "+0.000 +0.000  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8441,
+        "kind": "key",
+        "detail": "BUTTON_THUMBL (106) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8444,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8638,
+        "kind": "leftStick",
+        "detail": "+0.989 -0.149  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8641,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8760,
+        "kind": "leftStick",
+        "detail": "+0.106 +0.225  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8773,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8777,
+        "kind": "leftStick",
+        "detail": "-0.001 +0.357  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8790,
+        "kind": "leftStick",
+        "detail": "-0.101 +0.502  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8792,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8859,
+        "kind": "leftStick",
+        "detail": "-0.221 +0.778  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8877,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 8878,
+        "kind": "leftStick",
+        "detail": "-0.261 +0.965  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9117,
+        "kind": "leftStick",
+        "detail": "-0.179 +0.984  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9129,
+        "kind": "leftStick",
+        "detail": "-0.100 +0.995  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9141,
+        "kind": "leftStick",
+        "detail": "+0.155 +0.909  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9158,
+        "kind": "leftStick",
+        "detail": "+0.387 +0.757  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9176,
+        "kind": "leftStick",
+        "detail": "+0.494 +0.630  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9191,
+        "kind": "leftStick",
+        "detail": "+0.595 +0.451  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9193,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9193,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9264,
+        "kind": "leftStick",
+        "detail": "+0.732 +0.091  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9285,
+        "kind": "leftStick",
+        "detail": "+0.676 -0.737  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9287,
+        "kind": "key",
+        "detail": "DPAD_UP (19) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9348,
+        "kind": "leftStick",
+        "detail": "+0.582 -0.813  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9371,
+        "kind": "leftStick",
+        "detail": "+0.440 -0.898  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9384,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9385,
+        "kind": "leftStick",
+        "detail": "+0.376 -0.927  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9398,
+        "kind": "leftStick",
+        "detail": "-0.079 -0.997  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9415,
+        "kind": "leftStick",
+        "detail": "-0.240 -0.971  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9436,
+        "kind": "leftStick",
+        "detail": "-0.293 -0.956  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9449,
+        "kind": "leftStick",
+        "detail": "-0.436 -0.900  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9465,
+        "kind": "leftStick",
+        "detail": "-0.573 -0.819  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9477,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9535,
+        "kind": "leftStick",
+        "detail": "-0.641 -0.767  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9554,
+        "kind": "leftStick",
+        "detail": "-0.796 -0.605  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9570,
+        "kind": "leftStick",
+        "detail": "-0.954 -0.299  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9582,
+        "kind": "key",
+        "detail": "DPAD_UP (19) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9590,
+        "kind": "leftStick",
+        "detail": "-0.987 -0.162  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9603,
+        "kind": "leftStick",
+        "detail": "-0.978 +0.206  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9615,
+        "kind": "leftStick",
+        "detail": "-0.952 +0.307  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9634,
+        "kind": "leftStick",
+        "detail": "-0.895 +0.446  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9649,
+        "kind": "leftStick",
+        "detail": "-0.839 +0.543  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9651,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9720,
+        "kind": "leftStick",
+        "detail": "-0.759 +0.651  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9736,
+        "kind": "leftStick",
+        "detail": "-0.713 +0.702  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9748,
+        "kind": "leftStick",
+        "detail": "-0.643 +0.766  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9761,
+        "kind": "leftStick",
+        "detail": "-0.392 +0.920  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9762,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9787,
+        "kind": "leftStick",
+        "detail": "-0.292 +0.956  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9801,
+        "kind": "leftStick",
+        "detail": "-0.255 +0.967  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9816,
+        "kind": "leftStick",
+        "detail": "-0.205 +0.979  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9833,
+        "kind": "leftStick",
+        "detail": "-0.167 +0.986  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9851,
+        "kind": "leftStick",
+        "detail": "-0.097 +0.995  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9874,
+        "kind": "leftStick",
+        "detail": "+0.097 +0.995  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9891,
+        "kind": "key",
+        "detail": "BUTTON_THUMBL (106) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9893,
+        "kind": "leftStick",
+        "detail": "+0.000 +0.000  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9895,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 9895,
+        "kind": "key",
+        "detail": "UNKNOWN (0) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 10600,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 10860,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 10941,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 11194,
+        "kind": "key",
+        "detail": "DPAD_UP (19) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 11463,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 11483,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 11560,
+        "kind": "key",
+        "detail": "DPAD_UP (19) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 11583,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 12041,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 12364,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 12470,
+        "kind": "key",
+        "detail": "DPAD_DOWN (20) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 12884,
+        "kind": "key",
+        "detail": "DPAD_UP (19) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13152,
+        "kind": "key",
+        "detail": "DPAD_UP (19) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13289,
+        "kind": "key",
+        "detail": "DPAD_RIGHT (22) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13294,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13294,
+        "kind": "key",
+        "detail": "DPAD_UP (19) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13373,
+        "kind": "key",
+        "detail": "DPAD_UP (19) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 13462,
+        "kind": "key",
+        "detail": "DPAD_LEFT (21) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15135,
+        "kind": "key",
+        "detail": "BUTTON_START (108) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15139,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15576,
+        "kind": "key",
+        "detail": "DPAD_CENTER (23) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15587,
+        "kind": "key",
+        "detail": "BUTTON_R1 (103) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15590,
+        "kind": "key",
+        "detail": "BUTTON_START (108) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 15593,
+        "kind": "key",
+        "detail": "UNKNOWN (0) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16133,
+        "kind": "key",
+        "detail": "BUTTON_R1 (103) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16415,
+        "kind": "R2",
+        "detail": "0.055  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16427,
+        "kind": "R2",
+        "detail": "0.086  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16440,
+        "kind": "R2",
+        "detail": "0.122  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16452,
+        "kind": "R2",
+        "detail": "0.153  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16463,
+        "kind": "R2",
+        "detail": "0.188  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16475,
+        "kind": "R2",
+        "detail": "0.255  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16488,
+        "kind": "R2",
+        "detail": "0.322  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16501,
+        "kind": "R2",
+        "detail": "0.353  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16511,
+        "kind": "R2",
+        "detail": "0.388  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16533,
+        "kind": "R2",
+        "detail": "0.420  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16544,
+        "kind": "R2",
+        "detail": "0.455  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16554,
+        "kind": "R2",
+        "detail": "0.486  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16570,
+        "kind": "R2",
+        "detail": "0.522  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16580,
+        "kind": "R2",
+        "detail": "0.553  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16594,
+        "kind": "R2",
+        "detail": "0.588  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16611,
+        "kind": "R2",
+        "detail": "0.655  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16621,
+        "kind": "R2",
+        "detail": "0.686  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16631,
+        "kind": "R2",
+        "detail": "0.722  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16648,
+        "kind": "R2",
+        "detail": "0.788  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16676,
+        "kind": "R2",
+        "detail": "0.820  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16686,
+        "kind": "R2",
+        "detail": "0.855  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16697,
+        "kind": "R2",
+        "detail": "0.886  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16708,
+        "kind": "R2",
+        "detail": "0.922  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 16722,
+        "kind": "R2",
+        "detail": "0.988  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17116,
+        "kind": "R2",
+        "detail": "0.937  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17132,
+        "kind": "R2",
+        "detail": "0.875  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17147,
+        "kind": "R2",
+        "detail": "0.816  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17158,
+        "kind": "R2",
+        "detail": "0.753  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17169,
+        "kind": "R2",
+        "detail": "0.694  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17179,
+        "kind": "R2",
+        "detail": "0.631  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17195,
+        "kind": "R2",
+        "detail": "0.569  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17206,
+        "kind": "R2",
+        "detail": "0.510  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17218,
+        "kind": "R2",
+        "detail": "0.447  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17228,
+        "kind": "R2",
+        "detail": "0.388  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17238,
+        "kind": "R2",
+        "detail": "0.325  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17248,
+        "kind": "R2",
+        "detail": "0.263  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17260,
+        "kind": "R2",
+        "detail": "0.204  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17271,
+        "kind": "R2",
+        "detail": "0.141  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17281,
+        "kind": "R2",
+        "detail": "0.020  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17873,
+        "kind": "key",
+        "detail": "BUTTON_SELECT (109) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 17895,
+        "kind": "key",
+        "detail": "MENU (82) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 18284,
+        "kind": "key",
+        "detail": "MENU (82) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 18323,
+        "kind": "key",
+        "detail": "BUTTON_SELECT (109) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 18326,
+        "kind": "key",
+        "detail": "UNKNOWN (0) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 18331,
+        "kind": "key",
+        "detail": "BUTTON_L1 (102) down  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19113,
+        "kind": "key",
+        "detail": "BUTTON_L1 (102) up    from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19333,
+        "kind": "L2",
+        "detail": "0.055  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19344,
+        "kind": "L2",
+        "detail": "0.086  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19356,
+        "kind": "L2",
+        "detail": "0.122  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19367,
+        "kind": "L2",
+        "detail": "0.153  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19380,
+        "kind": "L2",
+        "detail": "0.188  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19391,
+        "kind": "L2",
+        "detail": "0.220  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19403,
+        "kind": "L2",
+        "detail": "0.286  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19414,
+        "kind": "L2",
+        "detail": "0.322  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19426,
+        "kind": "L2",
+        "detail": "0.353  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19440,
+        "kind": "L2",
+        "detail": "0.420  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19455,
+        "kind": "L2",
+        "detail": "0.455  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19467,
+        "kind": "L2",
+        "detail": "0.486  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19480,
+        "kind": "L2",
+        "detail": "0.553  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19496,
+        "kind": "L2",
+        "detail": "0.588  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19507,
+        "kind": "L2",
+        "detail": "0.620  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19520,
+        "kind": "L2",
+        "detail": "0.655  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19531,
+        "kind": "L2",
+        "detail": "0.686  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19543,
+        "kind": "L2",
+        "detail": "0.753  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19557,
+        "kind": "L2",
+        "detail": "0.820  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19578,
+        "kind": "L2",
+        "detail": "0.855  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19588,
+        "kind": "L2",
+        "detail": "0.886  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19600,
+        "kind": "L2",
+        "detail": "0.922  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 19614,
+        "kind": "L2",
+        "detail": "0.988  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20016,
+        "kind": "L2",
+        "detail": "0.937  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20037,
+        "kind": "L2",
+        "detail": "0.875  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20048,
+        "kind": "L2",
+        "detail": "0.816  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20060,
+        "kind": "L2",
+        "detail": "0.753  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20073,
+        "kind": "L2",
+        "detail": "0.631  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20087,
+        "kind": "L2",
+        "detail": "0.569  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20098,
+        "kind": "L2",
+        "detail": "0.510  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20109,
+        "kind": "L2",
+        "detail": "0.447  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20121,
+        "kind": "L2",
+        "detail": "0.388  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20140,
+        "kind": "L2",
+        "detail": "0.263  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20150,
+        "kind": "L2",
+        "detail": "0.204  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20166,
+        "kind": "L2",
+        "detail": "0.082  from Kestrel Virtual Controller (id 21)"
+      },
+      {
+        "tMs": 20179,
+        "kind": "L2",
+        "detail": "0.020  from Kestrel Virtual Controller (id 21)"
+      }
+    ]
+  }
+}

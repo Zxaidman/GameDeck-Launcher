@@ -1,6 +1,9 @@
-# GameDeck Android Compatibility
+# Kestrel Compatibility
 
-This document records what GameDeck actually supports on real devices and target applications.
+**Document:** `docs/COMPATIBILITY.md`  
+**Status:** Active — populated as device evidence is produced  
+
+This document records what Kestrel actually supports on real devices and target applications.
 
 It is intended to answer a simple question:
 
@@ -20,14 +23,14 @@ Do not mark something as supported merely because:
 
 # 1. Purpose
 
-GameDeck operates at several layers of the Android platform:
+Kestrel operates at several layers of the Android platform:
 
 ```text
 Android version
       ↓
 OEM / device firmware
       ↓
-GameDeck
+Kestrel
       ↓
 Input backend
       ↓
@@ -50,7 +53,7 @@ classification.
 
 # 2. Compatibility Areas
 
-GameDeck compatibility is divided into:
+Kestrel compatibility is divided into:
 
 1. Android version
 2. Device / OEM
@@ -238,6 +241,36 @@ Confidence: Unverified
 
 ---
 
+# 4a. Relationship to the Other Status Vocabularies
+
+Three documents describe result quality for different purposes. They are not interchangeable, and a
+value from one must never be substituted for a value from another.
+
+| Vocabulary | Defined in | Describes | Scope |
+| --- | --- | --- | --- |
+| Status + Confidence | this document, §3–§4 | what the project supports, and how well that is known | a device / target-application / backend combination |
+| Grade A–E | `docs/PHASE-0.md` §28 | how strong an input mechanism is, technically | one input mechanism during the feasibility phase |
+| Claim state | `AI_DEVELOPMENT_GUIDE.md` | how far a specific statement has been verified | any individual claim, in code or documentation |
+
+Approximate mapping, for orientation only:
+
+```text
+Grade A  →  may justify   Supported                (once devices confirm it)
+Grade B  →  may justify   Supported / Supported with Shizuku
+Grade C  →  may justify   Limited
+Grade D  →  may justify   Supported with Fallback
+Grade E  →                Unsupported
+```
+
+A grade is evidence about a mechanism. A status is a claim about the product. Producing a grade in a
+feasibility test never by itself upgrades a status here — that requires the evidence in §5 and a
+confidence level from §4.
+
+The issue template offers a deliberately reduced set of statuses because a reporter is describing one
+observation, not setting project-wide support. A maintainer assigns the final status.
+
+---
+
 # 5. Evidence Requirements
 
 A compatibility entry should ideally include:
@@ -246,7 +279,7 @@ A compatibility entry should ideally include:
 - device model
 - Android version
 - security/firmware information when relevant
-- GameDeck version or Git commit
+- Kestrel version or Git commit
 - target application
 - target application version
 - input backend
@@ -266,7 +299,7 @@ Google Pixel 8
 Android:
 15
 
-GameDeck:
+Kestrel:
 commit abc123
 
 Target:
@@ -368,6 +401,24 @@ Suggested table:
 
 Add individual device rows as they are actually tested.
 
+Tested devices:
+
+| Manufacturer | Device | Android | OEM Skin/Firmware | Shizuku ADB | Shizuku Root | Input | Overlay | Display | Overall |
+|---|---|---:|---|---|---|---|---|---|---|
+| Xiaomi | Redmi Note 13 5G (`2312DRAABI`) | 15 | HyperOS 3.0.3 (`OS3.0.3.0.VNQINXM`) | Working | Untested | Experimental | Untested | Untested | Experimental |
+
+```text
+Status: Experimental
+Confidence: Low
+Shizuku: ADB / shell (uid 2000)
+Evidence: docs/phase0/results/tier5-exercise-report.md, docs/phase0/results/tier6-report.md
+```
+
+Input is Experimental rather than Supported with Shizuku because §29 of `docs/PHASE-0.md` is not
+fully satisfied: no streaming client has been confirmed, and repeatability across reboots has not
+been established. Confidence is Low because every result comes from one device and one firmware.
+Root was never tested — the device is not rooted, so that cell is Untested, never Unsupported.
+
 ---
 
 # 9. Input Backend Compatibility
@@ -390,10 +441,30 @@ Suggested matrix:
 
 | Backend | Normal Android | Shizuku ADB | Shizuku Root | Buttons | Analog | Triggers | Simultaneous | Device Identity |
 |---|---|---|---|---|---|---|---|---|
-| Native/Gamepad | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Shizuku | N/A | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| Native/Gamepad | Unsupported | Experimental | Untested | Working | Working | Working | Working | Yes |
+| Shizuku | N/A | Limited | Untested | Working | Limited | Unsupported | Unknown | No |
 | System Injection | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | Touch Fallback | Unknown | N/A | N/A | Unknown | Unknown | Unknown | Unknown | No |
+
+```text
+Status: Experimental
+Confidence: Low
+Tested on: Xiaomi Redmi Note 13 5G, Android 15, HyperOS 3.0.3
+Evidence: docs/phase0/results/tier5-exercise-report.md, docs/phase0/results/tier6-report.md
+```
+
+Row by row, and only from what was actually observed on that one device:
+
+- **Native/Gamepad** here means a kernel virtual input device created through the platform's own
+  helper. It needs shell privilege, which an ordinary application cannot obtain, so the normal
+  column is Unsupported — that is a fact about privilege, not about the mechanism. With shell
+  privilege it produced a device the platform classifies as a controller, delivering buttons,
+  both sticks, analog triggers and simultaneous input under its own device id.
+- **Shizuku** here means the platform's `input` command run with shell privilege. It delivers
+  buttons, but `input motionevent` accepts only two coordinates, so the right stick and the
+  triggers are unreachable, and an axis it sets is never released implicitly. It has no device
+  identity of its own.
+- The remaining rows have not been tested and stay Unknown.
 
 The exact final backend names should match `docs/INPUT_BACKENDS.md` once that document exists.
 
@@ -401,7 +472,7 @@ The exact final backend names should match `docs/INPUT_BACKENDS.md` once that do
 
 # 10. True Gamepad Requirement
 
-GameDeck distinguishes between several kinds of input.
+Kestrel distinguishes between several kinds of input.
 
 ## Level 1 — Touch simulation
 
@@ -463,24 +534,77 @@ Controller features must be tested independently.
 
 | Feature | PPSSPP | Dolphin | RetroArch | Moonlight | Steam Link |
 |---|---|---|---|---|---|
-| A/B/X/Y | Unknown | Unknown | Unknown | Unknown | Unknown |
-| D-pad | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Left Stick | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Right Stick | Unknown | Unknown | Unknown | Unknown | Unknown |
-| LB/RB | Unknown | Unknown | Unknown | Unknown | Unknown |
-| LT/RT | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Start | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Back | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Simultaneous Inputs | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Hold/Release | Unknown | Unknown | Unknown | Unknown | Unknown |
+| A/B/X/Y | Untested | Unknown | Bound | Unknown | Unknown |
+| D-pad | Untested | Unknown | Bound | Unknown | Unknown |
+| Left Stick | Untested | Unknown | Bound | Unknown | Unknown |
+| Right Stick | Untested | Unknown | Untested | Unknown | Unknown |
+| LB/RB | Untested | Unknown | Bound | Unknown | Unknown |
+| LT/RT | Untested | Unknown | Untested | Unknown | Unknown |
+| Start | Untested | Unknown | Untested | Unknown | Unknown |
+| Back | Untested | Unknown | Untested | Unknown | Unknown |
+| Simultaneous Inputs | Untested | Unknown | Untested | Unknown | Unknown |
+| Hold/Release | Untested | Unknown | Untested | Unknown | Unknown |
+
+The Moonlight column above stays Unknown: the client tested was **Artemis**, and a result for one
+client is not a result for another. See §14.
 
 Additional applications should be added as testing begins.
+
+Emulators tested with a Kestrel-created controller, on the device in §8:
+
+| Feature | Eden | NetherSX2 | RetroArch 1.22.2 | PPSSPP | Dolphin |
+|---|---|---|---|---|---|
+| Listed as a connected controller | Yes, by name | Yes, by name and id | Yes, by name | Yes, as `pad1` | Yes, as `Android/1/Kestrel Virtual Controller` |
+| Auto-mapping | Full control set | Completed | Device selected as Port 1 | Bound through its mapping screen | Listed for selection |
+| A/B/X/Y | Bound (`Button 96/97/99/100`) | Bound (`Button96`, `Button100`) | Bound | Bound (`pad1.[A]`) | Untested |
+| D-pad | Bound (`±Axis 15/16`) | Bound (`±Axis15/16`) | Bound | Bound (`pad1.Y HAT+`) | Untested |
+| Left Stick | Bound (`Axis 0/1`) | Untested | Bound | Bound (`pad1.X Axis+`) | Untested |
+| Right Stick | Untested | Untested | Untested | Bound (`pad1.Z Axis+`) | Untested |
+| LB/RB | Bound (`Button 102/103`) | Untested | Bound | Untested | Untested |
+| **LT/RT** | **Bound as axes** (`Axis 17/18`) | Untested | Untested | Bound (`pad1.TriggerL+`) | Untested |
+| Simultaneous Inputs | Untested in-application | Untested | Untested | Untested | Untested |
+| Hold/Release | Untested in-application | Untested | Untested | Untested | Untested |
+
+One further observation, from outside the emulator category: a **browser gamepad tester** page
+reports the device through the web Gamepad API as `Kestrel Virtual Controller`, vendor `18d1`,
+product `4ee0`, connected, with sixteen buttons and live axis values. The browser has no controller
+heuristics of its own — it reports what the web platform hands it — so this is a target that was
+never written with any of this in mind treating the device as an ordinary controller.
+
+```text
+Status: Experimental
+Confidence: Low
+Level achieved: Level 4 — virtual gamepad identity (see §10)
+Evidence: docs/phase0/results/tier6-report.md
+```
+
+**Lifecycle hazard, found and addressed on this device.** A created controller is held by a process
+that is not the application's, so it initially survived force-stop, clearing data, and
+**uninstalling the application**, and kept delivering input with nothing installed — only a reboot
+ended it (`docs/phase0/results/tier5-orphan-report.md`).
+
+The mechanism is not the fault, and removing the persistence would remove the feature: a controller
+that dies when the user leaves the launcher cannot be used to play anything. What was missing was a
+way for the owner to end it. A session is now held by a lease renewed by a visible foreground
+service, with a privileged watchdog that closes the device when renewals stop. Verified on this
+device: the session survives leaving the application and switching between applications, ends
+immediately on Stop, and ends within 10–20 seconds on force stop or uninstall
+(`docs/phase0/results/tier5-session-report.md`).
+
+Any backend built on this mechanism inherits the requirement: **persistence must be governed, not
+prevented** — held by a lease rather than a schedule, watched by something that outlives the
+application, and visible while it exists.
+
+"Bound" records what the application's own binding screen displayed after auto-mapping. It is
+strong evidence that the application enumerated the device and accepted its controls, and it is
+**not** evidence that gameplay works: nothing was played, and latency was not measured. Entries
+left Untested were not exercised — they must never be read across from the ones that were.
 
 ---
 
 # 12. Target Application Compatibility
 
-GameDeck initially targets gaming applications rather than arbitrary Android applications.
+Kestrel initially targets gaming applications rather than arbitrary Android applications.
 
 Application compatibility should include:
 
@@ -580,6 +704,26 @@ Future emulator entries should be added after actual testing.
 
 # 14. Streaming and Cloud-Gaming Compatibility
 
+```text
+Status: Experimental
+Confidence: Low
+Client: Artemis   Host: Apollo on Windows   Link: USB tethering
+Evidence: docs/phase0/results/tier6-streaming-report.md
+```
+
+A controller created on the phone was forwarded by the client and **appeared on the Windows host as
+a game controller**, listed with status OK, with its axes and buttons moving as the phone drove
+them. Nothing was touched at either end.
+
+The name the host displays is the host's own virtual pad, not ours: a streaming host does not relay
+a device identity, it reconstructs a controller locally and feeds it the state the client sends. So
+the host's naming says nothing about the phone. What it does establish is the point of the test —
+**the client accepted the device as a controller worth forwarding**, which a client that had
+rejected it, or read it as a keyboard, would not have done.
+
+Untested and not to be read across from this: Wi-Fi (the test used a cable), latency, behaviour
+under load, and any client other than Artemis. Nobody has played anything over the link.
+
 Initial streaming targets include:
 
 - Moonlight
@@ -593,7 +737,7 @@ Streaming applications can behave differently from emulators because input may b
 Therefore testing should measure:
 
 ```text
-GameDeck
+Kestrel
    ↓
 Android target
    ↓
@@ -693,9 +837,9 @@ Track:
 - application-requested orientation
 - lifecycle behavior after rotation
 
-A target application's own orientation behavior may override GameDeck preferences.
+A target application's own orientation behavior may override Kestrel preferences.
 
-Do not claim orientation control merely because GameDeck itself rotates.
+Do not claim orientation control merely because Kestrel itself rotates.
 
 ---
 
@@ -829,7 +973,7 @@ Test:
 
 ### Shizuku unavailable
 
-GameDeck should clearly indicate unavailable capabilities.
+Kestrel should clearly indicate unavailable capabilities.
 
 ### Shizuku running
 
@@ -849,9 +993,9 @@ Test capabilities.
 
 ### Shizuku restarts
 
-Verify GameDeck detects capability changes.
+Verify Kestrel detects capability changes.
 
-### GameDeck restarts
+### Kestrel restarts
 
 Verify the application recovers.
 
@@ -868,7 +1012,7 @@ Running / stopped
 Privilege:
 ADB / root
 
-GameDeck:
+Kestrel:
 version/commit
 
 Android:
@@ -938,7 +1082,7 @@ A compatibility result should not be considered permanent.
 
 Important regression checkpoints:
 
-- new GameDeck release
+- new Kestrel release
 - major Android update
 - major OEM firmware update
 - major target-application update
@@ -989,7 +1133,7 @@ Use this template:
 - Android:
 - API:
 - Firmware:
-- GameDeck:
+- Kestrel:
 - Commit:
 - Shizuku:
 - Privilege:
@@ -1053,7 +1197,7 @@ Evidence should not contain private user information.
 
 # 32. Compatibility Labels in the Application
 
-The eventual GameDeck UI may show labels such as:
+The eventual Kestrel UI may show labels such as:
 
 ```text
 ✓ Supported
@@ -1285,7 +1429,7 @@ The most important compatibility rule is:
 
 > **Do not confuse hope, theory, or a single successful experiment with support.**
 
-GameDeck should be known for telling users honestly:
+Kestrel should be known for telling users honestly:
 
 - what works
 - what partially works

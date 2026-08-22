@@ -1,8 +1,11 @@
-# GameDeck Android — Input Backends
+# Kestrel — Input Backends
+
+**Document:** `docs/INPUT_BACKENDS.md`  
+**Status:** Active — preferred backend selected by ADR-INPUT-001, fallback still undecided  
 
 ## Purpose
 
-This document defines how GameDeck abstracts controller input so the UI and gaming-session code do not depend on one Android injection mechanism.
+This document defines how Kestrel abstracts controller input so the UI and gaming-session code do not depend on one Android injection mechanism.
 
 The primary product goal is **gamepad-style input**. Touch/gesture simulation is a fallback, not the definition of gamepad support.
 
@@ -10,7 +13,18 @@ The primary product goal is **gamepad-style input**. Touch/gesture simulation is
 
 ### 1. Virtual/Gamepad backend
 
-Preferred long-term result. The goal is for target applications to observe controller-like input/device semantics. This backend is not considered production-ready until Phase 0 proves it on real devices.
+**Selected as the preferred backend by `ADR-INPUT-001`, scoped to the reference device.**
+
+Phase 0 proved it there: a kernel virtual input device created through the platform's own helper
+with Shizuku-provided shell privilege, enumerated by the platform as a controller in player slot 1,
+accepted and auto-mapped by five emulators, reported through the web Gamepad API by a browser, and
+forwarded by a streaming client to a host that showed it as a game controller.
+
+Held for a session by a lease that a privileged watchdog enforces — see `ADR-INPUT-001` for why that
+is part of the backend rather than a detail of it.
+
+Proven on one device and one firmware. Everywhere else it is an assumption, and
+`docs/COMPATIBILITY.md` is where that distinction is kept.
 
 ### 2. Shizuku backend
 
@@ -22,7 +36,45 @@ Experimental system-level event delivery where a valid Android mechanism exists.
 
 ### 4. Touch/gesture fallback
 
-Simulates touchscreen interaction. It can provide broader compatibility but is not classified as a true virtual gamepad.
+**Direction fixed by `ADR-006`, implementation deferred, nothing tested.**
+
+An accessibility service dispatches gestures onto the target's own on-screen controls, with
+Kestrel's overlay drawn on top so the user can see where those controls are. Where Shizuku is
+available even once, `WRITE_SECURE_SETTINGS` can enable that service without the user navigating the
+accessibility menu; the permission persists across reboots, so one privileged moment sets up a
+fallback that afterwards needs no privilege at all.
+
+It presses a picture of a button. There is no device identity, no analog stick and no analog
+trigger, and only targets that draw their own on-screen controls can work at all. Level 1 in
+`docs/COMPATIBILITY.md` §10, Grade D in `docs/PHASE-0.md` §28, and never to be presented as a
+controller.
+
+## What a target application displays, and what decides it
+
+Two questions come up as soon as a created controller reaches a binding screen, and the answers
+constrain the descriptor rather than the interface.
+
+**Why the face buttons are 96, 97, 99, 100 and never 98.** Those are Android key codes:
+`BUTTON_A` 96, `BUTTON_B` 97, `BUTTON_C` **98**, `BUTTON_X` 99, `BUTTON_Y` 100, `BUTTON_Z` 101.
+The set comes from six-button arcade-style pads laid out A B C over X Y Z. Kestrel declares the
+four-button arrangement — `BTN_SOUTH`, `BTN_EAST`, `BTN_WEST`, `BTN_NORTH` — and deliberately does
+not declare `BTN_C`, so 98 never appears. Nothing is missing; the number belongs to a button this
+controller does not claim to have.
+
+**Whether a target shows names or numbers is the target's decision.** Some read the key code and
+print it; some recognise a controller by its vendor and product identifiers and apply a known
+layout, showing A/B/X/Y or PlayStation glyphs. Kestrel cannot make a target draw a glyph it has no
+asset for.
+
+What Kestrel *can* choose is the identity it presents. Declaring the identifiers of a widely
+recognised controller would make more targets show familiar names — and would also claim to be a
+device this is not. Targets then expect what that device offers, including rumble and touchpads
+that do not exist here, and a mismatch is worse than a number. **The default is Kestrel's own
+identity**, and any change is a decision to be recorded rather than a value to be quietly edited.
+
+The better answer for the user is on Kestrel's side of the boundary: Kestrel knows which control it
+sent, so its own interface can say "A" while a target says 96. That mapping belongs in the layout
+and profile model, not in the descriptor.
 
 ## Core abstraction
 
@@ -88,7 +140,7 @@ The runtime ordering is intentionally not finalized until Phase 0.
 
 ## Input semantics
 
-GameDeck internally uses controller semantics rather than Android-specific key codes.
+Kestrel internally uses controller semantics rather than Android-specific key codes.
 
 Examples:
 
@@ -147,4 +199,9 @@ Do not call an implementation a “true virtual gamepad” unless testing proves
 
 ## Architecture gate
 
-The production input strategy must be recorded in `docs/adr/ADR-INPUT-001.md` after Phase 0.
+The production input strategy is recorded in `docs/adr/ADR-INPUT-001.md`, Accepted and scoped to the
+device it was measured on. The **fallback** direction is `ADR-006` — decided, deferred, and entirely
+untested.
+
+How the difference between backends reaches the user is `docs/DEGRADED_STATE.md`, and how a layout
+behaves when a control it declares is unavailable is `ADR-007`.

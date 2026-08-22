@@ -1,0 +1,93 @@
+name: Build
+
+# Produces installable APKs without anyone needing a local toolchain.
+#
+# On every push and pull request: builds, lints, tests, and attaches both APKs as downloadable
+# artifacts on the run page.
+# On a tag starting with v: additionally publishes a release with both APKs attached, which gives a
+# stable link that can be opened directly on a phone.
+#
+# Both APKs are signed with the standard debug key. That is fine for testing and sideloading, but a
+# debug-signed build must never be treated as a distributable release. Proper release signing needs
+# a keystore held in repository secrets, and is deliberately not set up yet — see CHANGELOG.md.
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      # GitHub's Ubuntu runners ship with the Android SDK already installed and ANDROID_HOME set,
+      # so no SDK installation step is needed here.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Make the Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      # One command: compiles both modules, runs lint, runs the domain tests.
+      # Lint errors fail the build by design.
+      - name: Build, lint and test
+        run: ./gradlew build --stacktrace
+
+      - name: Collect the APKs
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             artifacts/kestrel-debug.apk
+          cp tools/phase0/build/outputs/apk/debug/phase0-debug.apk \
+             artifacts/kestrel-phase0-debug.apk
+          ls -lh artifacts
+
+      - name: Upload the APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kestrel-apks-${{ github.sha }}
+          path: artifacts/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      # Test reports are worth keeping when something fails, and only then.
+      - name: Upload test and lint reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.sha }}
+          path: |
+            **/build/reports/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Publish a release for a version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            artifacts/kestrel-debug.apk \
+            artifacts/kestrel-phase0-debug.apk \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Debug-signed builds for testing, not a distributable release.
+
+          - \`kestrel-phase0-debug.apk\` — the Phase 0 input feasibility harness
+          - \`kestrel-debug.apk\` — the product, currently a placeholder screen
+
+          Install either by opening the file on the device. If an install is refused because a
+          previous version is present, uninstall it first: these are signed with a per-machine
+          debug key, so a newer build may not count as an update."

@@ -10,7 +10,7 @@ Shizuku may expose capabilities unavailable to a normal application, but availab
 
 ## Decision
 
-Shizuku is an optional capability provider. GameDeck should remain useful without it where normal Android APIs or fallbacks can provide the required behavior.
+Shizuku is an optional capability provider. Kestrel should remain useful without it where normal Android APIs or fallbacks can provide the required behavior.
 
 ## Rationale
 
@@ -28,4 +28,4 @@ Negative:
 - more compatibility testing
 - some features may differ by device
 
-GameDeck must detect actual capabilities rather than only checking whether Shizuku is installed.
+Kestrel must detect actual capabilities rather than only checking whether Shizuku is installed.

@@ -1,19 +1,19 @@
-# GameDeck Android — Product Requirements Document v1.0
+# Kestrel — Product Requirements Document v1.0
 
-**Document: `PRD.md`**\
-**Project status:** Product definition / architecture phase\
-**Target platform:** Android phones\
-**Minimum Android version:** Android 10 / API 29\
-**Technology:** Native Kotlin + Jetpack Compose\
-**License:** GPLv3\
-**Primary distribution model:** Open source, initially personal-use focused\
+**Document: `PRD.md`**  
+**Project status:** Product definition / architecture phase  
+**Target platform:** Android phones  
+**Minimum Android version:** Android 10 / API 29  
+**Technology:** Native Kotlin + Jetpack Compose  
+**License:** GPLv3  
+**Primary distribution model:** Open source, initially personal-use focused  
 **Primary development method:** AI-assisted development with human product direction and testing
 
 ---
 
 ## 1. Product Vision
 
-GameDeck Android transforms an Android phone into a handheld gaming environment inspired by devices such as Steam Deck, ROG Ally, and other dedicated gaming handhelds.
+Kestrel transforms an Android phone into a handheld gaming environment inspired by devices such as Steam Deck, ROG Ally, and other dedicated gaming handhelds.
 
 The application provides a gaming-focused launcher, a permanent customizable virtual controller, application-specific controller profiles, game-screen scaling/aspect-ratio controls, skins/themes, and optional elevated integration through Shizuku.
 
@@ -111,7 +111,7 @@ Android 10 corresponds to API level 29 and gives the project a sufficiently mode
 
 # 5. Product Modes
 
-GameDeck will have two primary operating modes.
+Kestrel will have two primary operating modes.
 
 ## Mode A — Standard Mode
 
@@ -119,7 +119,7 @@ Designed to work without Shizuku.
 
 The application uses the most capable input method available to a normal application.
 
-Where proper system-level gamepad injection is unavailable, GameDeck may use a fallback input mechanism such as touch/gesture mapping where technically feasible.
+Where proper system-level gamepad injection is unavailable, Kestrel may use a fallback input mechanism such as touch/gesture mapping where technically feasible.
 
 The UI must clearly indicate which input backend is currently active.
 
@@ -145,14 +145,14 @@ The application must not assume that Shizuku always provides root-equivalent cap
 
 ## Primary requirement
 
-GameDeck should generate **proper gamepad-style input**, rather than merely simulating screen taps, wherever technically possible.
+Kestrel should generate **proper gamepad-style input**, rather than merely simulating screen taps, wherever technically possible.
 
 The preferred conceptual pipeline is:
 
 ```text
 Physical touch
         ↓
-GameDeck Controller Engine
+Kestrel Controller Engine
         ↓
 Input Abstraction Layer
         ↓
@@ -223,16 +223,16 @@ This architecture allows future developers or AI agents to implement additional 
 
 ---
 
-# 8. GameDeck Launcher
+# 8. Kestrel Launcher
 
-GameDeck will provide a dedicated gaming launcher.
+Kestrel will provide a dedicated gaming launcher.
 
 The home screen displays supported gaming applications rather than the complete Android application list.
 
 Example:
 
 ```text
-GAMEDECK
+KESTREL
 
 Recently Played
 
@@ -246,7 +246,7 @@ GeForce NOW
 
 ## Application discovery
 
-GameDeck should automatically identify likely gaming applications using a combination of:
+Kestrel should automatically identify likely gaming applications using a combination of:
 
 - Installed application metadata
 - Known package identifiers
@@ -317,7 +317,7 @@ Profiles must be stored independently from the built-in default templates.
 
 # 10. Controller Layout System
 
-GameDeck will support:
+Kestrel will support:
 
 - Xbox-style
 - PlayStation-style
@@ -425,7 +425,7 @@ The exact proportions must be configurable rather than fixed.
 
 # 13. Game Display Modes
 
-GameDeck will support:
+Kestrel will support:
 
 ### Fit
 
@@ -466,7 +466,7 @@ The architecture must therefore avoid hard-coding the supported list.
 
 # 15. Screen Configuration
 
-Where the Android platform and target application permit, GameDeck should support:
+Where the Android platform and target application permit, Kestrel should support:
 
 - Game area width
 - Game area height
@@ -487,7 +487,7 @@ and
 
 The former is expected to be widely implementable; the latter may depend on Android version, manufacturer, permissions, and whether the target activity can be organized/embedded.
 
-Android's official activity-embedding system has host/task ownership restrictions, so GameDeck must not assume arbitrary third-party activities can simply be embedded inside its own Compose layout.
+Android's official activity-embedding system has host/task ownership restrictions, so Kestrel must not assume arbitrary third-party activities can simply be embedded inside its own Compose layout.
 
 ---
 
@@ -544,7 +544,7 @@ A user should be able to apply a skin to different layouts without modifying the
 
 The project should support community sharing in a decentralized manner during the initial phase.
 
-There will be no mandatory GameDeck cloud backend.
+There will be no mandatory Kestrel cloud backend.
 
 GitHub can serve as the initial community distribution mechanism.
 
@@ -580,11 +580,11 @@ Each item can include:
 - Preview
 - License
 - Download path
-- Minimum GameDeck version
+- Minimum Kestrel version
 - SHA-256/checksum
 - Repository revision
 
-This allows GameDeck to download public community content directly from GitHub without requiring a proprietary backend.
+This allows Kestrel to download public community content directly from GitHub without requiring a proprietary backend.
 
 ---
 
@@ -690,7 +690,7 @@ Example:
 }
 ```
 
-When schemas change, GameDeck should migrate old configurations where practical.
+When schemas change, Kestrel should migrate old configurations where practical.
 
 This is essential for long-term open-source development.
 
@@ -700,11 +700,11 @@ This is essential for long-term open-source development.
 
 The project will be released under **GNU GPLv3**.
 
-All original GameDeck code should comply with the project's license policy.
+All original Kestrel code should comply with the project's license policy.
 
 Third-party dependencies must be reviewed individually for license compatibility before inclusion.
 
-The Shizuku API/project currently uses Apache 2.0 licensing, which should be recorded correctly in the project's third-party notices rather than having its source treated as GameDeck GPL code.
+The Shizuku API/project currently uses Apache 2.0 licensing, which should be recorded correctly in the project's third-party notices rather than having its source treated as Kestrel GPL code.
 
 ---
 
@@ -715,7 +715,7 @@ The repository should be designed for future contributors from the beginning.
 Suggested structure:
 
 ```text
-GameDeck/
+Kestrel/
 │
 ├── app/
 │
@@ -838,7 +838,7 @@ This phase comes before building the complete UI.
 
 The key experiment:
 
-**Can GameDeck reliably produce gamepad-compatible input for our target applications under the intended privilege combinations?**
+**Can Kestrel reliably produce gamepad-compatible input for our target applications under the intended privilege combinations?**
 
 Test environments:
 
@@ -959,7 +959,7 @@ Implement:
 - Expose capability status to the rest of the application
 - Use capability-specific implementations
 
-The rest of GameDeck must consume a generic capability interface rather than directly assuming Shizuku is available.
+The rest of Kestrel must consume a generic capability interface rather than directly assuming Shizuku is available.
 
 ---
 
@@ -1000,7 +1000,7 @@ No user account system is required.
 The first meaningful MVP is considered complete when the user can:
 
 ```text
-Open GameDeck
+Open Kestrel
       ↓
 See gaming applications
       ↓
@@ -1063,7 +1063,7 @@ These are visual/interaction templates. The project must avoid using proprietary
 
 # 37. Compatibility Philosophy
 
-GameDeck must report compatibility honestly.
+Kestrel must report compatibility honestly.
 
 Do not display:
 
@@ -1121,7 +1121,7 @@ The application should contain a diagnostics page showing:
 - Android version
 - Device model
 - Manufacturer
-- GameDeck version
+- Kestrel version
 - Input backend
 - Shizuku status
 - Shizuku privilege level
@@ -1196,7 +1196,7 @@ Performance measurement will be added after the first functional prototype.
 
 # 42. Privacy
 
-GameDeck should operate locally by default.
+Kestrel should operate locally by default.
 
 The application should not require:
 
@@ -1249,7 +1249,7 @@ Not part of the first release, but architecture should leave room for:
 
 # 45. Future Android Game Support
 
-After the emulator + streaming target is stable, GameDeck may expand toward Android games that support standard controllers.
+After the emulator + streaming target is stable, Kestrel may expand toward Android games that support standard controllers.
 
 The architecture should therefore use:
 
@@ -1270,7 +1270,7 @@ This keeps the product architecture extensible.
 
 # 46. Product Success Criteria
 
-The project is successful when a user can take an ordinary Android phone, install GameDeck, configure a gaming application, and experience it as a handheld device without needing a physical controller.
+The project is successful when a user can take an ordinary Android phone, install Kestrel, configure a gaming application, and experience it as a handheld device without needing a physical controller.
 
 The first major milestone is not:
 
@@ -1278,7 +1278,7 @@ The first major milestone is not:
 
 The first major milestone is:
 
-> **"I can launch a supported game and actually play it using GameDeck's virtual gamepad."**
+> **"I can launch a supported game and actually play it using Kestrel's virtual gamepad."**
 
 ---
 
