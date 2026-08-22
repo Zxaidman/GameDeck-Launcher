@@ -9,6 +9,7 @@ import io.github.zxaidman.kestrel.core.input.DeadzoneShape
 import io.github.zxaidman.kestrel.core.storage.MemoryDocumentStore
 import io.github.zxaidman.kestrel.core.storage.StoreFolder
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -170,11 +171,39 @@ class KestrelSettingsTest {
     @Test
     fun `a theme survives being written and read back`() {
         val settings = KestrelSettings(
-            display = DisplayPreferences(theme = AppTheme.DARK_AMOLED),
+            display = DisplayPreferences(theme = AppTheme.DARK, trueBlack = true),
         )
         val written = SettingsDocument.write(settings) as ConfigNode.Obj
         val read = value(SettingsDocument.read(written))
-        assertEquals(AppTheme.DARK_AMOLED, read.display.theme)
+        assertEquals(AppTheme.DARK, read.display.theme)
+        assertTrue(read.display.trueBlack)
+    }
+
+    @Test
+    fun `the theme names an earlier build wrote still read`() {
+        // Every phone that ran 0.0.30-dev has one of these in its settings file. A file Kestrel
+        // wrote must never become a file Kestrel refuses.
+        fun themeOf(stored: String) = value(
+            SettingsDocument.read(
+                ConfigNode.Obj(
+                    linkedMapOf(
+                        "schemaVersion" to ConfigNode.Num(1.0),
+                        "type" to ConfigNode.Text("settings"),
+                        "id" to ConfigNode.Text("user.settings"),
+                        "name" to ConfigNode.Text("S"),
+                        "display" to ConfigNode.Obj(
+                            linkedMapOf("theme" to ConfigNode.Text(stored))
+                        ),
+                    )
+                )
+            )
+        ).display
+
+        assertEquals(AppTheme.DARK, themeOf("dark-grey").theme)
+        assertFalse(themeOf("dark-grey").trueBlack)
+
+        assertEquals(AppTheme.DARK, themeOf("dark-amoled").theme)
+        assertTrue(themeOf("dark-amoled").trueBlack, "the black someone chose was thrown away")
     }
 
     @Test

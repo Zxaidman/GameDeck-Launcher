@@ -52,13 +52,13 @@ hardware.
 
 ---
 
-## State of the queue — build `0.0.30-dev`
+## State of the queue — build `0.0.31-dev`
 
 | Phase | Items |
 | --- | --- |
-| `done` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-9`–`BUG-17` (bar 3–8), `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`–`FEAT-18` — nineteen |
+| `done` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-9`–`BUG-21` (bar 3–8), `FEAT-10`–`FEAT-12`, `FEAT-14`, `FEAT-16`–`FEAT-22` — twenty-seven |
 | `superseded` | `FEAT-13` |
-| `testing` | `BUG-18`–`BUG-22`, `FEAT-19`–`FEAT-22` |
+| `testing` | `BUG-22`–`BUG-25`, `FEAT-23`–`FEAT-27` |
 | `building` | — |
 | `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`; `FEAT-15` next |
 
@@ -480,7 +480,7 @@ top of it, which must not change by editing.
 
 ### `BUG-18` — The canvas is a picture of the screen and should be the size of it
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Found by:** Reported with screenshots, build `0.0.28-dev`.
 
 The canvas is fitted with a 4% margin, left over from when it shared the screen with a panel. It has
@@ -494,7 +494,7 @@ makes "does the pad match the editor" a question anyone can answer by looking.
 
 ### `BUG-19` — The home page header does not scroll
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Asked for:** *"i don't want kestrel on homescreen as freeze header across scroll."*
 
 The title sits outside the scrolling area, so it holds a band of a small screen permanently. It
@@ -504,7 +504,7 @@ belongs in the scroll with everything else.
 
 ### `BUG-20` — The canvas border has nothing left to mark
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.29-dev`. *"there 1px maybe still shows as white."*
 
 The stroke around the canvas existed to say where the picture of the phone ended. The picture is now
@@ -515,7 +515,7 @@ screen already marks. It goes.
 
 ### `BUG-21` — A white band across the top and bottom of the home page
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.29-dev`. Sides are fine; top and bottom are not.
 
 Vertical padding on a full-screen page, applied outside the scrolling area, so it is a permanent
@@ -525,7 +525,7 @@ band rather than a margin that scrolls away. The horizontal padding is doing a r
 
 ### `BUG-22` — The long-press menu opens off the screen
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Found by:** Reported, build `0.0.29-dev`, and it made `FEAT-19`'s point 12 untestable.
 
 The menu is clamped against a **guessed** height, so a menu taller than the guess still runs off the
@@ -536,6 +536,43 @@ slid back over the control it belongs to.
 The fix is to measure the menu rather than guess it, and to choose a side per axis from where the
 control actually is. Every control worth long-pressing is in a corner or against an edge, because
 that is where thumbs are — so this is the normal case, not the edge case.
+
+---
+
+### `BUG-23` — The menu appears off screen and then jumps
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.30-dev`. *"it open outside of screen then suddenly popup in right
+place."*
+
+`BUG-22` measures the menu to decide which side it opens on, and a thing has no measurement until it
+has been drawn once. So the first frame is drawn at the raw touch point — off the edge — and the
+second frame is right. The fix is to not show the first frame: it is laid out, measured and only
+then made visible, which costs a frame nobody can see instead of a frame everybody can.
+
+---
+
+### `BUG-24` — The close button in the menu is too small to hit
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.30-dev`.
+
+A `×` in a text button, which is a glyph with almost no target around it, in a menu opened by a
+thumb. It needs a real target — and the menu should also close by touching the canvas away from it,
+which is what people try first.
+
+---
+
+### `BUG-25` — The toggle sits on the camera in portrait
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.30-dev`.
+
+Since the pad took the whole screen, the `K` toggle in portrait sits directly over the front camera —
+where the glass is a different shape and a finger is not reliably on the button. In portrait it moves
+down by its own height, which clears the cutout without moving it anywhere anyone has to look for it.
+
+Landscape is unaffected: the cutout is on a short edge there and the toggle is not near it.
 
 ---
 
@@ -839,7 +876,7 @@ orientation section leaves the tools entirely.
 
 ### `FEAT-19` — Long press a control for the things done to one control
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Asked for:** *"Long press on the gamepad button should open the small floating menu near it with
 four options: size (direct open :value dialog), shape (showing rect., circle, square), copy (only
 size & shape) and only show paste option once copy to supported buttons."*
@@ -864,7 +901,7 @@ refused. The menu says which family a control is in, so nobody has to guess why 
 
 ### `FEAT-20` — A shape should look like the shape
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Asked for:** *"instead of text use icon or shape to represent it, in both tools and popup. and
 this should be true for anything which can use visual instead of text just like rotation. (keep it
 bold & size visible)"*
@@ -882,7 +919,7 @@ invent one control at a time.
 
 ### `FEAT-21` — The same menu in window mode
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Asked for:** *"add similar popup dialog for window mode editor which only show options, not copy
 and paste."*
 
@@ -895,7 +932,7 @@ already does.
 
 ### `FEAT-22` — Material design, and three ways to be dark
 
-**Phase:** `testing` — built in `0.0.30-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.30-dev`. Written up in `done-list.md`.
 **Asked for:** *"Material UI design for whole app with light mode, grey dark mode, amoled dark
 mode."*
 
@@ -915,6 +952,86 @@ screen, and painting it does not make it a product.
 **The overlay keeps its own palette on purpose.** A pad is drawn over somebody else's application,
 so it is legible against a white page and a black one both — its colours answer to that, not to a
 theme. Making the pad follow the application's theme would make it invisible half the time.
+
+---
+
+### `FEAT-23` — AMOLED is a property of dark, not a third theme
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"make Amoled toggle rather than options in dark mode only. Also make all binary
+option as a Android capsule toggle design."*
+
+Right, and the first version had the shape of the setting wrong. There are two questions —
+*light or dark* and *how dark* — and offering them as three buttons in a row makes them look like
+one. So: **system, light, dark**, and a **true black** switch that is only live when the answer is
+dark.
+
+Every binary setting becomes a switch. A checkbox is a form control; a switch is a thing that is on
+or off, which is what these are — the grid and edge snapping were checkboxes and should not have
+been.
+
+---
+
+### `FEAT-24` — The sheet is settings now, because editing moved to the control
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"now that we can do many layout editing via long press popup, it is time we remove
+it from tools sheet and rename it settings use gear icon here. and make in landscape view reduce its
+width. and same in portrait reduce its height."*
+
+The sheet was a panel with everything in it, then a sheet with everything in it. With `FEAT-19` and
+`FEAT-21` the per-control work happens **at the control**, which is where it belongs, and what is
+left in the sheet is genuinely settings: which mode, the grid, snapping, and what the canvas is.
+
+So the sheet keeps those, is named for them, opens from a gear, and gets smaller — it no longer has
+to hold two editors.
+
+**What this forces, and it is the right forcing.** The long-press menu has to be complete: it gains
+the size steppers, taller and shorter, and the anchor. If a control cannot be fully edited from its
+own menu then removing the tools loses something, and losing something quietly is how an editor gets
+worse while looking cleaner.
+
+---
+
+### `FEAT-25` — Snapping is remembered for the session
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"snapping setting in editor should be saved per session."*
+
+Grid size and both snapping switches survive closing and reopening the editor. Somebody who turns
+edge snapping on wants it on for the arranging they are doing, not for the next control only.
+
+**For the session, as asked — not across restarts.** It is deliberately not written to
+`settings.json`: it is a working state rather than a preference, and every field in that file is one
+more thing to version and migrate. Say the word and it becomes persistent.
+
+---
+
+### `FEAT-26` — Buttons are rounded rectangles
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"app ui buttons should be rounded rectangle Instead of capsule like or maybe give
+option for this in settings."*
+
+Material 3 draws a filled button as a capsule, and the platform does not let that be changed through
+the theme — the token maps to a full corner whatever the theme's shapes say. So the buttons are
+wrapped once, in `ui/theme`, and the application uses the wrappers. One place to change the corner,
+which is also what would make a setting cheap later.
+
+**No setting for now.** It was offered as a "maybe", and a preference nobody has asked for twice is a
+preference that costs more to keep than to add.
+
+---
+
+### `FEAT-27` — Say what the lighter band is
+
+**Phase:** `testing` — built in `0.0.31-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"In the layout editor mentioned above the floating button the what lighter canva
+area represents."*
+
+A line above the floating buttons, shown only when there is a band: it is where the system bars and
+the camera cutout are, controls placed there work, and they share that strip with the system. It has
+been drawn since `0.0.28-dev` and explained only in a changelog nobody reads while holding a phone.
 
 ---
 
@@ -1163,6 +1280,30 @@ show the rectangle and its share of the screen rather than only the `group` name
 - **`FEAT-15` grows a requirement:** the pad size slider is per orientation as well as the
   arrangement.
 - **New:** Material design with light, grey dark and AMOLED dark → `FEAT-22`.
+
+
+
+### Round `0.0.30-dev` — themes and the menu
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1, 2 | Canvas edge, home page band | **Working** → `BUG-18`, `BUG-19`, `BUG-20`, `BUG-21` close |
+| 3, 4, 5 | Menu placement | Working, but it draws off screen for a frame first → `BUG-23` |
+| 6 | Trigger family | **Working** |
+| 7 | Drawn shapes | Working; the `×` in the menu is too small → `BUG-24` |
+| 8 | Window-mode menu | **Working** |
+| 9–15 | All four themes, bar icons, persistence, and the pad keeping its own colours | **All working** |
+| 16 | Regression | **None** |
+
+### Decisions and requests this round
+
+- **AMOLED becomes a switch inside dark**, and every binary setting becomes a switch → `FEAT-23`
+- **The tools sheet becomes settings**, with a gear and a smaller footprint, now that editing happens
+  at the control → `FEAT-24`
+- **Snapping is remembered for the session** → `FEAT-25`
+- **Buttons are rounded rectangles** rather than capsules → `FEAT-26`
+- **The `K` toggle clears the camera in portrait** → `BUG-25`
+- **The lighter band gets a caption** → `FEAT-27`
 
 
 ### Awaiting

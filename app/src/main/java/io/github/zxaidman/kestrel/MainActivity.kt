@@ -172,7 +172,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             io.github.zxaidman.kestrel.ui.theme.KestrelTheme(
-                theme = AppSettings.current.value.display.theme
+                theme = AppSettings.current.value.display.theme,
+                trueBlack = AppSettings.current.value.display.trueBlack,
             ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     // Which page is in front. One value, because there are two pages: a

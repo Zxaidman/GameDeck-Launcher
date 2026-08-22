@@ -1,12 +1,21 @@
 package io.github.zxaidman.kestrel.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import io.github.zxaidman.kestrel.core.settings.AppTheme
 
 /**
@@ -80,7 +89,7 @@ private val DARK_GREY: ColorScheme = darkColorScheme(
  * grey everything" rather than an AMOLED scheme. The containers are dark rather than black, because
  * a sheet that is exactly the colour of the page behind it has no edge at all.
  */
-private val DARK_AMOLED: ColorScheme = DARK_GREY.copy(
+private val DARK_BLACK: ColorScheme = DARK_GREY.copy(
     background = Color.Black,
     surface = Color.Black,
     surfaceVariant = Color(0xFF1C1C21),
@@ -96,17 +105,60 @@ private val DARK_AMOLED: ColorScheme = DARK_GREY.copy(
 public fun isDark(theme: AppTheme, systemIsDark: Boolean): Boolean = when (theme) {
     AppTheme.SYSTEM -> systemIsDark
     AppTheme.LIGHT -> false
-    AppTheme.DARK_GREY, AppTheme.DARK_AMOLED -> true
+    AppTheme.DARK -> true
+}
+
+/**
+ * The corner a button is drawn with.
+ *
+ * Material 3 draws a filled button as a capsule and the theme cannot say otherwise — the token maps
+ * to a full corner whatever `Shapes` holds. So the buttons are wrapped instead, and this is the one
+ * number that decides the corner for all of them.
+ */
+public val BUTTON_CORNER: Dp = 12.dp
+
+@Composable
+public fun KButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    content: @Composable RowScope.() -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        shape = RoundedCornerShape(BUTTON_CORNER),
+        colors = colors,
+        content = content,
+    )
 }
 
 @Composable
-public fun KestrelTheme(theme: AppTheme, content: @Composable () -> Unit) {
+public fun KOutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        shape = RoundedCornerShape(BUTTON_CORNER),
+        content = content,
+    )
+}
+
+@Composable
+public fun KestrelTheme(theme: AppTheme, trueBlack: Boolean, content: @Composable () -> Unit) {
     val systemIsDark = isSystemInDarkTheme()
-    val scheme = when (theme) {
-        AppTheme.LIGHT -> LIGHT
-        AppTheme.DARK_GREY -> DARK_GREY
-        AppTheme.DARK_AMOLED -> DARK_AMOLED
-        AppTheme.SYSTEM -> if (systemIsDark) DARK_GREY else LIGHT
+    val dark = isDark(theme, systemIsDark)
+    val scheme = when {
+        !dark -> LIGHT
+        trueBlack -> DARK_BLACK
+        else -> DARK_GREY
     }
     MaterialTheme(colorScheme = scheme, content = content)
 }

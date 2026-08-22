@@ -284,97 +284,155 @@ arranging, not configured beforehand. **Measured.**
 
 ---
 
-## Built, awaiting confirmation — `0.0.30-dev`
+### `BUG-18` + `BUG-20` — The canvas is the screen, with nothing drawn round it — **closed `0.0.30-dev`**
 
-### `BUG-20` — The canvas border is gone
-
-It marked where the picture of the phone ended. The picture is the whole screen at 1 : 1 now, so the
-only thing left for it to mark was the edge of the screen. Unverified on the device.
-
----
-
-### `BUG-21` — No white band on the home page
-
-Vertical padding on a full-screen page sits outside the scrolling area, so it was a permanent band
-rather than a margin that scrolls away. Horizontal padding does a real job and stays. Unverified.
+The margin went first and the border a round later. Previewing the orientation the phone is in, the
+canvas is now exactly 1 : 1 with the display and has nothing marking its edge, because the edge of
+the screen is the edge of the screen. **Measured.**
 
 ---
 
-### `BUG-22` — The menu opens away from the edge it is near
+### `BUG-19` + `BUG-21` — The home page scrolls to the edges — **closed `0.0.30-dev`**
 
-Measured rather than guessed, and it opens **upwards** for a control near the bottom and
-**leftwards** for one near the right edge, instead of being slid back over the control it belongs
-to. Every control worth long-pressing is against an edge, because that is where thumbs are — so this
-was the normal case being treated as the exception. Unverified on the device.
+The title moved into the scroll, then the vertical padding went. Both were bands of a small screen
+held permanently by things that had no reason to be fixed. Horizontal padding stays and does a real
+job. **Measured.**
 
 ---
 
-### `FEAT-20` — A shape is drawn as itself
+### `FEAT-19` — Long press a control — **closed `0.0.30-dev`**
+
+A menu at the control, with size, shape, copy and paste. **Copy takes size and outline only** —
+position is never copied, because two controls in the same place are two controls one of which
+cannot be pressed. Paste is offered **only within a family**: directional (the sticks and the pad),
+buttons (face, shoulders, menu) and triggers, which the project owner separated out on the grounds
+that a trigger is a long rectangle with a fill in it and nothing else on a pad is shaped like one.
+When the clipboard holds the wrong family the menu says so, rather than showing a paste that refuses.
+
+**Measured**, across two rounds — the first version opened partly off screen, which is `BUG-22`.
+
+---
+
+### `FEAT-20` — A shape is drawn as itself — **closed `0.0.30-dev`**
 
 `circle`, `square` and `rectangle` were three words that all meant "look at the picture you are
-already looking at". They are now the shapes, drawn — in the tools and in the long-press menu, the
-same three buttons from one place, the current one filled.
+already looking at". They are the shapes now, drawn rather than taken from a font, from one place
+used by both the tools and the menu. **Measured.**
 
-Deliberately drawn rather than taken from a font: a font has whatever squares and circles it happens
-to have, at whatever weight, and these have to read at button size on a dark sheet.
-
-**Where the rule stops, and this is a limit rather than an omission.** `own window`, `snap to the
-grid` and the anchor names have no picture that is faster to read than the words. A project with no
-icon vocabulary should not invent one a control at a time, and a label is not worse than an icon
-that has to be learned. Unverified on the device.
+**Where the rule stops:** `own window`, `snap to the grid` and the anchor names keep their words. A
+label is not worse than an icon that has to be learned, and a project with no icon vocabulary should
+not invent one a control at a time.
 
 ---
 
-### `FEAT-21` — The same menu in window mode
+### `FEAT-21` — The same menu in window mode — **closed `0.0.30-dev`**
 
-Long press in window mode gives the window options at the control: which window it is in, stepped
-through the same list the sheet offers, and its own window. **No copy and no paste**, as asked — and
-the reason is worth keeping: a group is a name shared between controls, so copying one is joining
-it, which is what stepping through the list already does. A clipboard here would be a second way to
-do one thing, with its own state to get out of step. Unverified on the device.
+Window options at the control, no copy and no paste. A group is a name shared between controls, so
+copying one is joining it — which is what stepping through the list already does. **Measured.**
 
 ---
 
-### `FEAT-19` — Triggers are their own family
+### `FEAT-22` — Material, and dark done properly — **closed `0.0.30-dev`**
 
-Three families now, not two: **directional** (the sticks and the pad), **buttons** (face, shoulders,
-menu) and **triggers**. The project owner's call and the right one — a trigger is a long rectangle
-with a fill running up it, and a face button's size on a trigger is a trigger nobody can read.
+Every screen, dialog, sheet and button follows one Material 3 colour scheme, and the pad keeps its
+own palette because it is drawn over other applications and has to be legible on a white page and a
+black one both. **Measured**, including that last part: *"theme doesn't change the gamepad and
+canvas good."*
+
+The version that shipped had the *shape* of the setting wrong — three themes in a row, where there
+are really two questions: light or dark, and then how dark. `FEAT-23` corrects it. The colours
+themselves were right first time.
+
+**What it is not:** a redesign. The home page is still a developer's diagnostics screen, and that is
+`CRIT-2`.
+
+---
+
+---
+
+## Built, awaiting confirmation — `0.0.31-dev`
+
+### `BUG-22` + `BUG-23` — The menu opens in the right place, first time
+
+`BUG-22` measured the menu to decide which side it opens on, and a thing has no measurement until it
+has been drawn once — so the first frame went to the raw touch point, off the edge, and the second
+was right. It is now laid out, measured and *then* made visible, which costs a frame nobody can see
+instead of one everybody can. Unverified on the device.
+
+---
+
+### `BUG-24` — A close button with a target round it
+
+A `×` in a text button is a glyph with almost nothing to hit, in a menu opened by a thumb. It is a
+44dp button now. Touching the canvas away from the menu also closes it, which is what people try
+first. Unverified.
+
+---
+
+### `BUG-25` — The toggle clears the camera in portrait
+
+Since the pad took the whole screen the `K` toggle in portrait sat directly over the front camera,
+where the glass is a different shape and a finger does not reliably land on the button. In portrait
+it moves down by its own height. Landscape is untouched — the cutout is on a short edge there.
+Unverified.
+
+---
+
+### `FEAT-23` — AMOLED is a property of dark, and binary settings are switches
+
+**system, light, dark**, and a **true black** switch that is live only when the answer is dark. Two
+questions instead of three answers. The names the previous build wrote — `dark-grey` and
+`dark-amoled` — still read, and `dark-amoled` still means true black, so nobody's choice is thrown
+away by upgrading. There is a unit test for exactly that.
+
+Every binary setting is a switch. A checkbox is a form control, ticked as part of an answer being
+composed; a switch is a thing that is on or off and takes effect at once, which is what these are.
+The grid and edge snapping were checkboxes and should not have been.
+
+Unverified on the device; the settings migration is unit-tested.
+
+---
+
+### `FEAT-24` — The sheet is settings, because editing moved to the control
+
+The sheet was a panel with everything in it, then a sheet with everything in it. With the long-press
+menu doing the per-control work, what is left is genuinely settings: which mode, the grid, snapping,
+what the canvas is, and a read-out of every window with its share of the screen — the one view that
+cannot be had at a single control. It opens from a **gear**, and it is smaller: 46% of the width in
+landscape, 52% of the height in portrait.
+
+**What this forced, and the forcing was right.** The long-press menu had to become complete first,
+so it gained the size steppers, taller and shorter, and the anchor. Removing the tools before the
+menu could replace them would have lost half the editor quietly, which is how an editor gets worse
+while looking cleaner.
+
 Unverified on the device.
 
 ---
 
-### `FEAT-22` — Material design, three ways to be dark
+### `FEAT-25` — Snapping is remembered for the session
 
-**Light**, **grey dark**, **AMOLED dark**, and **follow the system** as the default. The application
-is built from Material 3 already, so a colour scheme is the whole of the change: every screen,
-dialog, sheet and button follows it at once. The accent is the same slate blue in all three — they
-differ in what they are painted on, not in what they are.
-
-**AMOLED is true black everywhere it shows.** Material draws elevation as a tint over the surface,
-so a dialog on a black page comes out grey unless the container colours are set too — which would
-have made it "black background, grey everything" rather than an AMOLED scheme. The containers are
-near-black rather than black, because a sheet exactly the colour of the page behind it has no edge.
-
-The system bar icons follow the theme, or a light theme with the bars showing is white on white.
-
-**What this is not:** a redesign. The home page is still a developer's diagnostics screen and
-painting it does not make it a product — that is `CRIT-2`.
-
-**The overlay keeps its own palette, deliberately.** A pad is drawn over somebody else's application
-and has to be legible on a white page and a black one both. A pad that followed the application's
-theme would be invisible half the time.
-
-**How it is known.** The settings round-trip is unit-tested, including a settings file written
-before themes existed and a theme name this build does not know. The colours themselves are
-Unverified — nobody has looked at them on a screen.
+Grid size and both snapping switches survive closing and reopening the editor, for as long as
+Kestrel is running. **Not written to `settings.json`, as asked** — it is working state rather than a
+preference, and every field in that file is one more thing to version and migrate. Unverified.
 
 ---
 
-### `BUG-18`, `BUG-19` — carried
+### `FEAT-26` — Buttons are rounded rectangles
 
-Both were reported as working with a remainder: a 1px border and a white band. The remainders are
-`BUG-20` and `BUG-21`; these two close when those do.
+Material 3 draws a filled button as a capsule and the theme cannot say otherwise — the token maps to
+a full corner whatever `Shapes` holds. So the buttons are wrapped once, in `ui/theme`, and the
+application uses the wrappers: one number decides the corner for all of them, which is also what
+would make a setting cheap if one is ever wanted. Switches stay capsules, because that is what a
+switch is. Unverified.
+
+---
+
+### `FEAT-27` — The lighter band says what it is
+
+A line above the floating buttons, only when there is a band: it is where the system bars and the
+camera cutout are, controls there work, and they share that strip with the system. It had been drawn
+since `0.0.28-dev` and explained only in a changelog nobody reads while holding a phone. Unverified.
 
 ---
 

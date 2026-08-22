@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -36,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zxaidman.kestrel.core.diagnostics.changedEnough
 import io.github.zxaidman.kestrel.core.input.AnalogProfile
-import io.github.zxaidman.kestrel.core.settings.KestrelSettings
 import io.github.zxaidman.kestrel.core.input.CapabilityState
 import io.github.zxaidman.kestrel.core.input.InputCapability
 import io.github.zxaidman.kestrel.core.input.applyStick
@@ -47,13 +45,16 @@ import io.github.zxaidman.kestrel.core.profile.ProfileScope
 import io.github.zxaidman.kestrel.core.profile.ProfileSummary
 import io.github.zxaidman.kestrel.core.profile.TargetDescriptor
 import io.github.zxaidman.kestrel.core.profile.matchProfile
+import io.github.zxaidman.kestrel.core.settings.KestrelSettings
 import io.github.zxaidman.kestrel.platform.session.ControllerSessionService
 import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.settings.AppSettings
-import io.github.zxaidman.kestrel.platform.storage.KestrelStorage
 import io.github.zxaidman.kestrel.platform.shizuku.ShizukuCapability
-import kotlinx.coroutines.delay
+import io.github.zxaidman.kestrel.platform.storage.KestrelStorage
+import io.github.zxaidman.kestrel.ui.theme.KButton
+import io.github.zxaidman.kestrel.ui.theme.KOutlinedButton
 import kotlin.math.min
+import kotlinx.coroutines.delay
 
 /**
  * A diagnostic surface, not a product screen.
@@ -268,10 +269,10 @@ public fun InputPreviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = onSave) { Text("Save…") }
-                Button(onClick = onShare) { Text("Share") }
+                KButton(onClick = onSave) { Text("Save…") }
+                KButton(onClick = onShare) { Text("Share") }
                 // Start the trail clean, so a test is not read through whatever happened before it.
-                Button(
+                KButton(
                     onClick = {
                         state.clearTrail()
                         SessionState.engine?.trail?.clear()
@@ -302,10 +303,10 @@ public fun InputPreviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = { ShizukuCapability.bind(context) {} }, enabled = shizuku.serviceRunning) {
+                KButton(onClick = { ShizukuCapability.bind(context) {} }, enabled = shizuku.serviceRunning) {
                     Text("Connect")
                 }
-                Button(onClick = { ShizukuCapability.requestPermission() }, enabled = shizuku.serviceRunning) {
+                KButton(onClick = { ShizukuCapability.requestPermission() }, enabled = shizuku.serviceRunning) {
                     Text("Grant")
                 }
             }
@@ -313,8 +314,8 @@ public fun InputPreviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = { ControllerSessionService.start(context) }) { Text("Start controller") }
-                Button(onClick = { ControllerSessionService.stop(context) }) { Text("Stop") }
+                KButton(onClick = { ControllerSessionService.start(context) }) { Text("Start controller") }
+                KButton(onClick = { ControllerSessionService.stop(context) }) { Text("Stop") }
             }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -323,7 +324,7 @@ public fun InputPreviewScreen(
                 // Never disabled, and it rebinds before it acts. A controller can outlive the
                 // process that created it, so recovery has to work from a cold start with nothing
                 // remembered — that is exactly the situation a stuck controller produces.
-                Button(onClick = { ControllerSessionService.stop(context) }) {
+                KButton(onClick = { ControllerSessionService.stop(context) }) {
                     Text("Force remove any controller")
                 }
             }
@@ -350,7 +351,7 @@ public fun InputPreviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(
+                KButton(
                     onClick = {
                         SessionState.profile = profile
                         if (!io.github.zxaidman.kestrel.platform.overlay.ControllerOverlay
@@ -369,7 +370,7 @@ public fun InputPreviewScreen(
                 ) {
                     Text(if (SessionState.overlayShown.value) "Controls shown" else "Show controls")
                 }
-                Button(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
+                KButton(onClick = { ControllerSessionService.hideOverlay(context) }) { Text("Hide") }
             }
             // Two rows rather than one. Three buttons side by side fit in landscape and run off
             // the edge in portrait, where nothing scrolls sideways — so the editor could not be
@@ -378,8 +379,8 @@ public fun InputPreviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(onClick = onEditLayout) { Text("Edit layout") }
-                Button(onClick = { ExportState.message.value = reloadLayout(context) }) {
+                KButton(onClick = onEditLayout) { Text("Edit layout") }
+                KButton(onClick = { ExportState.message.value = reloadLayout(context) }) {
                     Text("Reload layout")
                 }
             }
@@ -390,7 +391,7 @@ public fun InputPreviewScreen(
                 // Built-in -> duplicate -> user copy -> edit, which is the workflow the schema
                 // requires. The built-in cannot be edited because it is inside the application; the
                 // copy is a file in the user's own folder, and the pad follows it from then on.
-                Button(onClick = { ExportState.message.value = copyLayoutForEditing(context) }) {
+                KButton(onClick = { ExportState.message.value = copyLayoutForEditing(context) }) {
                     Text("Copy layout to my folder")
                 }
             }
@@ -522,7 +523,7 @@ public fun InputPreviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     row.forEach { option ->
-                        Button(
+                        KButton(
                             onClick = { set { it.copy(orientation = option) } },
                             enabled = display.orientation != option,
                         ) { Text(option.wireName) }
@@ -531,24 +532,44 @@ public fun InputPreviewScreen(
             }
 
             Mono("\ntheme")
-            io.github.zxaidman.kestrel.core.settings.AppTheme.entries.chunked(2).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    row.forEach { option ->
-                        Button(
-                            onClick = { set { it.copy(theme = option) } },
-                            enabled = display.theme != option,
-                        ) { Text(option.wireName) }
-                    }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                io.github.zxaidman.kestrel.core.settings.AppTheme.entries.forEach { option ->
+                    KButton(
+                        onClick = { set { it.copy(theme = option) } },
+                        enabled = display.theme != option,
+                    ) { Text(option.wireName) }
                 }
             }
+            // Two questions, not three answers: light or dark, and then how dark. Offering them as
+            // one row of three made them look like one question, which is what they are not.
+            val systemIsDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val dark = io.github.zxaidman.kestrel.ui.theme.isDark(display.theme, systemIsDark)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Switch(
+                    checked = display.trueBlack,
+                    enabled = dark,
+                    onCheckedChange = { on -> set { it.copy(trueBlack = on) } },
+                )
+                Text(
+                    text = if (dark) {
+                        "True black (AMOLED)"
+                    } else {
+                        "True black (AMOLED) — applies when dark"
+                    },
+                )
+            }
             Text(
-                text = "Three ways to be dark because they are not the same thing: grey dark is " +
-                    "the ordinary dark surface, and amoled dark is true black, so on this panel " +
-                    "those pixels are actually off. The pad keeps its own colours — it is drawn " +
-                    "over other applications and has to be legible on a white page and a black one.",
+                text = "True black is not a matter of taste on this panel: a black pixel is an " +
+                    "unlit one. The pad keeps its own colours whatever is chosen here — it is " +
+                    "drawn over other applications and has to be legible on a white page and a " +
+                    "black one both.",
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -793,11 +814,11 @@ private fun StorageSection(context: android.content.Context) {
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = { runCatching { picker.launch(KestrelStorage.folderPicker()) } }) {
+            KButton(onClick = { runCatching { picker.launch(KestrelStorage.folderPicker()) } }) {
                 Text(if (chosen) "Change folder" else "Choose folder")
             }
             if (chosen) {
-                Button(
+                KButton(
                     onClick = {
                         AppSettings.message.value = KestrelStorage.forgetFolder(context)
                         AppSettings.reload(context)
@@ -805,7 +826,7 @@ private fun StorageSection(context: android.content.Context) {
                     },
                 ) { Text("Stop using it") }
             }
-            Button(
+            KButton(
                 onClick = {
                     AppSettings.reload(context)
                     refresh += 1

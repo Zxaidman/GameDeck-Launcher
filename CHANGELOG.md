@@ -13,6 +13,48 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.31-dev` — Editing Moved To The Control, So The Sheet Became Settings
+
+**The tools sheet is settings now.** It was a panel with everything in it, then a sheet with
+everything in it, and with the long-press menu doing the per-control work what is left is genuinely
+settings: the mode, the grid, snapping, what the canvas is, and a read-out of every window with its
+share of the screen — the one view that cannot be had at a single control. Gear icon, and smaller.
+
+**What that forced was the point of it.** The long-press menu had to become complete before the
+tools could go, so it gained the size steppers, taller and shorter, and the anchor. Removing the
+sheet's copy first would have lost half the editor quietly, which is how an editor gets worse while
+looking cleaner.
+
+**AMOLED becomes a property of dark rather than a third theme.** There are two questions here —
+light or dark, and then how dark — and three buttons in a row made them look like one. It is
+**system, light, dark** plus a **true black** switch that is live only when the answer is dark. The
+names the previous build wrote still read, and `dark-amoled` still means true black, so upgrading
+does not throw away a choice; there is a unit test for exactly that.
+
+Every binary setting is a switch now. A checkbox is a form control, ticked as part of an answer being
+composed; a switch is a thing that is on or off and takes effect at once. The grid and edge snapping
+were checkboxes and should not have been.
+
+**Buttons are rounded rectangles.** Material 3 draws a filled button as a capsule and the theme
+cannot say otherwise — the token maps to a full corner whatever `Shapes` holds — so the buttons are
+wrapped once and the application uses the wrappers. One number decides the corner for all of them.
+Switches stay capsules, because that is what a switch is.
+
+Also: the long-press menu is laid out, measured and *then* shown, so it no longer appears off the
+edge for a frame before jumping — a thing has no measurement until it has been drawn once, and the
+fix is to not show that first drawing; its close button has a real target round it; grid and snapping
+are remembered for the session but deliberately not written to `settings.json`; the lighter band on
+the canvas says what it is; and the `K` toggle moves down by its own height in portrait, where taking
+the whole screen had put it on top of the front camera.
+
+**Eight items closed on the device**, including the long-press menu, the drawn shapes, the window
+menu and the themes — and the part of the theme work that mattered most was confirmed: *"theme
+doesn't change the gamepad and canvas."* Twenty-seven items are `done`.
+
+**Next, and on its own:** a layout that holds a separate arrangement per orientation, with the size
+setting per orientation too. It changes the file format, so it gets its own round.
+
+
 ### `0.0.30-dev` — Material, And Three Ways To Be Dark
 
 **The pad matches the editor.** Four entries, four rounds and three real causes stacked under one

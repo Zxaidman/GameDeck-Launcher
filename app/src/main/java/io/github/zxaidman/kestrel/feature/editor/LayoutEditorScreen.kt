@@ -26,15 +26,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,6 +50,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -83,6 +82,8 @@ import io.github.zxaidman.kestrel.core.layout.shapedAs
 import io.github.zxaidman.kestrel.platform.display.DeviceSurface
 import io.github.zxaidman.kestrel.platform.session.SessionState
 import io.github.zxaidman.kestrel.platform.settings.AppSettings
+import io.github.zxaidman.kestrel.ui.theme.KButton
+import io.github.zxaidman.kestrel.ui.theme.KOutlinedButton
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -146,9 +147,12 @@ public fun LayoutEditorScreen(
     var dirty by remember(layout.header.id) { mutableStateOf(false) }
     var mode by remember { mutableStateOf(EditorMode.CONTROLS) }
     var message by remember { mutableStateOf("") }
-    var gridUnit by remember { mutableStateOf(DEFAULT_GRID) }
-    var snapToGrid by remember { mutableStateOf(false) }
-    var snapToEdges by remember { mutableStateOf(false) }
+    // Remembered for the session, not written to settings.json. Somebody who turns edge snapping
+    // on wants it on for the arranging they are doing — but it is working state rather than a
+    // preference, and every field in that file is one more thing to version and migrate.
+    var gridUnit by remember { mutableStateOf(EditorSession.gridUnit) }
+    var snapToGrid by remember { mutableStateOf(EditorSession.snapToGrid) }
+    var snapToEdges by remember { mutableStateOf(EditorSession.snapToEdges) }
     var typingNumbers by remember { mutableStateOf(false) }
     var toolsOpen by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
@@ -202,7 +206,9 @@ public fun LayoutEditorScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FloatingActionButton(onClick = { toolsOpen = true }) { Text("Tools") }
+                FloatingActionButton(onClick = { toolsOpen = true }) {
+                    Text("⚙", style = MaterialTheme.typography.titleLarge)
+                }
                 // Turning the phone is done *while* arranging, not configured beforehand, so it
                 // does not belong two taps deep in a sheet.
                 FloatingActionButton(
@@ -228,6 +234,12 @@ public fun LayoutEditorScreen(
                 ) { Text("Exit") }
             }
 
+            if (bars != null) {
+                Caption(
+                    text = "The lighter band is the system bars and the camera cutout. Controls " +
+                        "there work, and share that strip with the system.",
+                )
+            }
             Caption(
                 text = working.header.name + if (dirty) "  •  unsaved" else "",
             )
@@ -274,6 +286,10 @@ public fun LayoutEditorScreen(
                     working = working.replacing(menuElement.copy(shape = shape))
                     dirty = true
                 },
+                onStep = { updated ->
+                    working = working.replacing(updated)
+                    dirty = true
+                },
                 onCopy = {
                     copied = ControlStyle.of(menuElement)
                     menuFor = null
@@ -296,37 +312,29 @@ public fun LayoutEditorScreen(
             ) {
                 ModeSwitch(mode = mode, onMode = { mode = it })
 
-                SelectionHeader(element = selected, device = device)
-
-                ControlTools(
-                    element = selected,
-                    enabled = mode == EditorMode.CONTROLS,
-                    onChange = { updated ->
-                        working = working.replacing(updated)
-                        dirty = true
-                    },
-                    onType = { typingNumbers = true },
-                )
-
-                WindowTools(
+                WindowSummary(
                     layout = working,
                     device = device,
                     controlScale = controlScale,
                     element = selected,
-                    enabled = mode == EditorMode.WINDOWS,
-                    onChange = { updated ->
-                        working = working.replacing(updated)
-                        dirty = true
-                    },
                 )
 
                 GridTools(
                     gridUnit = gridUnit,
-                    onGrid = { gridUnit = it },
+                    onGrid = {
+                        gridUnit = it
+                        EditorSession.gridUnit = it
+                    },
                     snapToGrid = snapToGrid,
-                    onSnapToGrid = { snapToGrid = it },
+                    onSnapToGrid = {
+                        snapToGrid = it
+                        EditorSession.snapToGrid = it
+                    },
                     snapToEdges = snapToEdges,
-                    onSnapToEdges = { snapToEdges = it },
+                    onSnapToEdges = {
+                        snapToEdges = it
+                        EditorSession.snapToEdges = it
+                    },
                     device = device,
                     wholeScreen = wholeScreen,
                 )
@@ -352,7 +360,7 @@ public fun LayoutEditorScreen(
             title = { Text("Leave without saving?") },
             text = { Text("The arrangement on screen has not been written to the file.") },
             confirmButton = {
-                Button(onClick = {
+                KButton(onClick = {
                     leaving = false
                     onClose()
                 }) { Text("Leave") }
@@ -384,6 +392,19 @@ public enum class EditorMode(public val label: String) {
  * The extremes are gone after a round of use: `0.01` was too fine to see and `0.25` too coarse to
  * place anything with. What is left spans a fifth of a button to most of one.
  */
+/**
+ * What the editor was last set to, for as long as Kestrel is running.
+ *
+ * Deliberately in memory rather than in `settings.json`. Grid size and snapping are how somebody is
+ * working right now, not what they prefer — and a preference file is a schema with a version and a
+ * migration behind every field in it.
+ */
+private object EditorSession {
+    var gridUnit: Double = DEFAULT_GRID
+    var snapToGrid: Boolean = false
+    var snapToEdges: Boolean = false
+}
+
 private val GRID_SIZES = listOf(0.02, 0.04, 0.06, 0.10)
 private const val DEFAULT_GRID = 0.04
 
@@ -435,9 +456,11 @@ private fun ToolsSheet(
                 .align(if (landscape) Alignment.CenterEnd else Alignment.BottomCenter)
                 .then(
                     if (landscape) {
-                        Modifier.fillMaxHeight().fillMaxWidth(0.62f)
+                        // Smaller than it was: it used to hold two editors and now holds
+                        // settings, and a sheet is a hole in the picture of the pad while it is up.
+                        Modifier.fillMaxHeight().fillMaxWidth(0.46f)
                     } else {
-                        Modifier.fillMaxWidth().fillMaxHeight(0.72f)
+                        Modifier.fillMaxWidth().fillMaxHeight(0.52f)
                     }
                 )
                 // The sheet swallows its own touches; only the dimmed area outside it dismisses.
@@ -454,7 +477,7 @@ private fun ToolsSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    Button(onClick = onDismiss) { Text("Done") }
+                    KButton(onClick = onDismiss) { Text("Done") }
                 }
                 content()
             }
@@ -517,11 +540,11 @@ private fun ShapeChoice(current: ControlShape?, enabled: Boolean, onShape: (Cont
     ) {
         ControlShape.entries.forEach { shape ->
             if (shape == current) {
-                Button(enabled = enabled, onClick = { onShape(shape) }) {
+                KButton(enabled = enabled, onClick = { onShape(shape) }) {
                     ShapeMark(shape, MaterialTheme.colorScheme.onPrimary)
                 }
             } else {
-                OutlinedButton(enabled = enabled, onClick = { onShape(shape) }) {
+                KOutlinedButton(enabled = enabled, onClick = { onShape(shape) }) {
                     ShapeMark(shape, MaterialTheme.colorScheme.primary)
                 }
             }
@@ -605,6 +628,7 @@ private fun ControlMenu(
     copied: ControlStyle?,
     onSize: () -> Unit,
     onShape: (ControlShape) -> Unit,
+    onStep: (LayoutElement) -> Unit,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
     onDismiss: () -> Unit,
@@ -621,7 +645,26 @@ private fun ControlMenu(
                 TextButton(onClick = onDismiss) { Text("×") }
             }
 
-            Button(onClick = onSize, modifier = Modifier.fillMaxWidth()) { Text("size") }
+            KButton(onClick = onSize, modifier = Modifier.fillMaxWidth()) { Text("size") }
+
+            // Everything that can be done to one control, at the control. The tools sheet used to
+            // hold half of this; when editing moved here it had to move completely, or removing the
+            // sheet's copy would have quietly lost the half that never arrived.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                KButton(onClick = { onStep(element.resizedBy(-STEP)) }) { Text("−") }
+                KButton(onClick = { onStep(element.resizedBy(STEP)) }) { Text("+") }
+                KButton(onClick = { onStep(element.taller(STEP)) }) { Text("taller") }
+                KButton(onClick = { onStep(element.taller(-STEP)) }) { Text("shorter") }
+            }
+            KOutlinedButton(
+                onClick = { onStep(element.withNextAnchor()) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(element.placement.anchor.wireName) }
+
+            KButton(onClick = onSize, modifier = Modifier.fillMaxWidth()) { Text("⋮ values") }
 
             ShapeChoice(current = element.shape, enabled = true, onShape = onShape)
 
@@ -629,12 +672,12 @@ private fun ControlMenu(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Button(onClick = onCopy) { Text("copy") }
+                KButton(onClick = onCopy) { Text("copy") }
                 // Shown only when what is on the clipboard means something here. There is no
                 // greyed-out paste, because "why is this disabled" is a worse question than "where
                 // is paste" has an answer for.
                 if (copied != null && copied.family == element.kind.family()) {
-                    Button(onClick = onPaste) { Text("paste") }
+                    KButton(onClick = onPaste) { Text("paste") }
                 }
             }
             if (copied != null && copied.family != element.kind.family()) {
@@ -676,6 +719,10 @@ private fun MenuAt(
         modifier = Modifier
             .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
             .onSizeChanged { size = it }
+            // Invisible until it has been measured. A thing has no size until it has been drawn
+            // once, so the first frame was drawn at the raw touch point — off the edge — and the
+            // second was right. This costs a frame nobody can see instead of one everybody can.
+            .graphicsLayer { alpha = if (size == IntSize.Zero) 0f else 1f }
             .width(MENU_WIDTH.dp),
         tonalElevation = 6.dp,
         shape = MaterialTheme.shapes.medium,
@@ -714,7 +761,7 @@ private fun WindowMenu(
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onDismiss) { Text("×") }
+            CloseButton(onDismiss)
         }
         Text(
             text = "in: " + (element.group ?: "own window"),
@@ -722,17 +769,25 @@ private fun WindowMenu(
             fontFamily = FontFamily.Monospace,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Button(onClick = { onChange(element.withGroupStep(options, -1)) }) { Text("◀") }
-            Button(onClick = { onChange(element.withGroupStep(options, 1)) }) { Text("▶") }
+            KButton(onClick = { onChange(element.withGroupStep(options, -1)) }) { Text("◀") }
+            KButton(onClick = { onChange(element.withGroupStep(options, 1)) }) { Text("▶") }
         }
-        Button(
+        KButton(
             onClick = { onChange(element.copy(group = null)) },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("own window") }
     }
 }
 
-private const val MENU_WIDTH = 230
+/** A close button with a target round it, rather than a glyph a thumb has to find. */
+@Composable
+private fun CloseButton(onDismiss: () -> Unit) {
+    KOutlinedButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
+        Text("×", style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+private const val MENU_WIDTH = 250
 
 // --- the tools -----------------------------------------------------------------------------------
 
@@ -741,9 +796,9 @@ private fun ModeSwitch(mode: EditorMode, onMode: (EditorMode) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         EditorMode.entries.forEach { candidate ->
             if (candidate == mode) {
-                Button(onClick = { onMode(candidate) }) { Text(candidate.label) }
+                KButton(onClick = { onMode(candidate) }) { Text(candidate.label) }
             } else {
-                OutlinedButton(onClick = { onMode(candidate) }) { Text(candidate.label) }
+                KOutlinedButton(onClick = { onMode(candidate) }) { Text(candidate.label) }
             }
         }
     }
@@ -768,92 +823,23 @@ private fun LayoutElement.summary(device: LayoutSurface): String {
     )
 }
 
-@Composable
-private fun SelectionHeader(element: LayoutElement?, device: LayoutSurface) {
-    Text(
-        text = element?.let { "${it.kind.wireName}\n${it.summary(device)}" }
-            ?: "Nothing selected — touch a control.",
-        style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
-    )
-}
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ControlTools(
-    element: LayoutElement?,
-    enabled: Boolean,
-    onChange: (LayoutElement) -> Unit,
-    onType: () -> Unit,
-) {
-    val live = enabled && element != null
-    Text("Control", style = MaterialTheme.typography.labelLarge)
-    // Wrapping, not a row. A row that does not wrap loses its last button off the edge, which is
-    // how `⋮ values` came to exist in portrait and not in landscape.
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Button(enabled = live, onClick = { element?.let { onChange(it.resizedBy(-STEP)) } }) {
-            Text("−")
-        }
-        Button(enabled = live, onClick = { element?.let { onChange(it.resizedBy(STEP)) } }) {
-            Text("+")
-        }
-        Button(enabled = live, onClick = { element?.let { onChange(it.taller(STEP)) } }) {
-            Text("taller")
-        }
-        Button(enabled = live, onClick = { element?.let { onChange(it.taller(-STEP)) } }) {
-            Text("shorter")
-        }
-        Button(enabled = live, onClick = { element?.let { onChange(it.withNextAnchor()) } }) {
-            Text(element?.placement?.anchor?.wireName ?: "anchor")
-        }
-        Button(enabled = live, onClick = onType) { Text("⋮ values") }
-    }
-    ShapeChoice(
-        current = element?.shape,
-        enabled = live,
-        onShape = { shape -> element?.let { onChange(it.copy(shape = shape)) } },
-    )
-}
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * What the windows currently are, without offering to change any of them.
+ *
+ * Changing one happens at the control, by long press. This is the view that cannot be had there:
+ * every window at once, and what share of the screen each is taking.
+ */
 @Composable
-private fun WindowTools(
+private fun WindowSummary(
     layout: ControllerLayout,
     device: LayoutSurface,
     controlScale: Float,
     element: LayoutElement?,
-    enabled: Boolean,
-    onChange: (LayoutElement) -> Unit,
 ) {
-    val live = enabled && element != null
     Spacer(modifier = Modifier.height(2.dp))
-    Text("Window", style = MaterialTheme.typography.labelLarge)
-
-    val options = layout.windowOptions()
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Button(
-            enabled = live,
-            onClick = { element?.let { onChange(it.withGroupStep(options, -1)) } },
-        ) { Text("◀") }
-        Button(
-            enabled = live,
-            onClick = { element?.let { onChange(it.withGroupStep(options, 1)) } },
-        ) { Text("▶") }
-        Button(enabled = live, onClick = { element?.let { onChange(it.copy(group = null)) } }) {
-            Text("own window")
-        }
-    }
-    Text(
-        text = "in: " + (element?.group ?: "own window"),
-        style = MaterialTheme.typography.bodyMedium,
-        fontFamily = FontFamily.Monospace,
-    )
+    Text("Windows", style = MaterialTheme.typography.labelLarge)
 
     val clusters = layout.clustersOn(device, controlScale)
     val screen = device.widthPx * device.heightPx
@@ -870,7 +856,7 @@ private fun WindowTools(
     }
     Text(
         text = "Percentages are of the whole screen. Past a quarter, a window is taking away more " +
-            "than a pad should.",
+            "than a pad should. Long press a control to change which window it is in.",
         style = MaterialTheme.typography.bodySmall,
     )
 }
@@ -903,7 +889,7 @@ private fun GridTools(
     Text("Grid and snapping", style = MaterialTheme.typography.labelLarge)
 
     Box {
-        OutlinedButton(onClick = { open = true }) { Text("Grid  " + gridLabel(gridUnit, device)) }
+        KOutlinedButton(onClick = { open = true }) { Text("Grid  " + gridLabel(gridUnit, device)) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             GRID_SIZES.forEach { size ->
                 DropdownMenuItem(
@@ -917,12 +903,20 @@ private fun GridTools(
         }
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = snapToGrid, onCheckedChange = onSnapToGrid)
+    // Switches, not checkboxes. A checkbox is a form control — a thing ticked as part of an answer
+    // being composed. These are on or off and take effect at once, which is a switch.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Switch(checked = snapToGrid, onCheckedChange = onSnapToGrid)
         Text("Snap to the grid", style = MaterialTheme.typography.bodyMedium)
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = snapToEdges, onCheckedChange = onSnapToEdges)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Switch(checked = snapToEdges, onCheckedChange = onSnapToEdges)
         Text("Snap to gamepad edges", style = MaterialTheme.typography.bodyMedium)
     }
     Text(
@@ -1003,8 +997,8 @@ private fun NumbersDialog(
                 // to be negative. Reported on the reference device as "the keyboard only shows
                 // numbers", with pasting as the only way round it.
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { offsetX = negated(offsetX) }) { Text("± offsetX") }
-                    OutlinedButton(onClick = { offsetY = negated(offsetY) }) { Text("± offsetY") }
+                    KOutlinedButton(onClick = { offsetX = negated(offsetX) }) { Text("± offsetX") }
+                    KOutlinedButton(onClick = { offsetY = negated(offsetY) }) { Text("± offsetY") }
                 }
                 if (problem.isNotBlank()) {
                     Text(
@@ -1017,11 +1011,11 @@ private fun NumbersDialog(
             }
         },
         confirmButton = {
-            Button(onClick = {
+            KButton(onClick = {
                 val numbers = listOf(offsetX, offsetY, width, height).map { it.trim().toDoubleOrNull() }
                 if (numbers.any { it == null }) {
                     problem = "Every field has to be a number."
-                    return@Button
+                    return@KButton
                 }
                 val candidate = Placement.of(
                     anchor = element.placement.anchor,

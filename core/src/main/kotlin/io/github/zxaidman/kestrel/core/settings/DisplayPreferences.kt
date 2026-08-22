@@ -51,20 +51,30 @@ public enum class AppOrientation(public val wireName: String) {
  */
 public enum class AppTheme(public val wireName: String) {
 
-    /** Whatever the phone is set to, resolving to light or to [DARK_GREY]. The default. */
+    /** Whatever the phone is set to. The default. */
     SYSTEM("system"),
 
     LIGHT("light"),
 
-    /** Dark, on grey surfaces. */
-    DARK_GREY("dark-grey"),
-
-    /** Dark, on black. */
-    DARK_AMOLED("dark-amoled"),
+    DARK("dark"),
     ;
 
     public companion object {
-        public fun of(wireName: String): AppTheme? = entries.firstOrNull { it.wireName == wireName }
+
+        /**
+         * Reads a theme, including the two names an earlier build wrote.
+         *
+         * `dark-grey` and `dark-amoled` were shipped as separate themes before it was clear they
+         * are one theme and a property of it. Settings files on phones say those words, and a file
+         * a previous version of Kestrel wrote must not become a file this version refuses.
+         */
+        public fun of(wireName: String): AppTheme? = when (wireName) {
+            "dark-grey", "dark-amoled" -> DARK
+            else -> entries.firstOrNull { it.wireName == wireName }
+        }
+
+        /** Whether a stored theme name also means true black was chosen. */
+        public fun trueBlackFrom(wireName: String): Boolean = wireName == "dark-amoled"
     }
 }
 
@@ -86,4 +96,15 @@ public data class DisplayPreferences(
     public val drawUnderCutout: Boolean = true,
     public val orientation: AppOrientation = AppOrientation.LANDSCAPE,
     public val theme: AppTheme = AppTheme.SYSTEM,
+
+    /**
+     * Dark on black rather than dark on grey.
+     *
+     * A property of being dark, not a third theme — there are two questions here, *light or dark*
+     * and *how dark*, and three buttons in a row made them look like one. Ignored while the theme
+     * resolves to light.
+     *
+     * It is not a matter of taste on this hardware: on an OLED panel a black pixel is an unlit one.
+     */
+    public val trueBlack: Boolean = false,
 )

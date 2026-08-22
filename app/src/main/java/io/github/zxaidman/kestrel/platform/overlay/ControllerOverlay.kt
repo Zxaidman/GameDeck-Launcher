@@ -118,10 +118,18 @@ public class ControllerOverlay(
         // Deliberately not scaled with the controls. It is the way out, and a way out that shrinks
         // with a setting is a way out someone can make too small to use.
         val size = (unit * 0.10f).toInt()
+        // In portrait the top centre of the screen is the front camera, and since the pad took the
+        // whole display the toggle was sitting on it — where the glass is a different shape and a
+        // finger does not reliably land on the button. One toggle-height down clears it without
+        // moving it anywhere anyone has to look for it. Landscape is unaffected: the cutout is on a
+        // short edge there and the toggle is nowhere near it.
+        val surface = surface()
+        val portrait = surface.heightPx > surface.widthPx
+        val margin = (unit * 0.02f).toInt() + if (portrait) size else 0
         return runCatching {
             windows?.addView(
                 view,
-                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, (unit * 0.02f).toInt()),
+                params(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, margin),
             )
             toggle = view
             true

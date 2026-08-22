@@ -4,6 +4,7 @@ import io.github.zxaidman.kestrel.core.common.Outcome
 import io.github.zxaidman.kestrel.core.common.flatMap
 import io.github.zxaidman.kestrel.core.configuration.ConfigNode
 import io.github.zxaidman.kestrel.core.configuration.ConfigReader
+import io.github.zxaidman.kestrel.core.configuration.ConfigurationError
 import io.github.zxaidman.kestrel.core.configuration.DocumentHeader
 import io.github.zxaidman.kestrel.core.configuration.DocumentType
 import io.github.zxaidman.kestrel.core.configuration.Json
@@ -169,6 +170,7 @@ public object SettingsDocument {
                     "drawUnderCutout" to ConfigNode.Bool(settings.display.drawUnderCutout),
                     "orientation" to ConfigNode.Text(settings.display.orientation.wireName),
                     "theme" to ConfigNode.Text(settings.display.theme.wireName),
+                    "trueBlack" to ConfigNode.Bool(settings.display.trueBlack),
                 )
             ),
             "stick" to ConfigNode.Obj(
@@ -215,19 +217,24 @@ public object SettingsDocument {
             }
         }
 
-        val theme = if (!display.has("theme")) {
+        // Read through `AppTheme.of`, which still understands the two names an earlier build
+        // wrote, rather than through the enum reader, which would refuse them.
+        val storedTheme = when (val v = ConfigReader.optionalText(display, "theme", "display")) {
+            is Outcome.Failure -> return v
+            is Outcome.Success -> v.value
+        }
+        val theme = if (storedTheme == null) {
             defaults.theme
         } else {
-            when (
-                val v = ConfigReader.enum(
-                    display, "theme", AppTheme.entries.toTypedArray(),
-                    { it.wireName }, "display",
+            AppTheme.of(storedTheme) ?: return Outcome.Failure(
+                ConfigurationError.UnknownValue(
+                    "display.theme",
+                    storedTheme,
+                    AppTheme.entries.map { it.wireName }.toSet(),
                 )
-            ) {
-                is Outcome.Failure -> return v
-                is Outcome.Success -> v.value
-            }
+            )
         }
+        val trueBlackDefault = storedTheme?.let { AppTheme.trueBlackFrom(it) } ?: defaults.trueBlack
 
         return Outcome.Success(
             DisplayPreferences(
@@ -247,6 +254,12 @@ public object SettingsDocument {
                 },
                 orientation = orientation,
                 theme = theme,
+                trueBlack = when (
+                    val v = ConfigReader.boolean(display, "trueBlack", trueBlackDefault, "display")
+                ) {
+                    is Outcome.Failure -> return v
+                    is Outcome.Success -> v.value
+                },
             )
         )
     }
