@@ -36,6 +36,7 @@ Six sections, in the order the project owner asked for them.
 | `pending` | Not started. |
 | `building` | Being written now. |
 | `testing` | Built and in a build the project owner can install; waiting on a device result. |
+| `superseded` | It worked, and something else replaced it. Recorded rather than deleted — what it cost to build is part of the record. |
 | `done` | Confirmed on the device, and copied into `done-list.md` with what was done. |
 
 An item leaves this file only by reaching `done`, and it is described in `done-list.md` when it
@@ -51,14 +52,15 @@ hardware.
 
 ---
 
-## State of the queue — build `0.0.27-dev`
+## State of the queue — build `0.0.28-dev`
 
 | Phase | Items |
 | --- | --- |
-| `done` | `BUG-9` the square, `FEAT-10` the window editor — both confirmed on the device |
-| `testing` | `CRIT-5`, `FEAT-11`, `FEAT-12` reworked after their first test; `BUG-10`–`BUG-14`, `FEAT-13`, `FEAT-14` built this round |
+| `done` | `BUG-9`, `BUG-11`, `BUG-12`, `BUG-13`, `BUG-14`, `FEAT-10` |
+| `superseded` | `FEAT-13` — worked, and was replaced by `FEAT-16` one round later |
+| `testing` | `CRIT-5`, `BUG-1`, `BUG-2`, `BUG-10`, `BUG-15`, `BUG-16`, `FEAT-11`, `FEAT-12`, `FEAT-14`, `FEAT-16`, `FEAT-17` |
 | `building` | — |
-| `pending` | `CRIT-1`, `CRIT-2`, `CRIT-3`, `CRIT-4`, `BUG-1`–`BUG-8`, `FEAT-1`–`FEAT-9` |
+| `pending` | `CRIT-1`–`CRIT-4`, `BUG-3`–`BUG-8`, `FEAT-1`–`FEAT-9`, `FEAT-15` (needs a decision) |
 
 ---
 
@@ -143,7 +145,7 @@ one action once the contents are agreed — and once `CRIT-1` is done.
 
 ### `CRIT-5` — The editor must draw the phone, not the page
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Kind:** critical. Named first by the project owner, ahead of everything else on this list.  
 **Found by:** Reported, build `0.0.25-dev`.
@@ -178,7 +180,7 @@ would mean building each one twice.
 
 ### `BUG-1` — The overlay does not draw into the cutout area
 
-**Phase:** `pending`
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Reported**, `0.0.25-dev`, with a screenshot. Kestrel's own screen now uses the notch area
 correctly; **the controller overlay does not**. On the reference device the left-hand controls stop
@@ -195,7 +197,7 @@ whether or not the user asked it to.
 
 ### `BUG-2` — The "use the notch area" setting does not reach the overlay
 
-**Phase:** `pending`
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Reported**, `0.0.25-dev`: *"yes, except for gamepad"*. Toggling the setting changes Kestrel's own
 screen and leaves the controls where they were. A setting that works in one place and silently does
@@ -341,7 +343,7 @@ Same drawing path as `CRIT-5`, so it is fixed there rather than separately.
 
 ### `BUG-10` — The canvas is the usable area, not the phone, so the pad does not match it
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Found by:** Reported and reproduced from the numbers, build `0.0.26-dev`.
 
 **The fault, exactly.** The canvas draws **2289 × 927** — the usable area, with the system bars and
@@ -364,7 +366,7 @@ proportions. A control that leaves the usable area is then visibly leaving it, a
 
 ### `BUG-11` — `Edit layout` cannot be reached in portrait
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.27-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.26-dev`.
 
 Three buttons — *Copy layout to my folder*, *Reload layout*, *Edit layout* — sit in one row that
@@ -375,7 +377,7 @@ sideways. The editor is unreachable without turning the phone.
 
 ### `BUG-12` — Turning the phone inside the editor throws you back to the home page
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.27-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.26-dev`.
 
 The activity is recreated on a configuration change, so every piece of editor state — which page is
@@ -390,7 +392,7 @@ without losing a thing.
 
 ### `BUG-13` — The numbers dialog does not fit in landscape and will not scroll
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.27-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.26-dev`.
 
 Four fields stacked vertically in a dialog on a short landscape screen: **width** and **height** are
@@ -403,7 +405,7 @@ Two fields per row, and the body scrolls.
 
 ### `BUG-14` — A minus sign cannot be typed on the numeric keyboard
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `done` — confirmed on the device in `0.0.27-dev`. Written up in `done-list.md`.
 **Found by:** Reported, build `0.0.26-dev`: *"The Android keyboard only shows numbers."*
 
 The fields ask for a decimal keyboard. On this device's keyboard that appears to be digits and a
@@ -414,6 +416,45 @@ meant to sit outside its anchor. Pasting works, which is a workaround and not an
 digits; the project owner entered `0.24` successfully in the same round, which suggests the point is
 there and only the sign is missing. A `±` button beside each offset field removes the doubt without
 depending on which keyboard someone uses.
+
+---
+
+### `BUG-15` — The pad should use the whole screen, and both sides should agree on which screen
+
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Decided by the project owner, build `0.0.27-dev`:** *"i want the gamepad and it's window to always
+use the whole screen 2400x1080."*
+
+**What was wrong with the previous answer.** `BUG-10` made the canvas the whole screen and then kept
+placing the pad inside the usable area, so four controls sitting perfectly well on the screen were
+reported as *"outside the usable screen"* and outlined in orange. The report was true of the usable
+area and false of the phone, which is worse than no report: the images show them plainly on screen.
+
+**The decision, and it settles three open items at once.** The pad is laid out against the **whole
+display**, cutout and bars included. That is what the project owner wants, it is what the canvas is
+already drawing, and it is what `BUG-1` and `BUG-2` were asking for from the other direction — the
+notch setting existed and never reached the overlay.
+
+**What it takes.** Overlay windows need `FLAG_LAYOUT_IN_SCREEN` and `FLAG_LAYOUT_NO_LIMITS` to be
+placed outside the area the system hands out, and a cutout mode that lets them into the notch. The
+editor resolves against the same surface, so the orange warning fires only for a control genuinely
+off the display.
+
+**The cost, stated once.** A control under the status bar shares that space with the system: a swipe
+down from the top edge still opens the shade, and a control there will sometimes be pulled at
+instead of pressed. That is the trade being taken deliberately, and the band stays drawn on the
+canvas so it can be seen while arranging rather than discovered while playing.
+
+---
+
+### `BUG-16` — `⋮ values` disappears in landscape
+
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Found by:** Reported, build `0.0.27-dev`. Present in portrait, gone in landscape.
+
+The control tools are a row that does not wrap. With the panel at a quarter of a landscape screen
+there is no room for the seventh button, so it is simply not on screen — the same fault as `BUG-11`,
+in a different row. Tools have to wrap rather than run off an edge.
 
 ---
 
@@ -558,7 +599,7 @@ question rather than letting them discover it in a game.
 
 ### `FEAT-11` — A grid, and snapping
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -578,7 +619,7 @@ finding it.
 
 ### `FEAT-12` — Type the numbers
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 
 **Asked for:** build `0.0.25-dev` round.
 
@@ -596,7 +637,7 @@ inwards, measured in fractions of the screen's shorter side.
 
 ### `FEAT-13` — Three parts canvas to one part tools, and the numbers button where the hand is
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `superseded` — built and confirmed working in `0.0.27-dev`, then replaced by `FEAT-16`. In `done-list.md`.
 **Asked for:** *"use maximum length for Canva 3 ratio for Canva area while 1 ratio for tools. And
 three dots are barely visible, I want you to make it the same and along side button edit tool + / -
 etc"*
@@ -614,7 +655,7 @@ pad is best done with the phone in portrait — which `BUG-12` currently makes i
 
 ### `FEAT-14` — The grid measured in the layout's own unit
 
-**Phase:** `testing` — built in `0.0.27-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
 **Asked for:** *"the button is 0.12 and the grid is 32px both are different scales so it is not very
 helpful. Make it both are the same scale"*
 
@@ -629,6 +670,73 @@ snapped control lands on a number the file can hold — which the pixel grid cou
 which was written up as a limitation of `FEAT-11` when it was really a symptom of the wrong unit.
 
 The selected control's size is shown in both units for the same reason.
+
+---
+
+### `FEAT-15` — One layout, two orientations
+
+**Phase:** `pending` — blocked on one decision from the project owner, stated in the entry.
+**Asked for:** *"config should now have both orientation segregation."*
+
+Today a layout is one arrangement, and both orientations are derived from it by anchors and by
+sizes measured against the shorter side. That travels between phones well and it does not solve the
+real problem: a pad that is right in landscape is not simply the same pad in portrait — the thumbs
+are in different places and there is a different amount of room between them.
+
+**The decision needed**, because it changes the file format either way and the wrong choice is
+expensive to undo:
+
+- **(a) One document, two sets of placements.** `landscape` and `portrait` blocks inside the same
+  layout, sharing one list of controls, their bindings, shapes and groups. One file to copy, one
+  file to share, and a control cannot exist in one orientation and vanish in the other.
+- **(b) Two documents, one per orientation**, tied together by the profile. Simpler to read; but
+  everything except position is duplicated, and the two can drift apart.
+
+**Recommended: (a).** What differs between orientations is *where things are*, not *what they are*,
+and the format should say so. `LayoutOrientation` already exists in the schema for a document that
+declares itself landscape-only or portrait-only, so (a) extends what is there rather than
+contradicting it.
+
+Either way this is a **schema change**: a version bump, a migration for layouts already saved, tests,
+and `docs/CONFIGURATION_SCHEMA.md`. It also touches the repository (pick the arrangement for the
+orientation in use), the overlay (swap on rotation without dropping a held control) and the editor
+(edit one at a time, and say which).
+
+---
+
+### `FEAT-16` — The editor is the canvas, with three buttons floating on it
+
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"instead of 3:1 canvas whole screen display the Canva and with three floating
+button, options (where all the tools and options will go as overlay menu), save, exit. in both
+orientation."*
+
+The canvas takes the entire screen. Three buttons float on it — **Tools**, **Save**, **Exit** — and
+everything that was in the side panel moves into a menu that opens over the canvas and closes again.
+
+They float **in the middle of the screen**, which is the one region a pad never occupies: controls
+belong to the corners and edges where thumbs are, and the centre is the part of the screen a game is
+played through. Anywhere else and the buttons would sit on top of the thing being arranged.
+
+This also ends `FEAT-13`'s three-to-one split after one round. Three quarters of the screen was
+better than half and still an answer to the wrong question — the canvas does not want *most* of the
+screen, it wants the screen, because it is a picture of the screen.
+
+---
+
+### `FEAT-17` — Previewing the other orientation turns the phone
+
+**Phase:** `testing` — built in `0.0.28-dev`, awaiting a device result. What was built is described in `done-list.md`.
+**Asked for:** *"pressing portrait preview should rotate the app to portrait view for editing period
+only once outside app should follow chosen orientation."*
+
+Right, and it removes an estimate rather than adding a feature. Drawing a portrait phone inside a
+landscape editor gives a strip too narrow to work in, and the bars in that preview were guessed at,
+because only the orientation the phone is actually in can be measured.
+
+So the toggle asks the activity to turn instead. The editor then measures the orientation it is
+really in — no estimate, no strip — and on leaving the editor the orientation goes back to whatever
+the display settings say.
 
 ---
 
@@ -825,6 +933,20 @@ show the rectangle and its share of the screen rather than only the `group` name
 
 **Still `testing`, because part of what they promised is not true yet:** `CRIT-5` (`BUG-10`,
 `FEAT-13`), `FEAT-11` (`FEAT-14`), `FEAT-12` (`BUG-13`, `BUG-14`).
+
+
+
+### Round `0.0.27-dev` — the whole-screen decision
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1–3 | Canvas, bands, the match | **Wrong answer, right question.** Four controls on the screen were reported as outside it, because the pad was still placed in the usable area while the canvas drew the display. Decided: **the pad uses the whole screen** → `BUG-15`, which also closes `BUG-1` and `BUG-2` |
+| 4, 7 | Numbers dialog, values button | Dialog **working**. `⋮ values` present in portrait, missing in landscape → `BUG-16` |
+| 5 | `±` buttons | **Working** |
+| 6 | Three-to-one split | Superseded: whole-screen canvas with three floating buttons → `FEAT-16`. Preview should turn the phone → `FEAT-17` |
+| 8, 9, 10 | Dialog in landscape, `±`, grid | **Working.** `0.01` and `0.25` are useless extremes → grid steps narrowed under `FEAT-14` |
+| 11 | Regression | **None.** "Guides" was unexplained on this side: the yellow line that appears while dragging with edge snapping on, showing what the control has lined up with |
+| — | Orientation | The layout should hold a separate arrangement per orientation → `FEAT-15`, which needs a format decision first |
 
 
 ### Awaiting

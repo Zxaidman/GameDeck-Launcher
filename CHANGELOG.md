@@ -13,6 +13,58 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/). Seman
 
 ## [Unreleased]
 
+### `0.0.28-dev` — The Pad Takes The Whole Screen
+
+Four items closed on the device, one superseded a round after it was built, and the question the
+last two releases kept getting wrong was settled by the project owner rather than by another guess.
+
+**Which screen is the pad on?** `0.0.27-dev` drew the whole display on the canvas and went on
+placing the pad in the usable area, so four controls sitting plainly on the screen were reported as
+*"outside the usable screen"* and outlined in orange. The screenshots said otherwise, and they were
+right: the warning was true of the usable area and false of the phone.
+
+The answer is the whole display, cutout and bars included. `DeviceSurface.forPad` gives one answer
+to *what surface is a pad laid out against* and the overlay and the editor both ask it. The overlay's
+windows gained `FLAG_LAYOUT_IN_SCREEN` and `FLAG_LAYOUT_NO_LIMITS`, without which the window manager
+keeps every window inside the area it hands out — a control the layout puts against the top of the
+screen quietly arriving below the status bar is exactly how the pad and the editor came to disagree.
+
+**This closes `BUG-1` and `BUG-2` from the other direction.** The "use the notch area" setting
+existed and never reached the overlay: the application obeyed it and the pad — the only thing on
+screen while playing — did not. Now the same setting decides both, and the band the system takes is
+drawn on the canvas rather than cut out of it. The cost is real and is said once: a control under the
+status bar shares that strip with the shade.
+
+**The editor is the canvas now.** No title above it, no margin around it, nothing beside it. Three
+buttons float in the middle of the screen — Tools, Save, Exit — which is the one region a pad never
+occupies, because controls belong to the corners a thumb reaches and the centre is what a game is
+played through. The tools open as a sheet and close again. `FEAT-13`'s three-to-one split lasted one
+round and is recorded as superseded rather than deleted: three quarters was better than half and
+still an answer to the wrong question. A picture of the whole screen wants the whole screen.
+
+**Previewing the other orientation turns the phone.** It used to draw a small picture of the phone
+turned — a strip too narrow to work in, with system bars that were an estimate, because only the
+orientation the phone is actually in can be measured. The estimate is gone from the code along with
+the feature that needed it. Leaving the editor puts the orientation back to the setting.
+
+Also: tools wrap instead of running off a narrow panel, which is where `⋮ values` had been
+disappearing in landscape; grid steps drop the two useless extremes and keep 0.02 to 0.10; and
+leaving the editor with unsaved changes asks first, now that the exit button is much easier to press.
+
+**Closed on the device, and written up in `done-list.md`:** `Edit layout` reachable in portrait, the
+rotation that no longer discards unsaved work, the numbers dialog that fits and scrolls, and the `±`
+buttons. Six items are now `done`.
+
+**Still not measured.** Everything built this round is `testing`. The window flags are documented
+platform behaviour rather than something observed here, which is precisely the kind of claim this
+project does not treat as settled.
+
+**Not built, and blocked on a decision:** a layout that holds a separate arrangement per
+orientation. It is a schema change either way, and the choice between one document with two
+placement sets and two documents tied by a profile is the project owner's to make. Recorded as
+`FEAT-15` with a recommendation.
+
+
 ### `0.0.27-dev` — The Canvas Becomes The Phone
 
 The first device test of block 1 closed two items and failed on five points. The most important

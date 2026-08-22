@@ -173,6 +173,33 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    // Which page is in front. One value, because there are two pages: a
+                    // navigation graph for two destinations would be scaffolding around a
+                    // decision that has not been made yet.
+                    var editing by androidx.compose.runtime.remember {
+                        androidx.compose.runtime.mutableStateOf<
+                            io.github.zxaidman.kestrel.core.layout.ControllerLayout?
+                            >(null)
+                    }
+
+                    if (editing != null) {
+                        // Outside the padded column on purpose. The editor's canvas is a picture of
+                        // the whole screen, so it is given the whole screen — a title bar above it
+                        // and a margin around it are a picture of a smaller phone.
+                        io.github.zxaidman.kestrel.feature.editor.LayoutEditorScreen(
+                            layout = editing!!,
+                            onSave = ::saveEditedLayout,
+                            onClose = {
+                                editing = null
+                                // The editor may have turned the phone to arrange a portrait pad.
+                                // Leaving it hands the orientation back to the setting.
+                                applyDisplayPreferences()
+                            },
+                            onPreviewOrientation = ::previewOrientation,
+                        )
+                        return@Surface
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -211,15 +238,6 @@ class MainActivity : ComponentActivity() {
                         }
                         @Suppress("UNUSED_EXPRESSION") tick
 
-                        // Which page is in front. One value, because there are two pages: a
-                        // navigation graph for two destinations would be scaffolding around a
-                        // decision that has not been made yet.
-                        var editing by androidx.compose.runtime.remember {
-                            androidx.compose.runtime.mutableStateOf<
-                                io.github.zxaidman.kestrel.core.layout.ControllerLayout?
-                                >(null)
-                        }
-
                         // Setup is a page, not a banner: on a fresh install everything below it
                         // is unusable anyway, and a screen that cannot do its job is a worse thing
                         // to show than the list of reasons why.
@@ -232,16 +250,6 @@ class MainActivity : ComponentActivity() {
                                 onNotifications = ::askForNotifications,
                                 onOverlay = ::askForOverlay,
                                 onFolder = ::chooseFolder,
-                            )
-                        } else if (editing != null) {
-                            // A page of its own, and the whole screen while it is open. Arranging
-                            // a pad is a spatial job, and a preview squeezed above a diagnostics
-                            // list would be a preview of a different shape from the thing being
-                            // arranged.
-                            io.github.zxaidman.kestrel.feature.editor.LayoutEditorScreen(
-                                layout = editing!!,
-                                onSave = ::saveEditedLayout,
-                                onClose = { editing = null },
                             )
                         } else {
                             InputPreviewScreen(
@@ -285,6 +293,22 @@ class MainActivity : ComponentActivity() {
                 }
                 editable.value
             }
+        }
+    }
+
+    /**
+     * Turns the phone for the length of an editing session, and no longer.
+     *
+     * Drawing a portrait phone inside a landscape editor gives a strip too narrow to work in, and
+     * the system bars in that picture are a guess — only the orientation the phone is actually in
+     * can be measured. So the editor asks for the real thing. `applyDisplayPreferences` puts it
+     * back when the editor closes, which is the only thing that makes this temporary.
+     */
+    private fun previewOrientation(landscape: Boolean) {
+        requestedOrientation = if (landscape) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 

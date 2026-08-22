@@ -94,7 +94,16 @@ public class ControllerOverlay(
      * — and controls that move when it does are controls a thumb has to find again mid-play.
      */
     private fun surface(): LayoutSurface =
-        io.github.zxaidman.kestrel.platform.display.DeviceSurface.usable(context)
+        io.github.zxaidman.kestrel.platform.display.DeviceSurface.forPad(context, wholeScreen())
+
+    /**
+     * Whether the pad may use the display the system is also using.
+     *
+     * The setting existed and never reached here, which is what `BUG-1` and `BUG-2` were: the
+     * application obeyed it and the pad — the only thing on screen while playing — did not.
+     */
+    private fun wholeScreen(): Boolean =
+        io.github.zxaidman.kestrel.platform.settings.AppSettings.current.value.display.drawUnderCutout
 
     /**
      * Shows the toggle, and nothing else.
@@ -360,12 +369,34 @@ public class ControllerOverlay(
         // holding the stick froze every other control and froze the phone underneath with it.
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
+            WindowManager.LayoutParams.FLAG_SPLIT_TOUCH or
+            // Placed against the display rather than against what is left of it. Without these two
+            // the window manager keeps every window inside the area it hands out, so a control the
+            // layout puts against the top of the screen quietly arrives below the status bar — the
+            // pad and the editor then disagree about where the same control is.
+            if (wholeScreen()) {
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            } else {
+                0
+            },
         PixelFormat.TRANSLUCENT,
     ).apply {
         this.gravity = gravity
         x = marginX
         y = marginY
+        // A cutout is part of the screen or it is not; there is no useful middle. ALWAYS is API 30
+        // and this project supports 29, where SHORT_EDGES is the most that can be asked for.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            layoutInDisplayCutoutMode = when {
+                !wholeScreen() ->
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                else ->
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
     }
 
     public companion object {

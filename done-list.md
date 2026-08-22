@@ -82,113 +82,162 @@ percentage and turns it orange. `ADR-007`'s spirit: say what is true, do not ove
 
 ---
 
-## Built, awaiting confirmation — `0.0.27-dev`
-
-The first test of block 1 closed two items and failed on five points. This is what was done about
-them, plus the two items from block 1 that are still not finished.
-
-### `BUG-10` — The canvas is the phone now, bands and all
-
-**The fault, as measured.** The canvas drew **2289 × 927**; the screen is **2400 × 1080**. Those are
-2.47 : 1 and 2.22 : 1 — not the same shape. `CRIT-5` had fixed the *size* of the lie and not the
-lie. And it is why the pad still did not match: controls drawn hanging over the canvas edge are, on
-the phone, pushed back inside by the window manager, because a window is laid out within the area
-the system gives it.
-
-**Built.** `DeviceSurface.screen()` returns the **whole** screen with the bars and the cutout carried
-as insets rather than subtracted. The canvas draws that rectangle, shades the band the system takes,
-outlines the usable area inside it, and arranges the pad within the band — which `LayoutSurface` and
-`resolve` already supported, so nothing about placement changed, only what is drawn. A control that
-leaves the usable area is now **outlined in orange**, and the panel says how many have, and why it
-matters: *"the phone will not put a window there, so the pad will not match this."*
-
-**How it is known.** Unverified on the device. The geometry is the same code the overlay uses.
-
-**Cost.** A layout can still put a control outside the usable area — that is a real design for a
-shoulder button, and `ADR-007`'s spirit says show it rather than forbid it. What is no longer
-possible is doing it *by accident and invisibly*.
-
----
-
-### `BUG-11` — `Edit layout` is reachable in portrait
+### `BUG-11` — `Edit layout` reachable in portrait — **closed `0.0.27-dev`**
 
 Three buttons in one non-wrapping row put the third off the edge in portrait, with nothing to scroll
-sideways: the editor could not be opened with the phone upright. Two rows now, with `Edit layout`
-first and alone with `Reload layout`. Unverified on the device.
+sideways: the editor could not be opened with the phone upright. Split into two rows, `Edit layout`
+first. **Measured** — the project owner confirmed it on the device.
+
+**What it did not fix, and cost a round to learn:** the same fault existed in the editor's own tool
+row, where `⋮ values` was the seventh button in a panel a quarter of a landscape screen wide. One
+non-wrapping row was fixed and the next was left standing. `BUG-16` wraps them properly.
 
 ---
 
-### `BUG-12` — Turning the phone keeps you in the editor
+### `BUG-12` — Turning the phone keeps you in the editor — **closed `0.0.27-dev`**
 
 `MainActivity` declares `configChanges` for orientation and the sizes that come with it, so a
 rotation re-lays-out instead of rebuilding the activity. What this really saves is not the
 navigation — it is **every unsaved edit**, which was being thrown away by turning the phone.
 
-Unverified on the device. **The risk worth naming:** handling a configuration change means Kestrel
-is now responsible for anything that should change with it. Compose re-reads `LocalConfiguration`
-and the editor re-measures the screen from it, which covers what this screen needs; a future screen
-that depends on configuration-specific resources will have to be checked rather than assumed.
+**Measured** on the device. It is also what made `FEAT-17` possible: an editor that survives a
+rotation can ask for one.
+
+**The standing obligation it creates:** handling a configuration change means Kestrel is now
+responsible for anything that should change with it. Compose re-reads `LocalConfiguration` and the
+editor re-measures from it, which covers what exists today; a future screen that depends on
+configuration-specific resources has to be checked rather than assumed.
 
 ---
 
-### `BUG-13` — The numbers dialog fits and scrolls
+### `BUG-13` — The numbers dialog fits and scrolls — **closed `0.0.27-dev`**
 
-Two fields to a row, and the body scrolls. Four stacked fields in a dialog on a landscape phone put
-width and height below the fold with no way to reach them. Unverified on the device.
-
----
-
-### `BUG-14` — A minus sign without a minus key
-
-`± offsetX` and `± offsetY` buttons in the dialog flip the sign of whatever is in the field,
-including a half-typed one. This does not depend on which keyboard someone has, which is the part
-that could not be relied on. Unverified on the device, and the underlying question — whether that
-keyboard offers a decimal point but no minus — is still not confirmed either way.
+Two fields to a row and a scrolling body. Four stacked fields in a dialog on a landscape phone put
+width and height below the fold with no way to reach them — a feature that worked and could not be
+used. **Measured** on the device.
 
 ---
 
-### `FEAT-13` — Three to one, and the values button where the hand is
+### `BUG-14` — A minus sign without a minus key — **closed `0.0.27-dev`**
 
-The canvas takes three quarters and the tools one quarter, in both orientations. `⋮ values` is a
-filled button in the same row as `−`, `+`, `taller`, `shorter`, `shape` and `anchor` — it was a bare
-text button beside a row of filled ones, which is what a control that looks like a label gets.
+`± offsetX` and `± offsetY` flip the sign of whatever is in the field, including a half-typed one.
+It does not depend on which keyboard someone has, which was the part that could not be relied on.
+**Measured** on the device.
 
-Unverified on the device. **Not fixed by this:** previewing *portrait* while the editor itself is in
-*landscape* still leaves a tall narrow strip, because the canvas can only be as tall as the dock.
-Three quarters of the width does not help a rectangle limited by height. Editing a portrait pad is
-best done with the phone in portrait — which `BUG-12` now makes possible.
+The underlying question — whether that keyboard offers a decimal point but no minus — is still not
+answered, and no longer needs to be.
 
 ---
 
-### `FEAT-14` — The grid in the layout's own unit
+### `FEAT-13` — Three parts canvas to one part tools — **superseded `0.0.28-dev`**
 
-*"the button is 0.12 and the grid is 32px both are different scales."* Correct, and the fix was to
-move the grid rather than the control. Steps are now **0.01, 0.02, 0.05, 0.10 and 0.25 of the
-shorter side**, labelled with the pixel equivalent for this phone — `0.05 · 46 px` — and the
-selected control's size is shown in both units for the same reason.
+Built in `0.0.27-dev`, confirmed working on the device, and replaced one round later by `FEAT-16`.
 
-It also removes a limitation that was written up as a property of `FEAT-11` and was really a symptom
-of the wrong unit: a step of `0.01` is exactly the precision the file stores, so a snapped control
-now lands on a number the file can hold. The pixel grid could not promise that on any screen.
+It is recorded rather than deleted because the lesson is worth keeping: three quarters of the screen
+was better than half and still an answer to the wrong question. The canvas does not want *most* of
+the screen — it is a picture of the screen, so it wants the screen. A permanent panel of any width
+is that much of the picture missing.
 
-Unverified on the device.
+What survived from it: `⋮ values` as a filled button among the others rather than a text button
+nobody could see.
 
 ---
 
-### `CRIT-5` — still `testing`
+---
 
-The canvas is now the phone (`BUG-10`) and the proportions are as asked (`FEAT-13`), but the item
-does not close until the pad on the phone matches what the editor drew. That is test 12, and it
-failed last round.
+## Built, awaiting confirmation — `0.0.28-dev`
 
-### `FEAT-11` — still `testing`
+### `BUG-15` — The pad uses the whole screen, and so does the canvas
 
-Grid and edge snapping both worked on the device. It stays open until the unit change (`FEAT-14`) is
-confirmed useful rather than merely different.
+**The decision.** *"i want the gamepad and it's window to always use the whole screen 2400x1080."*
 
-### `FEAT-12` — still `testing`
+**What was wrong before it.** `BUG-10` made the canvas the whole display and left the pad in the
+usable area. So four controls sitting plainly on the screen were reported as *"outside the usable
+screen"* and outlined in orange — true of the usable area, false of the phone, and the project
+owner's screenshots said so. A warning that fires on correct work is worse than no warning.
 
-Validation worked on the device. It stays open on `BUG-13` and `BUG-14`.
+**Built.** `DeviceSurface.forPad` gives one answer to *what surface is a pad laid out against*, and
+the overlay and the editor both ask it. The overlay's windows gained `FLAG_LAYOUT_IN_SCREEN` and
+`FLAG_LAYOUT_NO_LIMITS` — without those the window manager keeps every window inside the area it
+hands out, so a control the layout puts against the top of the screen quietly arrives below the
+status bar — and a cutout mode of `ALWAYS` on API 30 and above, `SHORT_EDGES` on 29.
+
+**This closes `BUG-1` and `BUG-2` from the other direction.** The "use the notch area" setting
+existed and never reached the overlay: the application obeyed it and the pad — the only thing on
+screen while playing — did not. It does now, and the same setting decides what the canvas draws.
+
+**How it is known.** Unverified on the device. The window flags are documented platform behaviour,
+not measured here, and that is exactly the kind of claim this project does not treat as settled.
+
+**The cost, stated once.** A control under the status bar shares that strip with the system: a swipe
+from the top edge will sometimes open the shade instead of pressing the control. The band stays
+drawn on the canvas so that is visible while arranging rather than discovered while playing.
+
+---
+
+### `BUG-16` — Tools wrap instead of running off the edge
+
+The control and window tools are `FlowRow`s. Seven buttons in a fixed row lost the last one off a
+narrow panel, which is how `⋮ values` came to exist in portrait and not in landscape. Unverified on
+the device.
+
+---
+
+### `FEAT-16` — The editor is the canvas, with three buttons floating on it
+
+**Asked for.** *"instead of 3:1 canvas whole screen display the Canva and with three floating
+button, options … save, exit. in both orientation."*
+
+**Built.** The canvas is the entire screen — no title bar above it, no margin around it, nothing
+beside it. Three buttons float on it: **Tools**, **Save**, **Exit**. Everything that was a side
+panel is now a sheet that opens over the canvas and closes again, down one edge in landscape and up
+from the bottom in portrait.
+
+They float **in the middle of the screen**, which is the one region a pad never occupies: controls
+belong to the corners and edges a thumb reaches, and the centre is what a game is played through.
+Any other position would have put them on top of the thing being arranged.
+
+Under them, on a dark plate so they stay readable over whatever is drawn behind: the layout's name,
+whether there are unsaved changes, the selected control in both units, and any warning.
+
+**Added without being asked, and it should be flagged:** leaving with unsaved changes now asks
+first. "Nothing is saved until it is saved" is a rule that makes an accidental exit expensive, and
+the exit button became a great deal easier to press.
+
+**How it is known.** Unverified on the device.
+
+---
+
+### `FEAT-17` — The preview turns the phone
+
+**Asked for.** *"pressing portrait preview should rotate the app to portrait view for editing period
+only once outside app should follow chosen orientation."*
+
+**Built.** The orientation buttons ask the activity to turn. The editor then measures the
+orientation it is really in, and closing the editor calls `applyDisplayPreferences`, which puts the
+orientation back to whatever the display settings say.
+
+**What this removes is better than what it adds.** The old toggle drew a small picture of the phone
+turned — a strip too narrow to work in — and the system bars in that picture were an estimate,
+because only the orientation the phone is in can be measured. That estimate is gone from the code
+along with the feature that needed it.
+
+**How it is known.** Unverified on the device.
+
+---
+
+### `FEAT-14` — Grid steps narrowed
+
+`0.01` was too fine to see and `0.25` too coarse to place anything with. The steps are now **0.02,
+0.04, 0.06 and 0.10** of the shorter side, still labelled with the pixels they come to on this
+phone. Unverified on the device; the rest of `FEAT-14` was confirmed working.
+
+---
+
+### `CRIT-5`, `BUG-10`, `FEAT-11`, `FEAT-12` — still `testing`
+
+`CRIT-5` and `BUG-10` do not close until the pad on the phone matches what the editor drew — that is
+the test that has failed twice. `FEAT-11` and `FEAT-12` are open only on the small changes above.
 
 ---
 

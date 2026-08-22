@@ -32,6 +32,24 @@ public object DeviceSurface {
     }
 
     /**
+     * The surface a pad is laid out against, which is the whole display unless the user says not.
+     *
+     * **The whole display by default, decided by the project owner**: a control belongs on the
+     * screen, not in the rectangle left over after the system has taken its share. What that costs
+     * is real and is worth saying — a control under the status bar shares its space with the shade,
+     * so a swipe from the top edge will sometimes be taken by the system instead of by the pad.
+     *
+     * When the setting is off the pad keeps to the usable area, which is what it did before, and
+     * the difference is visible on the editor's canvas either way.
+     */
+    public fun forPad(context: Context, wholeScreen: Boolean): LayoutSurface =
+        if (wholeScreen) {
+            screen(context).let { LayoutSurface(it.widthPx, it.heightPx) }
+        } else {
+            usable(context)
+        }
+
+    /**
      * The **whole** screen, with the bars and the cutout carried as insets rather than subtracted.
      *
      * This is what the editor draws, and the difference from [usable] is the difference between
